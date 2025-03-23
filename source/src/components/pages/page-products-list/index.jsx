@@ -162,19 +162,19 @@ const PageProductsList = () => {
       getActions: (params) => {
         let id = params?.row?.plan_code;
         let i_package = params?.row?.i_package;
-        let disabledView = false; // TODO: เช็คตามสิทธิ์
+        let disabledView = true; // TODO: เช็คตามสิทธิ์
         let disabledEdit = false; // TODO: เช็คตามสิทธิ์
+        if (params?.row?.product_plan_id) {
+          disabledView = false;
+        }
         const viewFunction = disabledView
           ? null
-          : () =>
-              router.push(
-                `/products/detail?&mode=VIEW&type=${params?.row?.promise_type_Code}&i_package=${i_package}&`
-              );
+          : () => handleCreateProductOnShelf(params?.row);
         const editFunction = disabledEdit
           ? null
           : () =>
               router.push(
-                `/products/detail?mode=EDIT&type=${params?.row?.promise_type_Code}`
+                `/products/detail?mode=EDIT&type=${params?.row?.promise_type_Code}&i_package=${i_package}&plan_code=${id}&product_plan_id=${params?.row?.product_plan_id}`
               );
 
         const defaultProps = {
@@ -188,13 +188,14 @@ const PageProductsList = () => {
 
         return [
           <GridActionsCellItem
+            disabled={disabledView}
             key={`view_${id}`}
             icon={<RemoveRedEye />}
             {...defaultProps}
             label="ดูรายละเอียด"
-            disabled={disabledView}
             onClick={viewFunction}
           />,
+
           <GridActionsCellItem
             key={`edit_${id}`}
             icon={<Edit />}
@@ -265,14 +266,11 @@ const PageProductsList = () => {
         update_date_end: watch(`update_date_end`),
       });
 
-      const response = await fetch(
-        `/api/products?action=getProducts`, //&pageNumber=${start}&pageSize=${limit}
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: dataBody,
-        }
-      );
+      const response = await fetch(`/api/products?action=getProducts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: dataBody,
+      });
 
       const data = await response.json();
       const mappedData = Array.from(data.products).map((item, index) => {
@@ -299,6 +297,58 @@ const PageProductsList = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateProductOnShelf = async (params) => {
+    try {
+      let dataBody = JSON.stringify({
+        is_active: true,
+        create_date: new Date(),
+        create_by: "system",
+        update_date: new Date(),
+        update_by: "system",
+        product_plan_id: null,
+        i_package: params.i_package,
+        title: "",
+        description: "",
+        content_url: "",
+        beneficiary_content_url: "",
+        is_fatca: false,
+        is_crs: false,
+        is_refund: false,
+        is_tax: false,
+        is_send_mail: false,
+        is_send_sms: false,
+        is_recurring: false,
+        is_health: false,
+        is_factor: false,
+        is_sale_fatca: false,
+        is_sale_crs: false,
+        i_plan: params.planCode,
+        is_check_fatca: false,
+        remark_marketing_name: "",
+        item_name: "",
+        is_download: null,
+      });
+      const response = await fetch(
+        `/api/products?action=AddOrUpdateProductOnShelf`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: dataBody,
+        }
+      );
+      const data = await response.json();
+      router.push(
+        `/products/detail?&mode=VIEW&type=${params.promise_type_Code}&i_package=${params.i_package}&plan_code=${params.plan_code}&product_plan_id=${data.product_plan_id}`
+      );
+    } catch (error) {
+      handleSnackAlert({
+        open: true,
+        message: `ล้มเหลวเกิดข้อผิดพลาด : ${error}`,
+      });
+    } finally {
     }
   };
 

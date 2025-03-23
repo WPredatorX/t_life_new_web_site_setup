@@ -26,10 +26,10 @@ import {
 
 const PageProductsDetail = ({
   productId,
-  productName,
   i_package,
   mode,
   type,
+  product_plan_id,
 }) => {
   const router = useAppRouter();
   const theme = useTheme();
@@ -79,41 +79,49 @@ const PageProductsDetail = ({
         ],
         ICapital: [
           {
-            n_no: null,
+            n_no: "",
+            m_sa: "",
           },
         ],
       },
       commonSetting: {
-        is_active: null,
-        create_date: null,
-        create_by: "",
-        update_date: null,
-        update_by: "",
         product_plan_id: "",
         i_package: "",
         title: "",
         description: "",
         content_url: "",
         beneficiary_content_url: "",
-        is_fatca: false,
-        is_crs: false,
-        is_refund: false,
-        is_tax: false,
-        is_send_mail: false,
-        is_send_sms: false,
-        is_recurring: false,
-        is_health: false,
-        is_factor: false,
-        is_sale_fatca: false,
-        is_sale_crs: false,
+        is_fatca: true,
+        is_crs: true,
+        is_refund: true,
+        is_tex: true,
+        is_send_mail: true,
+        is_send_sms: true,
+        is_recurring: true,
+        is_health: true,
+        is_factor: true,
+        is_sale_fatca: true,
+        is_sale_crs: true,
         i_plan: "",
-        is_check_fatca: false,
+        ordinary_class: null,
+        is_check_fatca: true,
         remark_marketing_name: "",
         item_name: "",
-        is_download: null,
+        is_download: true,
+        c_package: "",
+        quo_document_id: null,
+        document_id: null,
+        is_active: true,
+        create_date: null,
+        create_by: "",
+        update_date: null,
+        update_by: "",
+        cal_temp_code: "",
       },
     },
   });
+
+  const { reset, watch, setValue } = formMethods;
 
   const onSubmit = async (data) => {
     setLoading(true);
@@ -129,6 +137,7 @@ const PageProductsDetail = ({
     }
   };
   const handleResetForm = () => {
+    reset();
     const alert = handleNotiification("ล้างข้อมูลสำเร็จ", () => {
       return true;
     });
@@ -141,12 +150,13 @@ const PageProductsDetail = ({
 
   useEffect(() => {
     setTab();
+    handleFetchProduct();
   }, []);
 
   const setTab = () => {
     let data = [
       <PageCommonData
-        //formMethods={{ ...formMethods }}
+        formMethods={{ ...formMethods }}
         productId={productId}
         i_package={i_package}
         type={type}
@@ -161,6 +171,59 @@ const PageProductsDetail = ({
     let labelTab = ["ข้อมูลทั่วไป", "ตั้งค่าทั่วไป"];
     setTabContent(data);
     setTabLabel(labelTab);
+  };
+  const handleFetchProduct = async () => {
+    setLoading(true);
+    setTimeout(async () => {
+      try {
+        let response = await fetch(
+          `/api/products?action=getInsurancePlan&IPackage=${i_package}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+        const dataInsurancePlan = await response.json();
+
+        let responseCapital = await fetch(
+          `/api/products?action=getAllInsuredCapital&IPackage=${i_package}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+        const dataInsuranceCapital = await responseCapital.json();
+
+        let dataBody = JSON.stringify({
+          product_plan_id: product_plan_id,
+          i_package: i_package,
+        });
+
+        let responseProductOnShelf = await fetch(
+          `/api/products?action=GetProductOnShelfById`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: dataBody,
+          }
+        );
+
+        const dataProduct = await responseProductOnShelf.json();
+
+        reset({
+          IPlan: dataInsurancePlan || [],
+          ICapital: dataInsuranceCapital || [],
+          commonSetting: dataProduct[0],
+        });
+      } catch (error) {
+        handleSnackAlert({
+          open: true,
+          message: `ขออภัย เกิดข้อผิดพลาด กรุณาติดต่อเจ้าหน้าที่ที่เกี่ยวข้อง ${error}`,
+        });
+      } finally {
+        setLoading(false);
+      }
+    }, 0);
   };
 
   const handleNotiification = (message, callback) => {
@@ -207,6 +270,21 @@ const PageProductsDetail = ({
   ตอน error api => เอา component ออกทั้งหมด
   ตอนโหลด => ใส่ process load
   */
+  const handleFetchProductOnShelf = async () => {
+    let dataBody = JSON.stringify({
+      product_plan_id: product_plan_id,
+      i_package: i_package,
+    });
+    const response = await fetch(
+      `/api/products?action=GetProductOnShelfById`, //&pageNumber=${start}&pageSize=${limit}
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: dataBody,
+      }
+    );
+    const data = await response.json();
+  };
   return (
     <Grid>
       <form onSubmit={onSubmit}>

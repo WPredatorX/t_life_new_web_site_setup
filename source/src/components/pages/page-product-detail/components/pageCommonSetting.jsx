@@ -27,6 +27,7 @@ import { useAppDispatch, useAppSelector } from "@hooks";
 const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
   const [loading, setLoading] = useState(true);
   const { handleSnackAlert } = useAppSnackbar();
+  const [checkedCal, setcheckedCal] = useState(true);
   const validationSchema = Yup.object().shape();
   const {
     watch,
@@ -37,24 +38,8 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
     setValue,
     formState: { errors },
   } = formMethods;
-
-  useEffect(() => {
-    handleFetchProduct();
-  }, []);
-
-  const handleFetchProduct = async () => {
-    setLoading(true);
-    setTimeout(async () => {
-      try {
-      } catch (error) {
-        handleSnackAlert({
-          open: true,
-          message: `ขออภัย เกิดข้อผิดพลาด กรุณาติดต่อเจ้าหน้าที่ที่เกี่ยวข้อง ${error}`,
-        });
-      } finally {
-        setLoading(false);
-      }
-    }, 0);
+  const handleCalChange = () => {
+    setcheckedCal((prev) => !prev);
   };
 
   const handleFetchTemplate = async () => {
@@ -87,7 +72,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
               <Grid container>
                 <Grid item xs={12}>
                   <Controller
-                    name="FatcaCrs"
+                    name={`commonSetting.is_check_fatca`}
                     control={control}
                     disabled={mode === "VIEW"}
                     render={({ field }) => {
@@ -107,7 +92,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
               <Grid container>
                 <Grid item xs={12} md={6}>
                   <Controller
-                    name="AskFatca"
+                    name={`commonSetting.is_fatca`}
                     control={control}
                     disabled={mode === "VIEW"}
                     render={({ field }) => {
@@ -125,7 +110,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <Controller
-                    name="SellFatca"
+                    name={`commonSetting.is_sale_fatca`}
                     control={control}
                     disabled={mode === "VIEW"}
                     render={({ field }) => {
@@ -145,7 +130,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
               <Grid container>
                 <Grid item xs={12} md={6}>
                   <Controller
-                    name="AskCrs"
+                    name={`commonSetting.is_crs`}
                     control={control}
                     disabled={mode === "VIEW"}
                     render={({ field }) => {
@@ -164,7 +149,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
 
                 <Grid item xs={12} md={6}>
                   <Controller
-                    name="SellCrs"
+                    name={`commonSetting.is_sale_crs`}
                     control={control}
                     disabled={mode === "VIEW"}
                     render={({ field }) => {
@@ -185,7 +170,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
               <Grid container>
                 <Grid item xs={12}>
                   <Controller
-                    name="AskHealth"
+                    name={`commonSetting.is_health`}
                     control={control}
                     disabled={mode === "VIEW"}
                     render={({ field }) => {
@@ -203,7 +188,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                 </Grid>
                 <Grid item xs={12}>
                   <Controller
-                    name="has_return_amount"
+                    name={`commonSetting.is_refund`}
                     control={control}
                     disabled={mode === "VIEW"}
                     render={({ field }) => {
@@ -221,7 +206,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                 </Grid>
                 <Grid item xs={12}>
                   <Controller
-                    name="next_installment"
+                    name={`commonSetting.is_recurring`}
                     control={control}
                     disabled={mode === "VIEW"}
                     render={({ field }) => {
@@ -240,7 +225,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
 
                 <Grid item xs={12}>
                   <Controller
-                    name="tax_deduction"
+                    name={`commonSetting.is_tex`}
                     control={control}
                     disabled={mode === "VIEW"}
                     render={({ field }) => {
@@ -271,7 +256,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
               <Grid container>
                 <Grid item xs={12}>
                   <Controller
-                    name="CalculateFromPremiumToCoverage"
+                    name={`commonSetting.is_CalculateFromCoverageToPremium`}
                     control={control}
                     disabled={mode === "VIEW"}
                     render={({ field }) => {
@@ -279,7 +264,15 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                       return (
                         <FormControlLabel
                           control={
-                            <Switch checked={value} onChange={onChange} />
+                            <Switch
+                              checked={checkedCal}
+                              onChange={(val) => {
+                                handleCalChange();
+                                if (val) {
+                                  setValue(`commonSetting.cal_temp_code`, "01");
+                                }
+                              }}
+                            />
                           }
                           label="คำนวณจากเบี้ยไปทุน"
                         />
@@ -289,7 +282,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                 </Grid>
                 <Grid item xs={12}>
                   <Controller
-                    name="CalculateFromCoverageToPremium"
+                    name={`commonSetting.is_CalculateFromCoverageToPremium`}
                     control={control}
                     disabled={mode === "VIEW"}
                     render={({ field }) => {
@@ -297,7 +290,15 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                       return (
                         <FormControlLabel
                           control={
-                            <Switch checked={value} onChange={onChange} />
+                            <Switch
+                              checked={!checkedCal}
+                              onChange={(val) => {
+                                handleCalChange();
+                                if (val) {
+                                  setValue(`cal_temp_code`, "02");
+                                }
+                              }}
+                            />
                           }
                           label="คำนวณจากทุนไปเบี้ย"
                         />
@@ -307,7 +308,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                 </Grid>
                 <Grid item xs={12}>
                   <Controller
-                    name="Calculate_factor"
+                    name={`commonSetting.is_factor`}
                     control={control}
                     disabled={mode === "VIEW"}
                     render={({ field }) => {
@@ -326,7 +327,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                 {type === "0" && (
                   <Grid item xs={12}>
                     <Controller
-                      name={`status`}
+                      name={`commonSetting.ordinary_class`}
                       control={control}
                       render={({ field }) => {
                         const { name, onChange, ...otherProps } = field;
@@ -397,14 +398,11 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                     label="เอกสารสิทธิประโยชน์ตามกรมธรรม์"
                     fullWidth
                     size="small"
-                    inputProps={{
-                      allowNegative: false,
-                      fixedDecimalScale: true,
-                    }}
                     InputProps={{
-                      inputComponent: AppNumericFormat,
                       endAdornment: (
-                        <InputAdornment position="end">อัพโหลด</InputAdornment>
+                        <InputAdornment position="end">
+                          <Button sx={{ color: "GrayText" }}>อัพโหลด</Button>
+                        </InputAdornment>
                       ),
                     }}
                   />
@@ -420,15 +418,10 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                       label="เอกสารขั้นอาชีพ"
                       fullWidth
                       size="small"
-                      inputProps={{
-                        allowNegative: false,
-                        fixedDecimalScale: true,
-                      }}
                       InputProps={{
-                        inputComponent: AppNumericFormat,
                         endAdornment: (
                           <InputAdornment position="end">
-                            อัพโหลด
+                            <Button sx={{ color: "GrayText" }}>อัพโหลด</Button>
                           </InputAdornment>
                         ),
                       }}
@@ -453,7 +446,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
               <Grid container spacing={2} my={1}>
                 <Grid item xs={12} md={6}>
                   <Controller
-                    name="send_sms"
+                    name={`commonSetting.is_send_sms`}
                     control={control}
                     disabled={mode === "VIEW"}
                     render={({ field }) => {
@@ -472,7 +465,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
 
                 <Grid item xs={12} md={6}>
                   <Controller
-                    name="send_email"
+                    name={`commonSetting.is_send_mail`}
                     control={control}
                     disabled={mode === "VIEW"}
                     render={({ field }) => {
@@ -574,28 +567,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                       border: "1px solid",
                       borderColor: "#e7e7e7",
                     }}
-                  >
-                    {/*                     <Grid container spacing={2}>
-                      <Grid item xs={11}>
-                        <TextField label="บรรทัดที่ 1" fullWidth size="small" />
-                      </Grid>
-                      <Grid item xs={1}>
-                        <Button  variant="contained">
-                          ลบออก
-                        </Button>
-                      </Grid>
-                    </Grid>
-                    <Grid container spacing={2} mt={2}>
-                      <Grid item xs={11}>
-                        <TextField label="บรรทัดที่ 2" fullWidth size="small" />
-                      </Grid>
-                      <Grid item xs={1}>
-                        <Button  variant="contained">
-                          ลบออก
-                        </Button>
-                      </Grid>
-                    </Grid> */}
-                  </AppCard>
+                  ></AppCard>
                 </Grid>
               </Grid>
               {type === "0" && (
@@ -625,28 +597,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                         border: "1px solid",
                         borderColor: "#e7e7e7",
                       }}
-                    >
-                      {/*                     <Grid container spacing={2}>
-                      <Grid item xs={11}>
-                        <TextField label="บรรทัดที่ 1" fullWidth size="small" />
-                      </Grid>
-                      <Grid item xs={1}>
-                        <Button  variant="contained">
-                          ลบออก
-                        </Button>
-                      </Grid>
-                    </Grid>
-                    <Grid container spacing={2} mt={2}>
-                      <Grid item xs={11}>
-                        <TextField label="บรรทัดที่ 2" fullWidth size="small" />
-                      </Grid>
-                      <Grid item xs={1}>
-                        <Button  variant="contained">
-                          ลบออก
-                        </Button>
-                      </Grid>
-                    </Grid> */}
-                    </AppCard>
+                    ></AppCard>
                   </Grid>
                 </Grid>
               )}

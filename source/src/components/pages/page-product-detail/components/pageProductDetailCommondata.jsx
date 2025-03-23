@@ -28,32 +28,8 @@ const PageProductDetailCommonData = ({
     handleSubmit,
     watch,
     formState: { errors },
-  } = useAppForm({
-    mode: "onBlur",
-    reValidateMode: "onChange",
+  } = formMethods;
 
-    defaultValues: {
-      IPlan: [
-        {
-          i_package: "",
-          plan_code: "",
-          product_name: "",
-          promise_type: "",
-          is_active: null,
-          active_status: "",
-          create_by: "",
-          create_date: null,
-          update_by: "",
-          update_date: null,
-        },
-      ],
-      ICapital: [
-        {
-          n_no: null,
-        },
-      ],
-    },
-  });
   const {
     fields: packageFields,
     append: appendPackage,
@@ -71,45 +47,8 @@ const PageProductDetailCommonData = ({
     control,
     name: "ICapital",
   });
-
-  useEffect(() => {
-    handleFetchProduct(); // Fetch data on mount
-  }, []);
-  const handleFetchProduct = async () => {
-    setLoading(true);
-    setTimeout(async () => {
-      try {
-        const response = await fetch(
-          `/api/products?action=getInsurancePlan&IPackage=${i_package}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-          }
-        );
-        const dataInsurancePlan = await response.json();
-
-        if (dataInsurancePlan && Array.isArray(dataInsurancePlan)) {
-          reset({
-            IPlan: dataInsurancePlan || [],
-            ICapital: [
-              {
-                n_no: null,
-              },
-            ],
-          }); // Reset form with API data
-        }
-        const w = watch();
-        console.log(w);
-      } catch (error) {
-        handleSnackAlert({
-          open: true,
-          message: `ขออภัย เกิดข้อผิดพลาด กรุณาติดต่อเจ้าหน้าที่ที่เกี่ยวข้อง ${error}`,
-        });
-      } finally {
-        setLoading(false);
-      }
-    }, 0);
-  };
+  const w = watch();
+  console.log(w);
   if (type === "0") {
     return (
       <Grid container justifyContent={"center"}>
@@ -122,9 +61,14 @@ const PageProductDetailCommonData = ({
                 label="รหัสแพคเกจ"
                 margin="dense"
                 size="small"
-                value={i_package}
+                id={`commonSetting.i_package`}
+                defaultValue={watch(`commonSetting.i_package`)}
+                {...register(`commonSetting.i_package`)}
+                //value={i_package}
                 inputProps={{ maxLength: 100 }}
-                InputLabelProps={i_package && { shrink: true }}
+                InputLabelProps={
+                  watch(`commonSetting.i_package`) && { shrink: true }
+                }
                 error={Boolean(errors?.name)}
               />
               <FormHelperText error={errors?.name}>
@@ -139,9 +83,17 @@ const PageProductDetailCommonData = ({
                 label="ชื่อแพคเกจ"
                 margin="dense"
                 size="small"
-                value={productId}
+                id={`commonSetting.c_package`}
+                defaultValue={
+                  watch(`commonSetting.c_package`)
+                    ? watch(`commonSetting.c_package`)
+                    : ""
+                }
+                {...register(`commonSetting.c_package`)}
                 inputProps={{ maxLength: 100 }}
-                InputLabelProps={productId && { shrink: true }}
+                InputLabelProps={
+                  watch(`commonSetting.c_package`) && { shrink: true }
+                }
                 error={Boolean(errors?.name)}
               />
               <FormHelperText error={errors?.name}>
@@ -156,8 +108,22 @@ const PageProductDetailCommonData = ({
                 label="ชื่อสำหรับแสดงหน้าคำนวณเพื่อเลือกระยะเวลาเอาประกัน"
                 margin="dense"
                 size="small"
+                id={`commonSetting.item_name`}
+                defaultValue={
+                  watch(`commonSetting.item_name`)
+                    ? watch(`commonSetting.item_name`)
+                    : ""
+                }
+                {...register(`commonSetting.item_name`)}
                 inputProps={{ maxLength: 100 }}
+                InputLabelProps={
+                  watch(`commonSetting.item_name`) && { shrink: true }
+                }
+                error={Boolean(errors?.name)}
               />
+              <FormHelperText error={errors?.name}>
+                {errors?.name?.message}
+              </FormHelperText>
             </Grid>
           </Grid>
           <Grid container>
@@ -167,8 +133,22 @@ const PageProductDetailCommonData = ({
                 label="ชื่อทางการตลาด"
                 margin="dense"
                 size="small"
+                id={`commonSetting.title`}
+                defaultValue={
+                  watch(`commonSetting.title`)
+                    ? watch(`commonSetting.title`)
+                    : ""
+                }
+                {...register(`commonSetting.title`)}
                 inputProps={{ maxLength: 100 }}
+                InputLabelProps={
+                  watch(`commonSetting.title`) && { shrink: true }
+                }
+                error={Boolean(errors?.name)}
               />
+              <FormHelperText error={errors?.name}>
+                {errors?.name?.message}
+              </FormHelperText>
             </Grid>
           </Grid>
           <Grid container>
@@ -179,8 +159,24 @@ const PageProductDetailCommonData = ({
                 label="หมายเหตุ"
                 margin="dense"
                 size="small"
+                id={`commonSetting.remark_marketing_name`}
+                defaultValue={
+                  watch(`commonSetting.remark_marketing_name`)
+                    ? watch(`commonSetting.remark_marketing_name`)
+                    : ""
+                }
+                {...register(`commonSetting.remark_marketing_name`)}
                 inputProps={{ maxLength: 100 }}
+                InputLabelProps={
+                  watch(`commonSetting.remark_marketing_name`) && {
+                    shrink: true,
+                  }
+                }
+                error={Boolean(errors?.name)}
               />
+              <FormHelperText error={errors?.name}>
+                {errors?.name?.message}
+              </FormHelperText>
             </Grid>
           </Grid>
           <Grid container mt={2} spacing={2}>

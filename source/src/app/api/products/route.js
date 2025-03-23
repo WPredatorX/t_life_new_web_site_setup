@@ -57,6 +57,44 @@ export async function POST(request) {
       });
 
       return NextResponse.json(data);
+    case "AddOrUpdateProductOnShelf":
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}BackOffice/AddOrUpdateProductOnShelf`,
+        body,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      if (response.status === 200) {
+        data = response.data?.data;
+      }
+      return NextResponse.json(data);
+    case "GetProductOnShelfById":
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}BackOffice/GetProductOnShelfById`,
+        body,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      if (response.status === 200) {
+        data = response.data?.data;
+      }
+      return NextResponse.json(data);
+    case "getAllInsuredCapital":
+      productId = url.searchParams.get("IPackage");
+      response = await axios.post(
+        `${baseUrl}BackOffice/GetAllInsuredCapital?IPackage=${productId}`,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      if (response.status === 200) {
+        data = response.data?.data;
+      }
+      return NextResponse.json(data);
     case "getSaleConditionByProductId":
       productId = url.searchParams.get("productId");
       data = {
