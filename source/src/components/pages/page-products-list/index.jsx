@@ -96,7 +96,9 @@ const PageProductsList = () => {
       headerClassName: "header-main",
       align: "center",
       minWidth: 200,
-      renderCell: (params) => <AppStatusProduct status={params.value} />,
+      renderCell: (params) => (
+        <AppStatusProduct status={params.row.is_active} />
+      ),
     },
     {
       flex: 1,
@@ -169,13 +171,22 @@ const PageProductsList = () => {
         }
         const viewFunction = disabledView
           ? null
-          : () => handleCreateProductOnShelf(params?.row);
-        const editFunction = disabledEdit
-          ? null
           : () =>
               router.push(
-                `/products/detail?mode=EDIT&type=${params?.row?.promise_type_Code}&i_package=${i_package}&plan_code=${id}&product_plan_id=${params?.row?.product_plan_id}`
+                `/products/detail?mode=VIEW&type=${params?.row?.promise_type_Code}&i_package=${i_package}&plan_code=${id}&product_plan_id=${params?.row?.product_plan_id}`
               );
+
+        const editFunction = disabledEdit
+          ? null
+          : () => {
+              if (params?.row?.product_plan_id) {
+                router.push(
+                  `/products/detail?mode=EDIT&type=${params?.row?.promise_type_Code}&i_package=${i_package}&plan_code=${id}&product_plan_id=${params?.row?.product_plan_id}`
+                );
+              } else {
+                handleCreateProductOnShelf(params?.row);
+              }
+            };
 
         const defaultProps = {
           showInMenu: true,
@@ -341,7 +352,7 @@ const PageProductsList = () => {
       );
       const data = await response.json();
       router.push(
-        `/products/detail?&mode=VIEW&type=${params.promise_type_Code}&i_package=${params.i_package}&plan_code=${params.plan_code}&product_plan_id=${data.product_plan_id}`
+        `/products/detail?&mode=EDIT&type=${params.promise_type_Code}&i_package=${params.i_package}&plan_code=${params.plan_code}&product_plan_id=${data.product_plan_id}`
       );
     } catch (error) {
       handleSnackAlert({

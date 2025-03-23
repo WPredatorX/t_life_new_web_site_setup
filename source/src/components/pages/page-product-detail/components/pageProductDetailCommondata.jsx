@@ -80,6 +80,7 @@ const PageProductDetailCommonData = ({
             <Grid item xs={4}>
               <TextField
                 fullWidth
+                disabled
                 label="ชื่อแพคเกจ"
                 margin="dense"
                 size="small"
@@ -154,7 +155,6 @@ const PageProductDetailCommonData = ({
           <Grid container>
             <Grid item xs={4}>
               <TextField
-                disabled
                 fullWidth
                 label="หมายเหตุ"
                 margin="dense"
@@ -191,7 +191,12 @@ const PageProductDetailCommonData = ({
               >
                 {packageFields &&
                   packageFields.map((IPlan, IPlanIndex) => (
-                    <Grid container justifyContent={"center"} key={IPlanIndex}>
+                    <Grid
+                      container
+                      justifyContent={"center"}
+                      key={IPlanIndex}
+                      mt={IPlanIndex !== 0 ? 2 : 0}
+                    >
                       <Grid item xs={11.8}>
                         <Card
                           sx={{ border: "1px solid", borderColor: "#e7e7e7" }}
@@ -218,7 +223,7 @@ const PageProductDetailCommonData = ({
                                       IPlan.plan_code && { shrink: true }
                                     }
                                     {...register(
-                                      `data.${IPlanIndex}.plan_code`
+                                      `IPlan.${IPlanIndex}.plan_code`
                                     )}
                                     error={Boolean(errors?.name)}
                                   />
@@ -239,7 +244,7 @@ const PageProductDetailCommonData = ({
                                       IPlan.product_name && { shrink: true }
                                     }
                                     {...register(
-                                      `data.${IPlanIndex}.plan_code`
+                                      `IPlan.${IPlanIndex}.product_name`
                                     )}
                                     error={Boolean(errors?.name)}
                                   />

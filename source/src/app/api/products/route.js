@@ -95,6 +95,54 @@ export async function POST(request) {
         data = response.data?.data;
       }
       return NextResponse.json(data);
+    case "getDocumentAppDetailById":
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}BackOffice/GetDocumentAppDetailById`,
+        body,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      if (response.status === 200) {
+        data = response.data?.data;
+      }
+      return NextResponse.json(data);
+    case "PreviewReportByDocumentCode":
+      let docCode = url.searchParams.get("DocumentCode");
+      response = await axios.post(
+        `${baseUrl}BackOffice/PreviewReportByDocumentCode?DocumentCode=${docCode}`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          responseType: "blob",
+        }
+      );
+
+      if (response.headers["content-type"]?.includes("application/pdf")) {
+        const headers = new Headers();
+        headers.set("Content-Type", "application/pdf");
+        headers.set("Content-Disposition", "inline; filename=document.pdf");
+        headers.set("Cache-Control", "no-cache");
+
+        return new NextResponse(response.data, {
+          status: 200,
+          headers: headers,
+        });
+      } else {
+        return NextResponse.json({ error: "ไม่พบไฟล์ PDF" }, { status: 400 });
+      }
+    case "addOrUpdateProductDocument":
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}BackOffice/AddOrUpdateDocumentAppDetail`,
+        body,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      if (response.status === 200) {
+        data = response.data?.data;
+      }
+      return NextResponse.json(data);
     case "getSaleConditionByProductId":
       productId = url.searchParams.get("productId");
       data = {
