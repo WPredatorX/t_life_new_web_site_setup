@@ -176,7 +176,7 @@ const PageProductsDetail = ({
       },
       is_CalculateFromCoverageToPremium: false,
       is_CalculateFromPremiumToCoverage: false,
-      _document: [],
+      _document: {},
       document: {
         detail_id: "",
         quo_document_id: "",
@@ -244,12 +244,12 @@ const PageProductsDetail = ({
           update_date: watch("commonSetting.update_date") || new Date(),
         },
       };
-
+      const document_id = watch("_document?.id");
       const Documentpayload = {
         document:
           watch("document")?.map((item) => ({
             detail_id: null,
-            document_id: watch("_document?.id"),
+            document_id: "fef74d5f-7e81-424f-8524-7a1d1d615665",
             quo_document_id: null,
             product_plan_id: product_plan_id,
             title: item.title,
@@ -264,6 +264,7 @@ const PageProductsDetail = ({
           })) || [],
       };
 
+      console.log(document_id);
       // ส่งข้อมูลไป API
       const response = await fetch(
         "/api/products?action=AddOrUpdateProductOnShelf",
@@ -291,9 +292,10 @@ const PageProductsDetail = ({
 
       const result = await response.json();
       const resultDocument = await responseDocument.json();
+      console.log("payload", Documentpayload.document);
       handleNotiification("บันทึกข้อมูลสำเร็จ", () => {
         setTimeout(() => {
-          router.push(`/products/`);
+          //router.push(`/products/`);
         }, 400);
       });
 
@@ -408,7 +410,6 @@ const PageProductsDetail = ({
           ICapital: dataInsuranceCapital || [],
           commonSetting: dataProduct[0],
           document: dataDocumentAppDetail || [],
-          _document: null,
           is_CalculateFromCoverageToPremium: false,
           is_CalculateFromPremiumToCoverage: false,
           title: dataDocumentAppDetail?.[0]?.title || "",

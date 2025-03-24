@@ -28,9 +28,10 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
   const [loading, setLoading] = useState(true);
   const { handleSnackAlert } = useAppSnackbar();
   const [checkedCal, setcheckedCal] = useState(true);
-  const [templateOptions, setTemplateOptions] = useState([]);
   const [benefitFile, setBenefitFile] = useState(null);
   const [benefitFileName, setBenefitFileName] = useState("");
+  const [templateOptions, setTemplateOptions] = useState([]);
+
   const validationSchema = Yup.object().shape();
   const {
     watch,
@@ -58,7 +59,18 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
       });
 
       const dataDocument = await response.json();
+
+      const dataSelect = Array.from(dataDocument).find(
+        (item) => item.id === watch("commonSetting.document_id")
+      );
+      const _form = watch();
+      debugger;
       setTemplateOptions(dataDocument);
+      reset({
+        ..._form,
+        _document: dataSelect,
+      });
+
       return dataDocument;
     } catch (error) {
       handleSnackAlert({
@@ -721,7 +733,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                     name={`_document`}
                     control={control}
                     render={({ field }) => {
-                      const { name, onChange, value, ...otherProps } = field;
+                      const { name, onChange, ...otherProps } = field;
                       return (
                         <>
                           <AppAutocomplete
@@ -729,17 +741,11 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                             name={name}
                             disablePortal
                             fullWidth
-                            defaultValue={
-                              watch("commonSetting.document_id") &&
-                              watch("commonSetting.document_id")
-                            }
                             label="เทมเพลตใบเสนอราคา"
-                            getOptionLabel={(option) => option.label}
-                            options={templateOptions}
                             onChange={(event, newValue) => {
                               onChange(newValue);
                             }}
-                            onBeforeOpen={handleFetchTemplate}
+                            options={templateOptions}
                             {...otherProps}
                             error={Boolean(errors?.status)}
                           />
