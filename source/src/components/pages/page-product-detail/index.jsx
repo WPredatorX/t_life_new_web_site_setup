@@ -199,6 +199,8 @@ const PageProductsDetail = ({
   const onSubmit = async (data) => {
     setLoading(true);
     try {
+      const ws = watch();
+      console.log(watch("document.0.document_id"));
       // เตรียมข้อมูลสำหรับส่งไป API
       const Productpayload = {
         common_setting: {
@@ -225,9 +227,10 @@ const PageProductsDetail = ({
             : "02",
           is_send_sms: watch("commonSetting.is_send_sms") || false,
           is_send_mail: watch("commonSetting.is_send_mail") || false,
-          document_id: watch("document.document_id") || watch("_document?.id"),
+          document_id:
+            watch("document.0.document_id") || watch("_document?.id"),
           quo_document_id:
-            watch("document.quo_document_id") || watch("_document?.id"),
+            watch("document.0.quo_document_id") || watch("_document?.id"),
           remark_marketing_name:
             watch("commonSetting.remark_marketing_name") || "",
           item_name: watch("commonSetting.item_name") || "",
@@ -385,7 +388,7 @@ const PageProductsDetail = ({
         let dataDocumentAppDetail;
         if (dataProduct[0].document_id && dataProduct[0].quo_document_id) {
           let dataBodyDoc = JSON.stringify({
-            detail_id: dataProduct[0].document_id,
+            detail_id: null,
             quo_document_id: dataProduct[0].quo_document_id,
             title: "",
           });
@@ -410,6 +413,7 @@ const PageProductsDetail = ({
           _document: null,
           is_CalculateFromCoverageToPremium: false,
           is_CalculateFromPremiumToCoverage: false,
+          title: dataDocumentAppDetail[0].title,
         });
       } catch (error) {
         handleSnackAlert({

@@ -128,7 +128,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const blob = await response.blob();
-      debugger;
+
       // ตรวจสอบว่าเป็น PDF หรือไม่
       /*       if (!blob.type.includes("pdf")) {
         throw new Error("ไม่พบไฟล์ PDF");
@@ -544,7 +544,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                 {type === "0" && (
                   <Grid item xs={12}>
                     <Controller
-                      name={`commonSetting.ordinary_class`}
+                      name={`ordinary_class`}
                       control={control}
                       render={({ field }) => {
                         const { name, onChange, ...otherProps } = field;
@@ -559,23 +559,23 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                               label="ขั้นอาชีพต่ำสุดที่ซื้อได้"
                               options={[
                                 {
-                                  id: "1",
+                                  id: 1,
                                   label: "ขั้นที่ 1",
                                 },
                                 {
-                                  id: "2",
+                                  id: 2,
                                   label: "ขั้นที่ 2",
                                 },
                                 {
-                                  id: "3",
+                                  id: 3,
                                   label: "ขั้นที่ 3",
                                 },
                                 {
-                                  id: "4",
+                                  id: 4,
                                   label: "ขั้นที่ 4",
                                 },
                                 {
-                                  id: "5",
+                                  id: 5,
                                   label: "ขั้นที่ 5",
                                 },
                               ]}
