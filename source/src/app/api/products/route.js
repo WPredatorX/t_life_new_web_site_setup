@@ -115,15 +115,15 @@ export async function POST(request) {
         {},
         {
           headers: { Authorization: `Bearer ${accessToken}` },
-          responseType: "blob",
+          responseType: "arraybuffer",
         }
       );
 
       if (response.headers["content-type"]?.includes("application/pdf")) {
         const headers = new Headers();
         headers.set("Content-Type", "application/pdf");
-        headers.set("Content-Disposition", "inline; filename=document.pdf");
-        headers.set("Cache-Control", "no-cache");
+        //headers.set("Content-Disposition", "inline; filename=document.pdf");
+        //headers.set("Cache-Control", "no-cache");
 
         return new NextResponse(response.data, {
           status: 200,

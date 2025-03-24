@@ -117,20 +117,22 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
         `/api/products?action=PreviewReportByDocumentCode&DocumentCode=${docCode}`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/octet-stream",
+          },
         }
       );
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-
       const blob = await response.blob();
-
+      debugger;
       // ตรวจสอบว่าเป็น PDF หรือไม่
-      if (!blob.type.includes("pdf")) {
+      /*       if (!blob.type.includes("pdf")) {
         throw new Error("ไม่พบไฟล์ PDF");
-      }
+      } */
 
       const previewUrl = URL.createObjectURL(blob);
 
