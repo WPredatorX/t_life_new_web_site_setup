@@ -23,6 +23,7 @@ import {
   PageCommonSetting,
   PageDocumentSetting,
 } from "./components";
+import { ro } from "date-fns/locale";
 
 const PageProductsDetail = ({
   productId,
@@ -191,6 +192,10 @@ const PageProductsDetail = ({
         update_date: null,
         update_by: null,
       },
+      policy_document: {
+        policy_document_type: "",
+        policy_document_file: "",
+      },
     },
   });
 
@@ -199,8 +204,6 @@ const PageProductsDetail = ({
   const onSubmit = async (data) => {
     setLoading(true);
     try {
-      const ws = watch();
-      console.log(watch("document.0.document_id"));
       // เตรียมข้อมูลสำหรับส่งไป API
       const Productpayload = {
         common_setting: {
@@ -227,10 +230,8 @@ const PageProductsDetail = ({
             : "02",
           is_send_sms: watch("commonSetting.is_send_sms") || false,
           is_send_mail: watch("commonSetting.is_send_mail") || false,
-          document_id:
-            watch("document.0.document_id") || watch("_document?.id"),
-          quo_document_id:
-            watch("document.0.quo_document_id") || watch("_document?.id"),
+          document_id: watch("_document?.id"),
+          quo_document_id: watch("document.0.quo_document_id") || null,
           remark_marketing_name:
             watch("commonSetting.remark_marketing_name") || "",
           item_name: watch("commonSetting.item_name") || "",
@@ -247,9 +248,9 @@ const PageProductsDetail = ({
       const Documentpayload = {
         document:
           watch("document")?.map((item) => ({
-            detail_id: item.detail_id,
-            document_id: item.document_id,
-            quo_document_id: item.quo_document_id,
+            detail_id: null,
+            document_id: watch("_document?.id"),
+            quo_document_id: null,
             product_plan_id: product_plan_id,
             title: item.title,
             create_by: item.create_by,
@@ -262,9 +263,6 @@ const PageProductsDetail = ({
             detail_type: item.detail_type,
           })) || [],
       };
-
-      console.log("Productpayload", Productpayload.common_setting);
-      console.log("Documentpayload", Documentpayload.document);
 
       // ส่งข้อมูลไป API
       const response = await fetch(
@@ -295,7 +293,7 @@ const PageProductsDetail = ({
       const resultDocument = await responseDocument.json();
       handleNotiification("บันทึกข้อมูลสำเร็จ", () => {
         setTimeout(() => {
-          // อาจจะเพิ่มการ redirect หรือ refresh ข้อมูลที่นี่
+          router.push(`/products/`);
         }, 400);
       });
 
@@ -409,11 +407,15 @@ const PageProductsDetail = ({
           IPlan: dataInsurancePlan || [],
           ICapital: dataInsuranceCapital || [],
           commonSetting: dataProduct[0],
-          document: dataDocumentAppDetail,
+          document: dataDocumentAppDetail || [],
           _document: null,
           is_CalculateFromCoverageToPremium: false,
           is_CalculateFromPremiumToCoverage: false,
-          title: dataDocumentAppDetail[0].title,
+          title: dataDocumentAppDetail?.[0]?.title || "",
+          policy_document: {
+            policy_document_type: "",
+            policy_document_file: "",
+          },
         });
       } catch (error) {
         handleSnackAlert({

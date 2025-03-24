@@ -28,6 +28,9 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
   const [loading, setLoading] = useState(true);
   const { handleSnackAlert } = useAppSnackbar();
   const [checkedCal, setcheckedCal] = useState(true);
+  const [templateOptions, setTemplateOptions] = useState([]);
+  const [benefitFile, setBenefitFile] = useState(null);
+  const [benefitFileName, setBenefitFileName] = useState("");
   const validationSchema = Yup.object().shape();
   const {
     watch,
@@ -38,6 +41,11 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
     setValue,
     formState: { errors },
   } = formMethods;
+
+  useEffect(() => {
+    handleFetchTemplate();
+  }, []);
+
   const handleCalChange = () => {
     setcheckedCal((prev) => !prev);
   };
@@ -50,6 +58,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
       });
 
       const dataDocument = await response.json();
+      setTemplateOptions(dataDocument);
       return dataDocument;
     } catch (error) {
       handleSnackAlert({
@@ -85,10 +94,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
     }
 
     let data = {
-      detail_id: watch(`_document.id`),
       document_id: watch(`_document.id`),
-      quo_document_id: watch(`_document.id`),
-      product_plan_id: watch(`_document.id`),
       title: watch(`title`),
       create_by: "admin",
       create_date: new Date(),
@@ -176,10 +182,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
     }
 
     let data = {
-      detail_id: watch(`_document.id`),
       document_id: watch(`_document.id`),
-      quo_document_id: watch(`_document.id`),
-      product_plan_id: watch(`_document.id`),
       title: watch(`title`),
       create_by: "admin",
       create_date: new Date(),
@@ -204,82 +207,44 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
     DataForRemove.sort((a, b) => b - a).forEach((index) => remove(index));
   };
 
-  const handleSave = async () => {
-    try {
-      setLoading(true);
-      const formData = watch();
-
-      // เตรียมข้อมูลสำหรับส่งไป API
-      const payload = {
-        product_id: productId,
-        common_setting: {
-          is_check_fatca: formData.commonSetting?.is_check_fatca || false,
-          is_fatca: formData.commonSetting?.is_fatca || false,
-          is_sale_fatca: formData.commonSetting?.is_sale_fatca || false,
-          is_crs: formData.commonSetting?.is_crs || false,
-          is_sale_crs: formData.commonSetting?.is_sale_crs || false,
-          is_health: formData.commonSetting?.is_health || false,
-          is_refund: formData.commonSetting?.is_refund || false,
-          is_recurring: formData.commonSetting?.is_recurring || false,
-          is_tex: formData.commonSetting?.is_tex || false,
-          is_CalculateFromCoverageToPremium:
-            formData.commonSetting?.is_CalculateFromCoverageToPremium || false,
-          is_factor: formData.commonSetting?.is_factor || false,
-          ordinary_class: formData.commonSetting?.ordinary_class?.id || null,
-          cal_temp_code: checkedCal ? "01" : "02",
-        },
-        document: {
-          document_id: formData._document?.id,
-          document_code: formData._document?.document_code,
-          title: formData.title,
-          details: fields.map((field) => ({
-            detail_id: field.detail_id,
-            document_id: field.document_id,
-            description: field.description,
-            seq: field.seq,
-            detail_type: field.detail_type,
-            is_active: field.is_active,
-            createBy: field.createBy,
-            createDate: field.createDate,
-            updateBy: field.updateBy,
-            updateDate: field.updateDate,
-          })),
-        },
-      };
-
-      const response = await fetch(
-        "/api/products?action=AddOrUpdateProductOnShelf",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+  const handleFileUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      // ตรวจสอบขนาดไฟล์ (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        handleSnackAlert({
+          open: true,
+          message: "ไฟล์มีขนาดใหญ่เกินไป กรุณาอัพโหลดไฟล์ขนาดไม่เกิน 10MB",
+          severity: "error",
+        });
+        return;
       }
 
-      const result = await response.json();
+      // ตรวจสอบประเภทไฟล์
+      const allowedTypes = [
+        "application/pdf",
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+      ];
+      if (!allowedTypes.includes(file.type)) {
+        handleSnackAlert({
+          open: true,
+          message: "กรุณาอัพโหลดไฟล์ PDF หรือรูปภาพเท่านั้น",
+          severity: "error",
+        });
+        return;
+      }
 
-      handleSnackAlert({
-        open: true,
-        message: "บันทึกข้อมูลสำเร็จ",
-        severity: "success",
-      });
-
-      return result;
-    } catch (error) {
-      handleSnackAlert({
-        open: true,
-        message: `เกิดข้อผิดพลาดในการบันทึกข้อมูล: ${error.message}`,
-        severity: "error",
-      });
-      return null;
-    } finally {
-      setLoading(false);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const base64String = e.target.result;
+        setBenefitFile(base64String);
+        setBenefitFileName(file.name);
+        setValue("benefit_document", base64String);
+        alert("อัพโหลดไฟล์สำเร็จ");
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -544,10 +509,21 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                 {type === "0" && (
                   <Grid item xs={12}>
                     <Controller
-                      name={`ordinary_class`}
+                      name={`commonSetting.ordinary_class`}
                       control={control}
+                      defaultValue={
+                        watch("commonSetting.ordinary_class") &&
+                        Number(watch("commonSetting.ordinary_class")) > 0
+                          ? {
+                              id: Number(watch("commonSetting.ordinary_class")),
+                              label: `ขั้นที่ ${watch(
+                                "commonSetting.ordinary_class"
+                              )}`,
+                            }
+                          : null
+                      }
                       render={({ field }) => {
-                        const { name, onChange, ...otherProps } = field;
+                        const { name, onChange, value, ...otherProps } = field;
 
                         return (
                           <>
@@ -579,8 +555,24 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                                   label: "ขั้นที่ 5",
                                 },
                               ]}
-                              onChange={(event, value) => {
-                                onChange(value);
+                              value={
+                                value
+                                  ? {
+                                      id: Number(
+                                        typeof value === "object"
+                                          ? value.id
+                                          : value
+                                      ),
+                                      label: `ขั้นที่ ${
+                                        typeof value === "object"
+                                          ? value.id
+                                          : value
+                                      }`,
+                                    }
+                                  : null
+                              }
+                              onChange={(event, newValue) => {
+                                onChange(newValue);
                               }}
                               {...otherProps}
                               error={Boolean(errors?.status)}
@@ -615,10 +607,22 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                     label="เอกสารสิทธิประโยชน์ตามกรมธรรม์"
                     fullWidth
                     size="small"
+                    value={benefitFileName}
                     InputProps={{
                       endAdornment: (
                         <InputAdornment position="end">
-                          <Button sx={{ color: "GrayText" }}>อัพโหลด</Button>
+                          <input
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png,.gif"
+                            style={{ display: "none" }}
+                            id="benefit-file-upload"
+                            onChange={handleFileUpload}
+                          />
+                          <label htmlFor="benefit-file-upload">
+                            <Button component="span" sx={{ color: "GrayText" }}>
+                              อัพโหลด
+                            </Button>
+                          </label>
                         </InputAdornment>
                       ),
                     }}
@@ -717,7 +721,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                     name={`_document`}
                     control={control}
                     render={({ field }) => {
-                      const { name, onChange, ...otherProps } = field;
+                      const { name, onChange, value, ...otherProps } = field;
                       return (
                         <>
                           <AppAutocomplete
@@ -725,9 +729,15 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                             name={name}
                             disablePortal
                             fullWidth
+                            defaultValue={
+                              watch("commonSetting.document_id") &&
+                              watch("commonSetting.document_id")
+                            }
                             label="เทมเพลตใบเสนอราคา"
-                            onChange={(event, value) => {
-                              onChange(value);
+                            getOptionLabel={(option) => option.label}
+                            options={templateOptions}
+                            onChange={(event, newValue) => {
+                              onChange(newValue);
                             }}
                             onBeforeOpen={handleFetchTemplate}
                             {...otherProps}
