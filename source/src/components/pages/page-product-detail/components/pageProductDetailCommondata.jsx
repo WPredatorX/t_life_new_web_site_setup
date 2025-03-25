@@ -328,6 +328,7 @@ const PageProductDetailCommonData = ({
             <Grid item xs={4}>
               <TextField
                 fullWidth
+                disabled
                 label="รหัสแบบประกัน"
                 value={productId}
                 margin="dense"
@@ -339,11 +340,26 @@ const PageProductDetailCommonData = ({
             <Grid item xs={4}>
               <TextField
                 fullWidth
+                disabled
                 label="ชื่อแบบประกัน"
                 margin="dense"
                 size="small"
+                id={`commonSetting.c_package`}
+                defaultValue={
+                  watch(`commonSetting.c_package`)
+                    ? watch(`commonSetting.c_package`)
+                    : ""
+                }
+                {...register(`commonSetting.c_package`)}
                 inputProps={{ maxLength: 100 }}
+                InputLabelProps={
+                  watch(`commonSetting.c_package`) && { shrink: true }
+                }
+                error={Boolean(errors?.name)}
               />
+              <FormHelperText error={errors?.name}>
+                {errors?.name?.message}
+              </FormHelperText>
             </Grid>
             <Grid item xs={4}>
               <TextField
@@ -351,8 +367,22 @@ const PageProductDetailCommonData = ({
                 label="ชื่อทางการตลาด"
                 margin="dense"
                 size="small"
+                id={`commonSetting.title`}
+                defaultValue={
+                  watch(`commonSetting.title`)
+                    ? watch(`commonSetting.title`)
+                    : ""
+                }
+                {...register(`commonSetting.title`)}
                 inputProps={{ maxLength: 100 }}
+                InputLabelProps={
+                  watch(`commonSetting.title`) && { shrink: true }
+                }
+                error={Boolean(errors?.name)}
               />
+              <FormHelperText error={errors?.name}>
+                {errors?.name?.message}
+              </FormHelperText>
             </Grid>
           </Grid>
           <Grid container spacing={2}>
@@ -362,8 +392,24 @@ const PageProductDetailCommonData = ({
                 label="หมายเหตุ"
                 margin="dense"
                 size="small"
+                id={`commonSetting.remark_marketing_name`}
+                defaultValue={
+                  watch(`commonSetting.remark_marketing_name`)
+                    ? watch(`commonSetting.remark_marketing_name`)
+                    : ""
+                }
+                {...register(`commonSetting.remark_marketing_name`)}
                 inputProps={{ maxLength: 100 }}
+                InputLabelProps={
+                  watch(`commonSetting.remark_marketing_name`) && {
+                    shrink: true,
+                  }
+                }
+                error={Boolean(errors?.name)}
               />
+              <FormHelperText error={errors?.name}>
+                {errors?.name?.message}
+              </FormHelperText>
             </Grid>
           </Grid>
         </Grid>

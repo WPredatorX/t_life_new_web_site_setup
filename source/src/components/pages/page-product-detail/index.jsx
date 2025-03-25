@@ -192,9 +192,10 @@ const PageProductsDetail = ({
         update_date: null,
         update_by: null,
       },
-      policy_document: {
+      beneficiary_document: {
         policy_document_type: "",
         policy_document_file: "",
+        policy_document_name: "",
       },
     },
   });
@@ -263,8 +264,6 @@ const PageProductsDetail = ({
             detail_type: item.detail_type,
           })) || [],
       };
-
-      console.log(document_id);
       // ส่งข้อมูลไป API
       const response = await fetch(
         "/api/products?action=AddOrUpdateProductOnShelf",
@@ -292,10 +291,59 @@ const PageProductsDetail = ({
 
       const result = await response.json();
       const resultDocument = await responseDocument.json();
-      console.log("payload", Documentpayload.document);
+      let dataPolicyholderDocument = {
+        policy_document_id: null,
+        product_plan_id: product_plan_id,
+        is_active: true,
+        create_date: new Date(),
+        create_by: "admin",
+        update_date: new Date(),
+        update_by: "admin",
+        policy_document_type: "1",
+        policy_document_name: watch(
+          "beneficiary_document.policy_document_name"
+        ),
+        policy_document_file: watch(
+          "beneficiary_document.policy_document_file"
+        ),
+      };
+
+      const policyholderBeneficiaryDocument = await fetch(
+        "/api/products?action=AddOrUpdatePolicyholderDocuments",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(dataPolicyholderDocument),
+        }
+      );
+      dataPolicyholderDocument = {
+        policy_document_id: null,
+        product_plan_id: product_plan_id,
+        policy_document_name: null,
+        policy_document_file_path: null,
+        is_active: true,
+        create_date: new Date(),
+        create_by: "admin",
+        update_date: new Date(),
+        update_by: "admin",
+        policy_document_type: "2",
+        policy_document_name: watch("occupation_document.policy_document_name"),
+        policy_document_file: watch("occupation_document.policy_document_file"),
+      };
+      if (type === "0") {
+        const policyholderOccupationDocument = await fetch(
+          "/api/products?action=AddOrUpdatePolicyholderDocuments",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(dataPolicyholderDocument),
+          }
+        );
+      }
+
       handleNotiification("บันทึกข้อมูลสำเร็จ", () => {
         setTimeout(() => {
-          //router.push(`/products/`);
+          router.push(`/products/`);
         }, 400);
       });
 
@@ -316,7 +364,6 @@ const PageProductsDetail = ({
     const alert = handleNotiification("ล้างข้อมูลสำเร็จ", () => {
       return true;
     });
-    console.log(alert);
   };
 
   const handleBack = () => {
@@ -392,7 +439,6 @@ const PageProductsDetail = ({
             quo_document_id: dataProduct[0].quo_document_id,
             title: "",
           });
-          console.log("databodyDoc", dataBodyDoc);
           let responseDocumentAppDetail = await fetch(
             `/api/products?action=getDocumentAppDetailById`,
             {
@@ -413,9 +459,15 @@ const PageProductsDetail = ({
           is_CalculateFromCoverageToPremium: false,
           is_CalculateFromPremiumToCoverage: false,
           title: dataDocumentAppDetail?.[0]?.title || "",
-          policy_document: {
+          beneficiary_document: {
             policy_document_type: "",
             policy_document_file: "",
+            policy_document_name: "",
+          },
+          occupation_document: {
+            policy_document_type: "",
+            policy_document_file: "",
+            policy_document_name: "",
           },
         });
       } catch (error) {

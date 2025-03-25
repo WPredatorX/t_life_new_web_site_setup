@@ -132,6 +132,17 @@ export async function POST(request) {
       } else {
         return NextResponse.json({ error: "ไม่พบไฟล์ PDF" }, { status: 400 });
       }
+    case "AddOrUpdatePolicyholderDocuments":
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}BackOffice/AddOrUpdatePolicyholderDocuments`,
+        body,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      if (response.status === 200) {
+        data = response.data?.data;
+      }
+      return NextResponse.json(data);
     case "addOrUpdateProductDocument":
       body = await request.json();
       response = await axios.post(

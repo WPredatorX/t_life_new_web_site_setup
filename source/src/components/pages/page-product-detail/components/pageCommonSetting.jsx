@@ -30,6 +30,8 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
   const [checkedCal, setcheckedCal] = useState(true);
   const [benefitFile, setBenefitFile] = useState(null);
   const [benefitFileName, setBenefitFileName] = useState("");
+  const [occupationFile, setOccupationFile] = useState(null);
+  const [occupationFileName, setOccupationFileName] = useState("");
   const [templateOptions, setTemplateOptions] = useState([]);
 
   const validationSchema = Yup.object().shape();
@@ -64,7 +66,6 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
         (item) => item.id === watch("commonSetting.document_id")
       );
       const _form = watch();
-      debugger;
       setTemplateOptions(dataDocument);
       reset({
         ..._form,
@@ -84,13 +85,28 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
 
   const baseName = "document";
   const baseErrors = errors?.[baseName];
-  const { fields, append, remove, insert } = useFieldArray({
+  const {
+    fields: fieldsDocument,
+    append: appendDocument,
+    remove: removeDocument,
+    insert: insertDocument,
+  } = useFieldArray({
     control,
     name: baseName,
   });
 
+  const {
+    fields: fieldsPolicyDocument,
+    append: appendPolicyDocument,
+    remove: removePolicyDocument,
+    insert: insertPolicyDocument,
+  } = useFieldArray({
+    control,
+    name: "policy_document",
+  });
+
   const AddField_Note = (length) => {
-    if (fields.length === 0) {
+    if (fieldsDocument.length === 0) {
       register(`document.detail_id`);
       register(`document.document_id`);
       register(`document.quo_document_id`);
@@ -118,15 +134,39 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
       detail_type: 1,
     };
 
-    insert(fields.length, data);
-
-    const w = watch();
-    console.log(w);
+    insertDocument(fieldsDocument.length, data);
   };
 
   const DeleteField = (row) => {
-    console.log(row);
-    remove(row);
+    removeDocument(row);
+  };
+
+  const BeneficiaryDocumentExample = async () => {
+    try {
+      /* const response = await fetch(
+        `/api/products?action=PreviewReportByDocumentCode&DocumentCode=${docCode}`,
+      ); */
+      const w = watch();
+    } catch (error) {
+      handleSnackAlert({
+        open: true,
+        message: `ขออภัย เกิดข้อผิดพลาด กรุณาติดต่อเจ้าหน้าที่ที่เกี่ยวข้อง ${error.message}`,
+      });
+    }
+  };
+
+  const OccupationDocumentExample = async () => {
+    try {
+      /* const response = await fetch(
+        `/api/products?action=PreviewReportByDocumentCode&DocumentCode=${docCode}`,
+      ); */
+      const w = watch();
+    } catch (error) {
+      handleSnackAlert({
+        open: true,
+        message: `ขออภัย เกิดข้อผิดพลาด กรุณาติดต่อเจ้าหน้าที่ที่เกี่ยวข้อง ${error.message}`,
+      });
+    }
   };
 
   const DocumentExample = async (docCode) => {
@@ -178,7 +218,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
   };
 
   const AddField_Disease = (length) => {
-    if (fields.length === 0) {
+    if (fieldsDocument.length === 0) {
       register(`document.detail_id`);
       register(`document.document_id`);
       register(`document.quo_document_id`);
@@ -206,20 +246,19 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
       detail_type: 2,
     };
 
-    insert(fields.length, data);
-
-    const w = watch();
-    console.log(w);
+    insertDocument(fieldsDocument.length, data);
   };
 
   const DeleteAll = (detail_type) => {
-    let DataForRemove = fields
+    let DataForRemove = fieldsDocument
       .map((item, index) => (item.detail_type === detail_type ? index : -1))
       .filter((index) => index !== -1);
-    DataForRemove.sort((a, b) => b - a).forEach((index) => remove(index));
+    DataForRemove.sort((a, b) => b - a).forEach((index) =>
+      removeDocument(index)
+    );
   };
 
-  const handleFileUpload = (event) => {
+  const handleBenefitFileUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
       // ตรวจสอบขนาดไฟล์ (max 10MB)
@@ -250,10 +289,56 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
 
       const reader = new FileReader();
       reader.onload = (e) => {
-        const base64String = e.target.result;
+        const base64String = e.target.result.split(",")[1];
         setBenefitFile(base64String);
         setBenefitFileName(file.name);
-        setValue("benefit_document", base64String);
+        setValue("beneficiary_document.policy_document_file", base64String);
+        setValue("beneficiary_document.policy_document_name", file.name);
+        setValue("beneficiary_document.policy_document_type", 1);
+        alert("อัพโหลดไฟล์สำเร็จ");
+      };
+      console.log(file);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleOccupationFileUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      // ตรวจสอบขนาดไฟล์ (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        handleSnackAlert({
+          open: true,
+          message: "ไฟล์มีขนาดใหญ่เกินไป กรุณาอัพโหลดไฟล์ขนาดไม่เกิน 10MB",
+          severity: "error",
+        });
+        return;
+      }
+
+      // ตรวจสอบประเภทไฟล์
+      const allowedTypes = [
+        "application/pdf",
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+      ];
+      if (!allowedTypes.includes(file.type)) {
+        handleSnackAlert({
+          open: true,
+          message: "กรุณาอัพโหลดไฟล์ PDF หรือรูปภาพเท่านั้น",
+          severity: "error",
+        });
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const base64String = e.target.result.split(",")[1];
+        setOccupationFile(base64String);
+        setOccupationFileName(file.name);
+        setValue("occupation_document.policy_document_file", base64String);
+        setValue("occupation_document.policy_document_name", file.name);
+        setValue("occupation_document.policy_document_type", 2);
         alert("อัพโหลดไฟล์สำเร็จ");
       };
       reader.readAsDataURL(file);
@@ -628,7 +713,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                             accept=".pdf,.jpg,.jpeg,.png,.gif"
                             style={{ display: "none" }}
                             id="benefit-file-upload"
-                            onChange={handleFileUpload}
+                            onChange={handleBenefitFileUpload}
                           />
                           <label htmlFor="benefit-file-upload">
                             <Button component="span" sx={{ color: "GrayText" }}>
@@ -641,7 +726,14 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                   />
                 </Grid>
                 <Grid item xs={2}>
-                  <Button variant="contained">ดูเอกสาร</Button>
+                  <Button
+                    onClick={() => {
+                      BeneficiaryDocumentExample();
+                    }}
+                    variant="contained"
+                  >
+                    ดูเอกสาร
+                  </Button>
                 </Grid>
               </Grid>
               {type === "0" && (
@@ -651,17 +743,39 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                       label="เอกสารขั้นอาชีพ"
                       fullWidth
                       size="small"
+                      value={occupationFileName}
                       InputProps={{
                         endAdornment: (
                           <InputAdornment position="end">
-                            <Button sx={{ color: "GrayText" }}>อัพโหลด</Button>
+                            <input
+                              type="file"
+                              accept=".pdf,.jpg,.jpeg,.png,.gif"
+                              style={{ display: "none" }}
+                              id="occupation-file-upload"
+                              onChange={handleOccupationFileUpload}
+                            />
+                            <label htmlFor="occupation-file-upload">
+                              <Button
+                                component="span"
+                                sx={{ color: "GrayText" }}
+                              >
+                                อัพโหลด
+                              </Button>
+                            </label>
                           </InputAdornment>
                         ),
                       }}
                     />
                   </Grid>
                   <Grid item xs={2}>
-                    <Button variant="contained">ดูเอกสาร</Button>
+                    <Button
+                      onClick={() => {
+                        OccupationDocumentExample();
+                      }}
+                      variant="contained"
+                    >
+                      ดูเอกสาร
+                    </Button>
                   </Grid>
                 </Grid>
               )}
@@ -805,7 +919,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                                 variant="contained"
                                 onClick={() => {
                                   AddField_Note(
-                                    fields.filter(
+                                    fieldsDocument.filter(
                                       (item) => item.detail_type === 1
                                     ).length
                                   );
@@ -833,7 +947,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                       borderColor: "#e7e7e7",
                     }}
                   >
-                    {fields.map(
+                    {fieldsDocument.map(
                       (doc, docindex) =>
                         doc.detail_type === 1 && (
                           <Grid container spacing={2} key={docindex}>
@@ -898,7 +1012,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                                   variant="contained"
                                   onClick={() => {
                                     AddField_Disease(
-                                      fields.filter(
+                                      fieldsDocument.filter(
                                         (item) => item.detail_type === 2
                                       ).length
                                     );
@@ -926,7 +1040,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                         borderColor: "#e7e7e7",
                       }}
                     >
-                      {fields.map(
+                      {fieldsDocument.map(
                         (doc, docindex) =>
                           doc.detail_type === 2 && (
                             <Grid container spacing={2} key={docindex}>
