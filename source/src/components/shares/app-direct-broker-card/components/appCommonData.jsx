@@ -9,10 +9,13 @@ import {
   Chip,
   Card,
   CircularProgress,
+  FormHelperText,
 } from "@mui/material";
 import { AppCard } from "@/components";
 import { useEffect, useState } from "react";
-import { useAppSnackbar } from "@/hooks";
+import { useAppForm, useAppSnackbar } from "@/hooks";
+import { Yup } from "@/utilities";
+import { yupResolver } from "@hookform/resolvers/yup";
 
 const AppCommonData = ({ mode }) => {
   const [GeneralInfo, SetGeneralInfo] = useState();
@@ -23,6 +26,42 @@ const AppCommonData = ({ mode }) => {
   const theme = useTheme();
   const [loading, setLoading] = useState(false);
   const { handleSnackAlert } = useAppSnackbar();
+  const validationSchema = Yup.array().of(Yup.object().shape({}));
+  const formMethods = useAppForm({
+    mode: "onBlur",
+    reValidateMode: "onChange",
+    resolver: yupResolver(validationSchema),
+    defaultValues: {
+      GeneralInfo: [
+        {
+          i_subbusiness_line: "",
+          c_subbusiness_line: "",
+          i_business_line: "",
+          broker_id: "",
+          broker_name: "",
+          broker_logo: "",
+          broker_license_number: "",
+          broker_email: "",
+          broker_url: "",
+          recipient_id: "",
+          mail_to: "",
+          mail_cc: "",
+          template_code: "",
+        },
+      ],
+    },
+  });
+
+  const {
+    reset,
+    watch,
+    setValue,
+    register,
+    formState: { errors },
+  } = formMethods;
+  const baseName = "GeneralInfo";
+  const baseErrors = errors?.[baseName];
+
   const handleFetchData = async () => {
     setLoading(true);
     try {
@@ -31,6 +70,15 @@ const AppCommonData = ({ mode }) => {
         headers: { "Content-Type": "application/json" },
       });
       const data = await response.json();
+      const result = Array.from(data || []).map((item) => {
+        return {
+          ...item,
+          mail_to: item.mail_to.split(";"),
+          mail_cc: item.mail_cc.split(";"),
+        };
+      });
+      reset({ GeneralInfo: result });
+
       SetGeneralInfo(data[0]);
     } catch (error) {
       handleSnackAlert({
@@ -39,11 +87,41 @@ const AppCommonData = ({ mode }) => {
       });
     } finally {
       setLoading(false);
+      setConfirmEmail(watch(`${baseName}.0.mail_to`));
+      setConfirmEmailCC(watch(`${baseName}.0.mail_cc`));
+      setContactEmail(watch(`${baseName}.1.mail_to`));
+      setContactEmailCC(watch(`${baseName}.1.mail_cc`));
+      let w = watch();
+      console.log(w);
     }
   };
   useEffect(() => {
     handleFetchData();
   }, []);
+
+  const onSubmit = () => {
+    setLoading(true);
+    try {
+    } catch (error) {
+      handleSnackAlert({
+        open: true,
+        message: `เกิดข้อผิดพลาดในการบันทึกข้อมูล: ${error.message}`,
+        severity: "error",
+      });
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onReset = () => {
+    reset();
+    setConfirmEmail(watch(`${baseName}.0.mail_to`));
+    setConfirmEmailCC(watch(`${baseName}.0.mail_cc`));
+    setContactEmail(watch(`${baseName}.1.mail_to`));
+    setContactEmailCC(watch(`${baseName}.1.mail_cc`));
+  };
+
   if (loading) {
     return (
       <Grid item xs={10.5} my={4} textAlign={"center"}>
@@ -51,6 +129,52 @@ const AppCommonData = ({ mode }) => {
       </Grid>
     );
   }
+
+  const handleTestSendMail = async (template_code) => {
+    setLoading(true);
+    try {
+      let dataBody;
+      if (template_code === 1) {
+        dataBody = {
+          mail_to: ConfirmEmail.join(";"),
+          mail_cc: ConfirmEmailCC.join(";"),
+          template_code: "01",
+        };
+        const response = await fetch(`/api/direct?action=TestSendMail`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(dataBody),
+        });
+        if (response.status === 200) {
+          alert("ส่งเมลล์สำเร็จ");
+        }
+      } else if (template_code === 2) {
+        dataBody = {
+          mail_to: ContactEmail.join(";"),
+          mail_cc: ContactEmailCC.join(";"),
+          template_code: "02",
+        };
+        const response = await fetch(`/api/direct?action=TestSendMail`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(dataBody),
+        });
+        if (response.status === 200) {
+          alert("ส่งเมลล์สำเร็จ");
+        }
+      }
+    } catch (error) {
+      handleSnackAlert({
+        open: true,
+        message: `เกิดข้อผิดพลาดในการบันทึกข้อมูล: ${error.message}`,
+        severity: "error",
+      });
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Grid container justifyContent={"center"} my={2}>
       <Grid item xs={11.6}>
@@ -65,12 +189,21 @@ const AppCommonData = ({ mode }) => {
               </Typography>
               <TextField
                 disabled
-                value={GeneralInfo && GeneralInfo.i_subbusiness_line}
+                value={
+                  watch(`${baseName}.0.i_subbusiness_line`) &&
+                  watch(`${baseName}.0.i_subbusiness_line`)
+                }
                 variant="outlined"
                 size="small"
+                id={`${baseName}.0.i_subbusiness_line`}
+                {...register(`${baseName}.0.i_subbusiness_line`)}
                 fullWidth
                 sx={{ paddingTop: 1 }}
+                error={Boolean(errors?.name)}
               />
+              <FormHelperText error={errors?.name}>
+                {errors?.name?.message}
+              </FormHelperText>
             </Grid>
           </Grid>
           <Grid container mt={2}>
@@ -80,12 +213,21 @@ const AppCommonData = ({ mode }) => {
               </Typography>
               <TextField
                 disabled
-                value={GeneralInfo && GeneralInfo.c_subbusiness_line}
+                value={
+                  watch(`${baseName}.0.c_subbusiness_line`) &&
+                  watch(`${baseName}.0.c_subbusiness_line`)
+                }
                 variant="outlined"
                 size="small"
+                id={`${baseName}.0.c_subbusiness_line`}
+                {...register(`${baseName}.0.c_subbusiness_line`)}
                 fullWidth
                 sx={{ paddingTop: 1 }}
+                error={Boolean(errors?.name)}
               />
+              <FormHelperText error={errors?.name}>
+                {errors?.name?.message}
+              </FormHelperText>
             </Grid>
           </Grid>
         </AppCard>
@@ -112,7 +254,8 @@ const AppCommonData = ({ mode }) => {
                     <Chip
                       label={option}
                       {...props({ index })}
-                      style={{ border: "1px solid red" }}
+                      style={{ margin: "auto" }}
+                      key={index}
                     />
                   ))
                 }
@@ -149,6 +292,7 @@ const AppCommonData = ({ mode }) => {
                       label={option}
                       {...props({ index })}
                       style={{ margin: "auto" }}
+                      key={index}
                     />
                   ))
                 }
@@ -172,6 +316,9 @@ const AppCommonData = ({ mode }) => {
                   width: "15rem",
                   backgroundColor: theme.palette.primary.main,
                   color: theme.palette.common.white,
+                }}
+                onClick={() => {
+                  handleTestSendMail(1);
                 }}
               >
                 ทดสอบส่งเมลล์
@@ -203,6 +350,7 @@ const AppCommonData = ({ mode }) => {
                       label={option}
                       {...props({ index })}
                       style={{ margin: "auto" }}
+                      key={index}
                     />
                   ))
                 }
@@ -239,6 +387,7 @@ const AppCommonData = ({ mode }) => {
                       label={option}
                       {...props({ index })}
                       style={{ margin: "auto" }}
+                      key={index}
                     />
                   ))
                 }
@@ -263,6 +412,9 @@ const AppCommonData = ({ mode }) => {
                   backgroundColor: theme.palette.primary.main,
                   color: theme.palette.common.white,
                 }}
+                onClick={() => {
+                  handleTestSendMail(2);
+                }}
               >
                 ทดสอบส่งเมลล์
               </Button>
@@ -276,24 +428,22 @@ const AppCommonData = ({ mode }) => {
             <Grid container spacing={2} justifyContent={"center"} mt={1} mb={3}>
               <Grid item xs={11.6}>
                 <Grid container justifyContent={"end"} spacing={2}>
-                  <Grid item xs={12} md={2}>
-                    <Button variant="outlined" fullWidth>
-                      ยกเลิก
-                    </Button>
+                  <Grid item xs="auto">
+                    <Button variant="outlined">ยกเลิก</Button>
                   </Grid>
-                  <Grid item xs={12} md={2}>
-                    <Button variant="outlined" fullWidth>
+                  <Grid item xs="auto">
+                    <Button variant="outlined" onClick={onReset}>
                       ล้างค่า
                     </Button>
                   </Grid>
-                  <Grid item xs={12} md={2}>
+                  <Grid item xs="auto">
                     <Button
-                      fullWidth
                       variant="contained"
                       sx={{
                         color: theme.palette.common.white,
                         backgroundColor: theme.palette.primary.main,
                       }}
+                      onClick={onSubmit}
                     >
                       บันทึก
                     </Button>

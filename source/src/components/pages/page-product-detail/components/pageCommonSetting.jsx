@@ -726,6 +726,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                   />
                 </Grid>
                 <Grid item xs={2}>
+                  {/* todo แสดงเอกสาร */}
                   <Button
                     onClick={() => {
                       BeneficiaryDocumentExample();

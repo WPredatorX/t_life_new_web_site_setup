@@ -17,13 +17,21 @@ export async function POST(request) {
   let limit = null;
   switch (action) {
     case "GetDirectGeneralInfo":
-      console.log(baseUrl);
-      start = url.searchParams.get("pageNumber");
-      limit = url.searchParams.get("pageSize");
       response = await axios.post(`${baseUrl}BackOffice/GetDirectGeneralInfo`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
-      data = response.data?.data;
+      if (response.status === 200) {
+        data = response.data?.data;
+      }
+      return NextResponse.json(data);
+    case "TestSendMail":
+      body = await request.json();
+      response = await axios.post(`${baseUrl}BackOffice/SendEmailTest`, body, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (response.status === 200) {
+        data = response.data;
+      }
       return NextResponse.json(data);
     case "getProductFromDirectWithMultiParam":
       //productId = url.searchParams.get("productId");

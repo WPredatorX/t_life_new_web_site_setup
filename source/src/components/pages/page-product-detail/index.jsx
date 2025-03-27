@@ -231,7 +231,7 @@ const PageProductsDetail = ({
             : "02",
           is_send_sms: watch("commonSetting.is_send_sms") || false,
           is_send_mail: watch("commonSetting.is_send_mail") || false,
-          document_id: watch("_document?.id"),
+          document_id: watch("_document.id"),
           quo_document_id: watch("document.0.quo_document_id") || null,
           remark_marketing_name:
             watch("commonSetting.remark_marketing_name") || "",
@@ -245,12 +245,12 @@ const PageProductsDetail = ({
           update_date: watch("commonSetting.update_date") || new Date(),
         },
       };
-      const document_id = watch("_document?.id");
+      const document_id = watch("_document.id");
       const Documentpayload = {
         document:
           watch("document")?.map((item) => ({
             detail_id: null,
-            document_id: "fef74d5f-7e81-424f-8524-7a1d1d615665",
+            document_id: document_id,
             quo_document_id: null,
             product_plan_id: product_plan_id,
             title: item.title,
@@ -290,48 +290,27 @@ const PageProductsDetail = ({
       }
 
       const result = await response.json();
-      const resultDocument = await responseDocument.json();
-      let dataPolicyholderDocument = {
-        policy_document_id: null,
-        product_plan_id: product_plan_id,
-        is_active: true,
-        create_date: new Date(),
-        create_by: "admin",
-        update_date: new Date(),
-        update_by: "admin",
-        policy_document_type: "1",
-        policy_document_name: watch(
-          "beneficiary_document.policy_document_name"
-        ),
-        policy_document_file: watch(
-          "beneficiary_document.policy_document_file"
-        ),
-      };
+      let policy_document = watch("beneficiary_document.policy_document_file");
+      if (policy_document) {
+        const resultDocument = await responseDocument.json();
+        let dataPolicyholderDocument = {
+          policy_document_id: null,
+          product_plan_id: product_plan_id,
+          is_active: true,
+          create_date: new Date(),
+          create_by: "admin",
+          update_date: new Date(),
+          update_by: "admin",
+          policy_document_type: "1",
+          policy_document_name: watch(
+            "beneficiary_document.policy_document_name"
+          ),
+          policy_document_file: watch(
+            "beneficiary_document.policy_document_file"
+          ),
+        };
 
-      const policyholderBeneficiaryDocument = await fetch(
-        "/api/products?action=AddOrUpdatePolicyholderDocuments",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(dataPolicyholderDocument),
-        }
-      );
-      dataPolicyholderDocument = {
-        policy_document_id: null,
-        product_plan_id: product_plan_id,
-        policy_document_name: null,
-        policy_document_file_path: null,
-        is_active: true,
-        create_date: new Date(),
-        create_by: "admin",
-        update_date: new Date(),
-        update_by: "admin",
-        policy_document_type: "2",
-        policy_document_name: watch("occupation_document.policy_document_name"),
-        policy_document_file: watch("occupation_document.policy_document_file"),
-      };
-      if (type === "0") {
-        const policyholderOccupationDocument = await fetch(
+        const policyholderBeneficiaryDocument = await fetch(
           "/api/products?action=AddOrUpdatePolicyholderDocuments",
           {
             method: "POST",
@@ -339,6 +318,40 @@ const PageProductsDetail = ({
             body: JSON.stringify(dataPolicyholderDocument),
           }
         );
+      }
+
+      if (type === "0") {
+        let policy_document_occupation = watch(
+          "occupation_document.policy_document_file"
+        );
+        if (policy_document_occupation) {
+          dataPolicyholderDocument = {
+            policy_document_id: null,
+            product_plan_id: product_plan_id,
+            policy_document_name: null,
+            policy_document_file_path: null,
+            is_active: true,
+            create_date: new Date(),
+            create_by: "admin",
+            update_date: new Date(),
+            update_by: "admin",
+            policy_document_type: "2",
+            policy_document_name: watch(
+              "occupation_document.policy_document_name"
+            ),
+            policy_document_file: watch(
+              "occupation_document.policy_document_file"
+            ),
+          };
+          const policyholderOccupationDocument = await fetch(
+            "/api/products?action=AddOrUpdatePolicyholderDocuments",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(dataPolicyholderDocument),
+            }
+          );
+        }
       }
 
       handleNotiification("บันทึกข้อมูลสำเร็จ", () => {
