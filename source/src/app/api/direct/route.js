@@ -33,6 +33,65 @@ export async function POST(request) {
         data = response.data;
       }
       return NextResponse.json(data);
+    case "getAllProductSaleDirect":
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}BackOffice/GetAllProductSaleDirect`,
+        body,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      if (response.status === 200) {
+        data = response.data?.data;
+      }
+      if (response.status === 204) {
+        return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
+      }
+      return NextResponse.json(data);
+    case "getProductSalePeriodById":
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}Products/GetProductSalePeriodById`,
+        body,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      if (response.status === 200) {
+        data = response.data?.data;
+      }
+      if (response.status === 204) {
+        return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
+      }
+      return NextResponse.json(data);
+
+    case "getPaymentModeById":
+      response = await axios.post(`${baseUrl}Payment/GetPaymentModeById`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      if (response.status === 200) {
+        data = response.data?.data;
+      }
+      if (response.status === 204) {
+        return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
+      }
+      return NextResponse.json(data);
+    case "getProductPaymentModeById":
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}Payment/GetProductPaymentModeById`,
+        body,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      if (response.status === 200) {
+        data = response.data?.data;
+      }
+      if (response.status === 204) {
+        return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
+      }
+      return NextResponse.json(data);
     case "getProductFromDirectWithMultiParam":
       //productId = url.searchParams.get("productId");
       /* response = await axios.post(

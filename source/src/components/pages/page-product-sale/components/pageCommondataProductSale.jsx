@@ -37,15 +37,40 @@ const PageCommonDataProductSale = ({ productId, type }) => {
             status: Yup.mixed().nullable(),
             statusText: Yup.string().nullable(),
             StartDate: Yup.date().required("กรุณาระบุวันที่เริ่มต้น"),
-            EndDate: Yup.date().when(
-              "StartDate",
-              (StartDate, schema) =>
-                StartDate &&
-                schema.min(
-                  StartDate,
-                  "วันที่สิ้นสุดต้องไม่น้อยกว่าวันที่เริ่มต้น"
+            EndDate: Yup.date()
+              .nullable()
+              .transform((value) => {
+                if (
+                  !value ||
+                  value === "undefined" ||
+                  value === undefined ||
+                  value === ""
                 )
-            ),
+                  return null;
+                try {
+                  return new Date(value);
+                } catch (error) {
+                  return null;
+                }
+              })
+              .when("StartDate", (StartDate, schema) => {
+                if (
+                  !StartDate ||
+                  StartDate === "undefined" ||
+                  StartDate === undefined
+                )
+                  return schema;
+                try {
+                  const startDate = new Date(StartDate);
+                  if (isNaN(startDate.getTime())) return schema;
+                  return schema.min(
+                    startDate,
+                    "วันที่สิ้นสุดต้องไม่น้อยกว่าวันที่เริ่มต้น"
+                  );
+                } catch (error) {
+                  return schema;
+                }
+              }),
             createBy: Yup.string().nullable(),
             createDate: Yup.string().nullable(),
             updateBy: Yup.string().nullable(),
@@ -58,12 +83,40 @@ const PageCommonDataProductSale = ({ productId, type }) => {
         status: Yup.mixed().nullable(),
         statusText: Yup.string().nullable(),
         StartDate: Yup.date().required("กรุณาระบุวันที่เริ่มต้น"),
-        EndDate: Yup.date().when(
-          "StartDate",
-          (StartDate, schema) =>
-            StartDate &&
-            schema.min(StartDate, "วันที่สิ้นสุดต้องไม่น้อยกว่าวันที่เริ่มต้น")
-        ),
+        EndDate: Yup.date()
+          .nullable()
+          .transform((value) => {
+            if (
+              !value ||
+              value === "undefined" ||
+              value === undefined ||
+              value === ""
+            )
+              return null;
+            try {
+              return new Date(value);
+            } catch (error) {
+              return null;
+            }
+          })
+          .when("StartDate", (StartDate, schema) => {
+            if (
+              !StartDate ||
+              StartDate === "undefined" ||
+              StartDate === undefined
+            )
+              return schema;
+            try {
+              const startDate = new Date(StartDate);
+              if (isNaN(startDate.getTime())) return schema;
+              return schema.min(
+                startDate,
+                "วันที่สิ้นสุดต้องไม่น้อยกว่าวันที่เริ่มต้น"
+              );
+            } catch (error) {
+              return schema;
+            }
+          }),
         createBy: Yup.string().nullable(),
         createDate: Yup.string().nullable(),
         updateBy: Yup.string().nullable(),
@@ -75,6 +128,7 @@ const PageCommonDataProductSale = ({ productId, type }) => {
         Yup.object().shape({
           id: Yup.mixed().nullable(),
           paidType: Yup.string().nullable(),
+          paymentMode: Yup.string().nullable(),
           status: Yup.mixed().nullable(),
           statusText: Yup.string().nullable(),
           StartDate: Yup.date().nullable(),
@@ -237,6 +291,7 @@ const PageCommonDataProductSale = ({ productId, type }) => {
             updateDate: format(new Date(), "yyyy-MM-dd"),
           },
         ],
+        paymentMode: {},
       },
 
       salePaidCategory: {
@@ -493,19 +548,39 @@ const PageCommonDataProductSale = ({ productId, type }) => {
         </AppCard>
       </Grid>
       <Grid item xs={12} mt={2}>
-        <AppCardDataGrid mode={1} formMethods={{ ...formMethods }} />
+        <AppCardDataGrid
+          mode={1}
+          formMethods={{ ...formMethods }}
+          productId={productId}
+        />
       </Grid>
       <Grid item xs={12} mt={2}>
-        <AppCardDataGrid mode={2} formMethods={{ ...formMethods }} />
+        <AppCardDataGrid
+          mode={2}
+          formMethods={{ ...formMethods }}
+          productId={productId}
+        />
       </Grid>
       <Grid item xs={12} mt={2}>
-        <AppCardDataGrid mode={3} formMethods={{ ...formMethods }} />
+        <AppCardDataGrid
+          mode={3}
+          formMethods={{ ...formMethods }}
+          productId={productId}
+        />
       </Grid>
       <Grid item xs={12} mt={2}>
-        <AppCardDataGrid mode={4} formMethods={{ ...formMethods }} />
+        <AppCardDataGrid
+          mode={4}
+          formMethods={{ ...formMethods }}
+          productId={productId}
+        />
       </Grid>
       <Grid item xs={12} mt={2}>
-        <AppCardDataGrid mode={5} formMethods={{ ...formMethods }} />
+        <AppCardDataGrid
+          mode={5}
+          formMethods={{ ...formMethods }}
+          productId={productId}
+        />
       </Grid>
       {type === "1" && (
         <Grid item xs={12} mt={2}>

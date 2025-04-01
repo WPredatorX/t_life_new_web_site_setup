@@ -46,7 +46,7 @@ const PageProductsSale = ({ productId, mode, type }) => {
           <Grid container spacing={2}>
             <Grid item xs={12} md={4}>
               <Typography>Plan Code</Typography>
-              <TextField fullWidth size="small" />
+              <TextField fullWidth value={productId} size="small" />
             </Grid>
             <Grid item xs={12} md={4}>
               <Typography>ชื่อ</Typography>

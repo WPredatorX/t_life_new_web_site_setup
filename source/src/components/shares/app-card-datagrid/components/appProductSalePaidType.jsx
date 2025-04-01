@@ -47,7 +47,7 @@ import {
   Delete,
 } from "@mui/icons-material";
 import { setDialog } from "@stores/slices";
-const AppProductSalePaidType = ({ formMethods }) => {
+const AppProductSalePaidType = ({ formMethods, productId }) => {
   const { handleSnackAlert } = useAppSnackbar();
   const theme = useTheme();
 
@@ -90,7 +90,7 @@ const AppProductSalePaidType = ({ formMethods }) => {
     name: baseName,
   });
   const router = useAppRouter();
-
+  const [paymentMode, setPaymentMode] = useState([]);
   const hiddenColumn = {
     id: false,
   };
@@ -147,11 +147,16 @@ const AppProductSalePaidType = ({ formMethods }) => {
       align: "center",
       minWidth: 100,
       valueGetter: (value) => {
-        let formattedValue = format(
-          addYears(parseISO(value), 543),
-          "dd/MM/yyyy"
-        );
-        return formattedValue;
+        if (!value) return "";
+        try {
+          let date;
+          date = typeof value === "string" ? parseISO(value) : new Date(value);
+          if (isNaN(date.getTime())) return value;
+          let formattedValue = format(addYears(date, 543), "dd/MM/yyyy");
+          return formattedValue;
+        } catch (error) {
+          return value;
+        }
       },
     },
     {
@@ -174,11 +179,16 @@ const AppProductSalePaidType = ({ formMethods }) => {
       align: "center",
       minWidth: 100,
       valueGetter: (value) => {
-        let formattedValue = format(
-          addYears(parseISO(value), 543),
-          "dd/MM/yyyy"
-        );
-        return formattedValue;
+        if (!value) return "";
+        try {
+          let date;
+          date = typeof value === "string" ? parseISO(value) : new Date(value);
+          if (isNaN(date.getTime())) return value;
+          let formattedValue = format(addYears(date, 543), "dd/MM/yyyy");
+          return formattedValue;
+        } catch (error) {
+          return value;
+        }
       },
     },
     {
@@ -271,7 +281,7 @@ const AppProductSalePaidType = ({ formMethods }) => {
                     <Grid container justifyContent={"center"}>
                       <Grid item xs={11} mb={2}>
                         <Controller
-                          name={`status`}
+                          name={`${baseName}.paymentMode`}
                           control={control}
                           render={({ field }) => {
                             const { name, onChange, ...otherProps } = field;
@@ -285,12 +295,7 @@ const AppProductSalePaidType = ({ formMethods }) => {
                                   fullWidth
                                   disabled={mode === "view" ? true : false}
                                   label="select an option"
-                                  options={[
-                                    {
-                                      id: "1",
-                                      label: "Option 1",
-                                    },
-                                  ]}
+                                  options={paymentMode}
                                   onChange={(event, value) => {
                                     onChange(value);
                                   }}
@@ -380,21 +385,63 @@ const AppProductSalePaidType = ({ formMethods }) => {
   const handleFetchProduct = async () => {
     setLoading(true);
     try {
-      const start = pageNumber * pageSize;
+      const start = pageNumber;
       const limit = pageSize;
+      const body = {
+        field: "",
+        direction: "",
+        page_number: start,
+        page_size: limit,
+        //product_sale_channel_id: productId,
+      };
       const response = await fetch(
-        `/api/products?action=getSalePaidTypeByProductId`,
+        `/api/direct?action=getProductPaymentModeById`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
         }
       );
 
       const data = await response.json();
+      let resultData = [];
+      if (data.status !== 204) {
+        if (data) {
+          resultData = Array.from(data).map((value) => {
+            return {
+              ...value,
+              id: value.product_payment_mode_id,
+              paidType: value.payment_mode_id,
+              StartDate: value.start_date,
+              EndDate: value.end_date,
+              createDate: value.create_date,
+              updateDate: value.update_date,
+              status: value.is_active,
+              createBy: value.create_by,
+              updateBy: value.update_by,
+            };
+          });
+        }
+      }
+
+      const paymentMode = await fetch(`/api/direct?action=getPaymentModeById`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const paymentModeData = await paymentMode.json();
+
+      const dataMap = Array.from(paymentModeData, (item) => ({
+        id: item.payment_mode_id,
+        label: item.payment_mode_description,
+      }));
+      setPaymentMode(dataMap);
       const resetData = watch();
-      reset({ ...resetData, salePaidType: { rows: [...data] } });
+      reset({ ...resetData, salePaidType: { rows: [...resultData] } });
     } catch (error) {
-      handleSnackAlert({ open: true, message: "ล้มเหลวเกิดข้อผิดพลาด" });
+      handleSnackAlert({
+        open: true,
+        message: "ล้มเหลวเกิดข้อผิดพลาด " + error,
+      });
     } finally {
       setLoading(false);
     }

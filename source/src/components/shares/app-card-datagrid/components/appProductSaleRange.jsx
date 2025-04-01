@@ -46,7 +46,7 @@ import {
   Delete,
 } from "@mui/icons-material";
 import { setDialog } from "@stores/slices";
-const AppProductSaleRange = ({ formMethods }) => {
+const AppProductSaleRange = ({ formMethods, productId }) => {
   const { handleSnackAlert } = useAppSnackbar();
   const theme = useTheme();
   const dispatch = useAppDispatch();
@@ -270,10 +270,16 @@ const AppProductSaleRange = ({ formMethods }) => {
       align: "left",
       minWidth: 100,
       valueGetter: (value) => {
-        let date;
-        date = typeof value === "string" ? parseISO(value) : new Date(value);
-        let formattedValue = format(addYears(date, 543), "dd/MM/yyyy");
-        return formattedValue;
+        if (!value) return "";
+        try {
+          let date;
+          date = typeof value === "string" ? parseISO(value) : new Date(value);
+          if (isNaN(date.getTime())) return value;
+          let formattedValue = format(addYears(date, 543), "dd/MM/yyyy");
+          return formattedValue;
+        } catch (error) {
+          return value;
+        }
       },
     },
     {
@@ -286,10 +292,16 @@ const AppProductSaleRange = ({ formMethods }) => {
       align: "left",
       minWidth: 100,
       valueGetter: (value) => {
-        let date;
-        date = typeof value === "string" ? parseISO(value) : new Date(value);
-        let formattedValue = format(addYears(date, 543), "dd/MM/yyyy");
-        return formattedValue;
+        if (!value) return "";
+        try {
+          let date;
+          date = typeof value === "string" ? parseISO(value) : new Date(value);
+          if (isNaN(date.getTime())) return value;
+          let formattedValue = format(addYears(date, 543), "dd/MM/yyyy");
+          return formattedValue;
+        } catch (error) {
+          return value;
+        }
       },
     },
 
@@ -313,10 +325,16 @@ const AppProductSaleRange = ({ formMethods }) => {
       align: "center",
       minWidth: 100,
       valueGetter: (value) => {
-        let date;
-        date = typeof value === "string" ? parseISO(value) : new Date(value);
-        let formattedValue = format(addYears(date, 543), "dd/MM/yyyy");
-        return formattedValue;
+        if (!value) return "";
+        try {
+          let date;
+          date = typeof value === "string" ? parseISO(value) : new Date(value);
+          if (isNaN(date.getTime())) return value;
+          let formattedValue = format(addYears(date, 543), "dd/MM/yyyy");
+          return formattedValue;
+        } catch (error) {
+          return value;
+        }
       },
     },
     {
@@ -339,10 +357,16 @@ const AppProductSaleRange = ({ formMethods }) => {
       align: "center",
       minWidth: 100,
       valueGetter: (value) => {
-        let date;
-        date = typeof value === "string" ? parseISO(value) : new Date(value);
-        let formattedValue = format(addYears(date, 543), "dd/MM/yyyy");
-        return formattedValue;
+        if (!value) return "";
+        try {
+          let date;
+          date = typeof value === "string" ? parseISO(value) : new Date(value);
+          if (isNaN(date.getTime())) return value;
+          let formattedValue = format(addYears(date, 543), "dd/MM/yyyy");
+          return formattedValue;
+        } catch (error) {
+          return value;
+        }
       },
     },
     {
@@ -423,31 +447,51 @@ const AppProductSaleRange = ({ formMethods }) => {
   const handleFetchProduct = async () => {
     setLoading(true);
     try {
-      const start = pageNumber * pageSize;
+      const start = pageNumber;
       const limit = pageSize;
+      const body = {
+        field: "",
+        direction: "",
+        page_number: start,
+        page_size: limit,
+        product_sale_channel_id: productId,
+      };
       const response = await fetch(
-        `/api/products?action=getSaleRangeByProductId`,
+        `/api/direct?action=getProductSalePeriodById`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
         }
       );
 
       const data = await response.json();
-      const resultData = data.map((value) => {
-        return {
-          ...value,
-          StartDate: new Date(value.StartDate),
-          EndDate: new Date(value.EndDate),
-          createDate: new Date(value.createDate),
-          updateDate: new Date(value.updateDate),
-        };
-      });
-
+      let resultData = [];
+      if (data.status === 200) {
+        if (data) {
+          resultData = data.map((value) => {
+            return {
+              ...value,
+              id: value.sale_period_id,
+              StartDate: value.start_date,
+              EndDate: value.end_date,
+              createDate: value.create_date,
+              updateDate: value.update_date,
+              status: value.is_active,
+              statusText: value.name_status,
+              createBy: value.create_by,
+              updateBy: value.update_by,
+            };
+          });
+        }
+      }
       const resetData = watch();
       reset({ ...resetData, saleRange: { rows: [...resultData] } });
     } catch (error) {
-      handleSnackAlert({ open: true, message: "ล้มเหลวเกิดข้อผิดพลาด" });
+      handleSnackAlert({
+        open: true,
+        message: `ล้มเหลวเกิดข้อผิดพลาด ${error.message}`,
+      });
     } finally {
       setLoading(false);
     }

@@ -82,6 +82,7 @@ const AppProductList = ({ mode }) => {
     reset,
     control,
     register,
+    watch,
     handleSubmit,
     formState: { errors },
   } = useAppForm({
@@ -128,12 +129,15 @@ const AppProductList = ({ mode }) => {
       align: "center",
       minWidth: 200,
       renderCell: (params) => (
-        <AppStatus status={params.value} statusText={params.row.statusText} />
+        <AppStatus
+          status={params.row.is_active}
+          statusText={params.row.name_status}
+        />
       ),
     },
     {
       flex: 1,
-      field: "minimumInsured",
+      field: "min_coverage_amount",
       type: "string",
       headerAlign: "center",
       headerName: "ทุนประกันต่ำสุด",
@@ -144,7 +148,7 @@ const AppProductList = ({ mode }) => {
     },
     {
       flex: 1,
-      field: "maximumInsured",
+      field: "max_coverage_amount",
       type: "string",
       headerAlign: "center",
       headerName: "ทุนประกันต่ำสุด",
@@ -156,7 +160,7 @@ const AppProductList = ({ mode }) => {
 
     {
       flex: 1,
-      field: "createBy",
+      field: "create_by",
       type: "string",
       headerAlign: "center",
       headerName: "สร้างโดย",
@@ -166,7 +170,7 @@ const AppProductList = ({ mode }) => {
     },
     {
       flex: 1,
-      field: "createDate",
+      field: "create_date",
       type: "string",
       headerAlign: "center",
       headerName: "สร้างเมื่อ",
@@ -174,16 +178,21 @@ const AppProductList = ({ mode }) => {
       align: "center",
       minWidth: 100,
       valueGetter: (value) => {
-        let formattedValue = format(
-          addYears(parseISO(value), 543),
-          "dd/MM/yyyy"
-        );
-        return formattedValue;
+        if (!value) return "";
+        try {
+          let formattedValue = format(
+            addYears(parseISO(value), 543),
+            "dd/MM/yyyy"
+          );
+          return formattedValue;
+        } catch (error) {
+          return value;
+        }
       },
     },
     {
       flex: 1,
-      field: "updateBy",
+      field: "update_by",
       type: "string",
       headerAlign: "center",
       headerName: "แก้ไขโดย",
@@ -193,7 +202,7 @@ const AppProductList = ({ mode }) => {
     },
     {
       flex: 1,
-      field: "updateDate",
+      field: "update_date",
       type: "string",
       headerAlign: "center",
       headerName: "แก้ไขเมื่อ",
@@ -201,11 +210,16 @@ const AppProductList = ({ mode }) => {
       align: "center",
       minWidth: 100,
       valueGetter: (value) => {
-        let formattedValue = format(
-          addYears(parseISO(value), 543),
-          "dd/MM/yyyy"
-        );
-        return formattedValue;
+        if (!value) return "";
+        try {
+          let formattedValue = format(
+            addYears(parseISO(value), 543),
+            "dd/MM/yyyy"
+          );
+          return formattedValue;
+        } catch (error) {
+          return value;
+        }
       },
     },
     {
@@ -288,11 +302,11 @@ const AppProductList = ({ mode }) => {
 
   const onSubmit = async (data) => {
     setLoading(true);
-
+    handleFetchProduct();
     try {
       console.log("submit", { data });
     } catch (error) {
-      handleSnackAlert({ open: true, message: "ล้มเหลวเกิดข้อผิดพลาด" });
+      handleSnackAlert({ open: true, message: ล้มเหลวเกิดข้อผิดพลาด });
     } finally {
       setLoading(false);
     }
@@ -312,20 +326,50 @@ const AppProductList = ({ mode }) => {
     try {
       const start = pageNumber * pageSize;
       const limit = pageSize;
-      const response = await fetch(`/api/direct?action=GetProductMain`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
+      const body = {
+        is_active: watch(`status`) ? watch(`status.id`) : null,
+        c_plan: watch(`name`) ? watch(`name`) : null,
+        min_coverage_amount: watch(`fromInsuredSum`),
+        max_coverage_amount: watch(`ToInsuredSum`),
+        create_date_start: null, //watch(`fromCreateDate`) ,
+        create_date_end: null, //watch(`toCreateDate`),
+        update_date_start: null, //watch(`fromUpdateDate`),
+        update_date_end: null, //watch("toUpdateDate"),
+      };
+
+      const response = await fetch(
+        `/api/direct?action=getAllProductSaleDirect`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
+      );
       const data = await response.json();
+      const mapData = data[0].detail.map((item) => {
+        return {
+          ...item,
+          id: item.product_plan_id,
+          name: item.i_plan,
+          status: item.product_status,
+          statusText: item.name_status,
+        };
+      });
+      debugger;
       setData({
-        rows: data,
+        rows: mapData,
         totalRows: 100,
       });
     } catch (error) {
-      handleSnackAlert({ open: true, message: "ล้มเหลวเกิดข้อผิดพลาด" });
+      handleSnackAlert({
+        open: true,
+        message: `ล้มเหลวเกิดข้อผิดพลาด ${error}`,
+      });
     } finally {
       handleFetchProductSub();
       setLoading(false);
+      console.log("data", data);
+      debugger;
     }
   };
 
@@ -426,9 +470,12 @@ const AppProductList = ({ mode }) => {
                           label="สถานะ"
                           options={[
                             {
-                              id: "1",
-                              label: "Option 1",
+                              id: "0",
+                              label: "ทั้งหมด",
                             },
+                            { id: "1", label: "แบบร่าง" },
+                            { id: "2", label: "เปิดใช้งาน" },
+                            { id: "3", label: "ยกเลิกใช้งาน" },
                           ]}
                           onChange={(event, value) => {
                             onChange(value);
@@ -685,6 +732,7 @@ const AppProductList = ({ mode }) => {
                   variant="contained"
                   fullWidth
                   disabled={loading}
+                  onClick={handleSubmit(onSubmit)}
                   endIcon={
                     loading ? <CircularProgress size={15} /> : <Search />
                   }
