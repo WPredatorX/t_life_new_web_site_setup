@@ -13,6 +13,7 @@ export { default as AppDatePicker } from "./shares/app-datepicker";
 export { default as AppCard } from "./shares/app-card";
 export { default as AppDataGrid } from "./shares/app-datagrid";
 export { default as AppStatus } from "./shares/app-status";
+export { default as AppStatusBool } from "./shares/app-status-bool";
 export { default as AppAutocomplete } from "./shares/app-autocomplete";
 export { default as AppDirectBrokerCard } from "./shares/app-direct-broker-card";
 export { default as AppCollapseCard } from "./shares/app-collapse-card";

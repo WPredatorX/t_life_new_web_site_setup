@@ -304,7 +304,6 @@ const AppProductList = ({ mode }) => {
     setLoading(true);
     handleFetchProduct();
     try {
-      console.log("submit", { data });
     } catch (error) {
       handleSnackAlert({ open: true, message: ล้มเหลวเกิดข้อผิดพลาด });
     } finally {
@@ -355,7 +354,6 @@ const AppProductList = ({ mode }) => {
           statusText: item.name_status,
         };
       });
-      debugger;
       setData({
         rows: mapData,
         totalRows: 100,
@@ -368,8 +366,6 @@ const AppProductList = ({ mode }) => {
     } finally {
       handleFetchProductSub();
       setLoading(false);
-      console.log("data", data);
-      debugger;
     }
   };
 

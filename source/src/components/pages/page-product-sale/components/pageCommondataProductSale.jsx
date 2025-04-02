@@ -20,7 +20,6 @@ import { APPLICATION_DEFAULT } from "@constants";
 import { format, addYears, addDays, parseISO } from "date-fns";
 
 const PageCommonDataProductSale = ({ productId, type }) => {
-  console.log(type);
   const router = useAppRouter();
   const theme = useTheme();
   const [loading, setLoading] = useState(true);
@@ -291,8 +290,8 @@ const PageCommonDataProductSale = ({ productId, type }) => {
             updateDate: format(new Date(), "yyyy-MM-dd"),
           },
         ],
-        paymentMode: {},
       },
+      paymentMode: {},
 
       salePaidCategory: {
         searchParams: {

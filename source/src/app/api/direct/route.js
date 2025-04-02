@@ -72,8 +72,15 @@ export async function POST(request) {
       });
 
       if (response.status === 200) {
-        data = response.data?.data;
+        data = Array.from(response.data?.data || []).map((item) => {
+          return {
+            ...item,
+            id: item.payment_mode_id,
+            label: item.payment_mode_description,
+          };
+        });
       }
+
       if (response.status === 204) {
         return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
       }

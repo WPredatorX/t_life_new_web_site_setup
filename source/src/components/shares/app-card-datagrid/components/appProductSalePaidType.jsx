@@ -18,10 +18,10 @@ import {
 import {
   AppCard,
   AppDataGrid,
-  AppStatus,
   AppAutocomplete,
   AppDatePicker,
   AppCollapseCard,
+  AppStatusBool,
 } from "@/components";
 import { Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -96,6 +96,7 @@ const AppProductSalePaidType = ({ formMethods, productId }) => {
   };
   useEffect(() => {
     handleFetchProduct();
+    handleFetchPaymentList();
   }, [pageNumber, pageSize]);
   const columns = [
     {
@@ -123,7 +124,10 @@ const AppProductSalePaidType = ({ formMethods, productId }) => {
       align: "center",
       minWidth: 200,
       renderCell: (params) => (
-        <AppStatus status={params.value} statusText={params.row.statusText} />
+        <AppStatusBool
+          status={params.value}
+          statusText={params.row.statusText}
+        />
       ),
     },
 
@@ -204,8 +208,12 @@ const AppProductSalePaidType = ({ formMethods, productId }) => {
         let disabledView = false; // TODO: เช็คตามสิทธิ์
         let disabledEdit = false; // TODO: เช็คตามสิทธิ์
         let disabledDelete = false; // TODO: เช็คตามสิทธิ์
-        const viewFunction = disabledView ? null : () => handleView();
-        const editFunction = disabledEdit ? null : () => handleEdit();
+        const viewFunction = disabledView
+          ? null
+          : () => handleView(params?.row?.payment_mode_id);
+        const editFunction = disabledEdit
+          ? null
+          : () => handleEdit(params?.row?.payment_mode_id);
         const deleteFunction = disabledDelete ? null : () => handleDelete();
         const defaultProps = {
           showInMenu: true,
@@ -247,18 +255,21 @@ const AppProductSalePaidType = ({ formMethods, productId }) => {
   ];
 
   const handleAdd = () => {
+    handleFetchPaymentList();
     handleNotiification("เพิ่มรูปแบบชำระเงิน", "add", () => {
       setTimeout(() => {}, 400);
     });
   };
 
   const handleEdit = (params) => {
-    handleNotiification("แก้ไขรูปแบบชำระเงิน", "edit", () => {
+    handleFetchPaymentList(params);
+    handleNotiification("แก้ไขรูปแบบชำระเงิน", "edit", params, () => {
       setTimeout(() => {}, 400);
     });
   };
-  const handleView = () => {
-    handleNotiification("รูปแบบชำระเงิน", "view", () => {
+  const handleView = (params) => {
+    handleFetchPaymentList(params);
+    handleNotiification("รูปแบบชำระเงิน", "view", params, () => {
       setTimeout(() => {}, 400);
     });
   };
@@ -281,7 +292,7 @@ const AppProductSalePaidType = ({ formMethods, productId }) => {
                     <Grid container justifyContent={"center"}>
                       <Grid item xs={11} mb={2}>
                         <Controller
-                          name={`${baseName}.paymentMode`}
+                          name={`paymentMode`}
                           control={control}
                           render={({ field }) => {
                             const { name, onChange, ...otherProps } = field;
@@ -365,7 +376,6 @@ const AppProductSalePaidType = ({ formMethods, productId }) => {
     setLoading(true);
 
     try {
-      console.log("submit", { data });
     } catch (error) {
       handleSnackAlert({ open: true, message: "ล้มเหลวเกิดข้อผิดพลาด" });
     } finally {
@@ -382,17 +392,48 @@ const AppProductSalePaidType = ({ formMethods, productId }) => {
     setPageSize(model.pageSize);
   };
 
+  const handleFetchPaymentList = async (paymentId) => {
+    setLoading(true);
+    try {
+      const resPaymentMode = await fetch(
+        `/api/direct?action=getPaymentModeById`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+      const paymentModeData = await resPaymentMode.json();
+      const dataSelect = Array.from(paymentModeData).find(
+        (item) => item.id === paymentId
+      );
+      setPaymentMode(paymentModeData);
+      const _form = watch();
+
+      reset({
+        ..._form,
+        paymentMode: dataSelect,
+      });
+    } catch (error) {
+      handleSnackAlert({
+        open: true,
+        message: "ล้มเหลวเกิดข้อผิดพลาด " + error,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleFetchProduct = async () => {
     setLoading(true);
     try {
       const start = pageNumber;
       const limit = pageSize;
       const body = {
-        field: "",
-        direction: "",
+        field: "CreateDate",
+        direction: "asc",
         page_number: start,
         page_size: limit,
-        //product_sale_channel_id: productId,
+        product_sale_channel_id: productId,
       };
       const response = await fetch(
         `/api/direct?action=getProductPaymentModeById`,
@@ -411,12 +452,13 @@ const AppProductSalePaidType = ({ formMethods, productId }) => {
             return {
               ...value,
               id: value.product_payment_mode_id,
-              paidType: value.payment_mode_id,
+              paidType: value.payment_mode_description,
               StartDate: value.start_date,
               EndDate: value.end_date,
               createDate: value.create_date,
               updateDate: value.update_date,
               status: value.is_active,
+              statusText: value.name_status,
               createBy: value.create_by,
               updateBy: value.update_by,
             };
@@ -424,17 +466,6 @@ const AppProductSalePaidType = ({ formMethods, productId }) => {
         }
       }
 
-      const paymentMode = await fetch(`/api/direct?action=getPaymentModeById`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      const paymentModeData = await paymentMode.json();
-
-      const dataMap = Array.from(paymentModeData, (item) => ({
-        id: item.payment_mode_id,
-        label: item.payment_mode_description,
-      }));
-      setPaymentMode(dataMap);
       const resetData = watch();
       reset({ ...resetData, salePaidType: { rows: [...resultData] } });
     } catch (error) {
