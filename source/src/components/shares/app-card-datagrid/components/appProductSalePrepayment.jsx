@@ -22,6 +22,7 @@ import {
   AppAutocomplete,
   AppDatePicker,
   AppCollapseCard,
+  AppStatusBool,
 } from "@/components";
 import { Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -48,7 +49,7 @@ import {
 } from "@mui/icons-material";
 
 import { setDialog } from "@stores/slices";
-const AppProductSalePrepayment = ({ formMethods }) => {
+const AppProductSalePrepayment = ({ formMethods, productId }) => {
   const { handleSnackAlert } = useAppSnackbar();
   const theme = useTheme();
 
@@ -134,7 +135,10 @@ const AppProductSalePrepayment = ({ formMethods }) => {
       align: "center",
       minWidth: 200,
       renderCell: (params) => (
-        <AppStatus status={params.value} statusText={params.row.statusText} />
+        <AppStatusBool
+          status={params.value}
+          statusText={params.row.statusText}
+        />
       ),
     },
     {
@@ -157,11 +161,16 @@ const AppProductSalePrepayment = ({ formMethods }) => {
       align: "center",
       minWidth: 100,
       valueGetter: (value) => {
-        let formattedValue = format(
-          addYears(parseISO(value), 543),
-          "dd/MM/yyyy"
-        );
-        return formattedValue;
+        if (!value) return "";
+        try {
+          let date;
+          date = typeof value === "string" ? parseISO(value) : new Date(value);
+          if (isNaN(date.getTime())) return value;
+          let formattedValue = format(addYears(date, 543), "dd/MM/yyyy");
+          return formattedValue;
+        } catch (error) {
+          return value;
+        }
       },
     },
     {
@@ -184,11 +193,16 @@ const AppProductSalePrepayment = ({ formMethods }) => {
       align: "center",
       minWidth: 100,
       valueGetter: (value) => {
-        let formattedValue = format(
-          addYears(parseISO(value), 543),
-          "dd/MM/yyyy"
-        );
-        return formattedValue;
+        if (!value) return "";
+        try {
+          let date;
+          date = typeof value === "string" ? parseISO(value) : new Date(value);
+          if (isNaN(date.getTime())) return value;
+          let formattedValue = format(addYears(date, 543), "dd/MM/yyyy");
+          return formattedValue;
+        } catch (error) {
+          return value;
+        }
       },
     },
     {
@@ -387,19 +401,47 @@ const AppProductSalePrepayment = ({ formMethods }) => {
   const handleFetchProduct = async () => {
     setLoading(true);
     try {
-      const start = pageNumber * pageSize;
-      const limit = pageSize;
+      let body = JSON.stringify({
+        field: "create_date",
+        direction: "asc",
+        page_number: pageNumber,
+        page_size: pageSize,
+        product_sale_channel_id: productId,
+      });
       const response = await fetch(
-        `/api/products?action=getPrepaymentByProductId`,
+        `/api/direct?action=getInstallmentTypeById`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          body,
         }
       );
 
       const data = await response.json();
+
+      let resultData = [];
+      if (data.status !== 204) {
+        if (data) {
+          resultData = Array.from(data).map((value) => {
+            return {
+              ...value,
+              id: value.installment_id,
+              PrepaymentForm: value.installment_description,
+              StartDate: value.start_date,
+              EndDate: value.end_date,
+              createDate: value.create_date,
+              updateDate: value.update_date,
+              status: value.is_active,
+              statusText: value.name_status,
+              createBy: value.create_by,
+              updateBy: value.update_by,
+              NumberOfInstallments: value.num_installments,
+            };
+          });
+        }
+      }
       const resetData = watch();
-      reset({ ...resetData, salePrepayment: { rows: [...data] } });
+      reset({ ...resetData, salePrepayment: { rows: [...resultData] } });
     } catch (error) {
       handleSnackAlert({ open: true, message: "ล้มเหลวเกิดข้อผิดพลาด" });
     } finally {

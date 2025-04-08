@@ -81,6 +81,7 @@ const AppProductSalePaidType = ({ formMethods, productId }) => {
     control,
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = formMethods;
   const baseName = "salePaidType";
@@ -89,6 +90,31 @@ const AppProductSalePaidType = ({ formMethods, productId }) => {
     control,
     name: baseName,
   });
+
+  const AddField = () => {
+    setValue(`${baseName}.baseRows.id`, crypto.randomUUID());
+    setValue(`${baseName}.baseRows.paidType`, watch(`paymentMode.label`));
+    setValue(`${baseName}.baseRows.payment_mode_id`, watch(`paymentMode.id`));
+    setValue(`${baseName}.baseRows.status`, 2);
+    setValue(`${baseName}.baseRows.statusText`, "รายการใหม่");
+    setValue(`${baseName}.baseRows.createBy`, "admin");
+    setValue(`${baseName}.baseRows.createDate`, new Date());
+    setValue(`${baseName}.baseRows.updateBy`, "admin");
+    setValue(`${baseName}.baseRows.updateDate`, new Date());
+
+    let re = watch(`${baseName}.baseRows`);
+    let test = watch();
+    debugger;
+    insert(fields.length, re);
+  };
+  const DeleteField = (index) => {
+    remove(index);
+  };
+  const UpdateField = (index) => {
+    let re = watch(`${baseName}.baseRows`);
+    update(index, re);
+  };
+
   const router = useAppRouter();
   const [paymentMode, setPaymentMode] = useState([]);
   const hiddenColumn = {
@@ -328,11 +354,32 @@ const AppProductSalePaidType = ({ formMethods, productId }) => {
               <Grid container justifyContent={"space-around"} mt={2}>
                 <Grid item xs={11}>
                   <Grid container justifyContent={"center"}>
-                    {mode !== "view" && (
+                    {mode === "add" && (
                       <Grid item xs={12} md="auto" pr={2}>
                         <Button
                           variant="contained"
                           onClick={() => {
+                            AddField();
+                            dispatch(
+                              setDialog({
+                                ...dialog,
+                                open: false,
+                                title: message,
+                              })
+                            );
+                          }}
+                        >
+                          ยืนยัน
+                        </Button>
+                      </Grid>
+                    )}
+
+                    {mode === "edit" && (
+                      <Grid item xs={12} md="auto" pr={2}>
+                        <Button
+                          variant="contained"
+                          onClick={() => {
+                            AddField();
                             dispatch(
                               setDialog({
                                 ...dialog,

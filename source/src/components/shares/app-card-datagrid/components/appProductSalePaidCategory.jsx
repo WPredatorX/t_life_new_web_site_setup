@@ -18,10 +18,10 @@ import {
 import {
   AppCard,
   AppDataGrid,
-  AppStatus,
   AppAutocomplete,
   AppDatePicker,
   AppCollapseCard,
+  AppStatusBool,
 } from "@/components";
 import { Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -48,7 +48,7 @@ import {
 } from "@mui/icons-material";
 import { setDialog } from "@stores/slices";
 import { Transform } from "@utilities";
-const AppProductSalePaidCategory = ({ formMethods }) => {
+const AppProductSalePaidCategory = ({ formMethods, productId }) => {
   const { handleSnackAlert } = useAppSnackbar();
   const theme = useTheme();
   const dispatch = useAppDispatch();
@@ -90,12 +90,13 @@ const AppProductSalePaidCategory = ({ formMethods }) => {
     name: baseName,
   });
   const router = useAppRouter();
-
+  const [paymentChannelData, setPaymentChannel] = useState([]);
   const hiddenColumn = {
     id: false,
   };
   useEffect(() => {
     handleFetchProduct();
+    handlePaymentChannel();
   }, [pageNumber, pageSize]);
   const columns = [
     {
@@ -123,7 +124,10 @@ const AppProductSalePaidCategory = ({ formMethods }) => {
       align: "center",
       minWidth: 200,
       renderCell: (params) => (
-        <AppStatus status={params.value} statusText={params.row.statusText} />
+        <AppStatusBool
+          status={params.value}
+          statusText={params.row.statusText}
+        />
       ),
     },
     {
@@ -169,11 +173,16 @@ const AppProductSalePaidCategory = ({ formMethods }) => {
       align: "center",
       minWidth: 100,
       valueGetter: (value) => {
-        let formattedValue = format(
-          addYears(parseISO(value), 543),
-          "dd/MM/yyyy"
-        );
-        return formattedValue;
+        if (!value) return "";
+        try {
+          let date;
+          date = typeof value === "string" ? parseISO(value) : new Date(value);
+          if (isNaN(date.getTime())) return value;
+          let formattedValue = format(addYears(date, 543), "dd/MM/yyyy");
+          return formattedValue;
+        } catch (error) {
+          return value;
+        }
       },
     },
     {
@@ -196,11 +205,16 @@ const AppProductSalePaidCategory = ({ formMethods }) => {
       align: "center",
       minWidth: 100,
       valueGetter: (value) => {
-        let formattedValue = format(
-          addYears(parseISO(value), 543),
-          "dd/MM/yyyy"
-        );
-        return formattedValue;
+        if (!value) return "";
+        try {
+          let date;
+          date = typeof value === "string" ? parseISO(value) : new Date(value);
+          if (isNaN(date.getTime())) return value;
+          let formattedValue = format(addYears(date, 543), "dd/MM/yyyy");
+          return formattedValue;
+        } catch (error) {
+          return value;
+        }
       },
     },
     {
@@ -216,8 +230,12 @@ const AppProductSalePaidCategory = ({ formMethods }) => {
         let disabledView = false; // TODO: เช็คตามสิทธิ์
         let disabledEdit = false; // TODO: เช็คตามสิทธิ์
         let disabledDelete = false; // TODO: เช็คตามสิทธิ์
-        const viewFunction = disabledView ? null : () => handleView();
-        const editFunction = disabledEdit ? null : () => handleEdit();
+        const viewFunction = disabledView
+          ? null
+          : () => handleView(params.rows.payment_id);
+        const editFunction = disabledEdit
+          ? null
+          : () => handleEdit(params.rows.payment_id);
         const deleteFunction = disabledDelete ? null : () => handleDelete();
         const defaultProps = {
           showInMenu: true,
@@ -278,11 +296,13 @@ const AppProductSalePaidCategory = ({ formMethods }) => {
     });
   };
   const handleEdit = (params) => {
+    handlePaymentChannel(params);
     handleNotiification("จัดการประเภทการชำระเงิน", "edit", () => {
       setTimeout(() => {}, 400);
     });
   };
-  const handleView = () => {
+  const handleView = (params) => {
+    handlePaymentChannel(params);
     handleNotiification("ประเภทการชำระเงิน", "view", () => {
       setTimeout(() => {}, 400);
     });
@@ -306,7 +326,7 @@ const AppProductSalePaidCategory = ({ formMethods }) => {
                     <Grid container justifyContent={"center"} spacing={2}>
                       <Grid item xs={11}>
                         <Controller
-                          name={`status`}
+                          name={`paymentChannel`}
                           control={control}
                           render={({ field }) => {
                             const { name, onChange, ...otherProps } = field;
@@ -320,12 +340,7 @@ const AppProductSalePaidCategory = ({ formMethods }) => {
                                   fullWidth
                                   disabled={mode === "view" ? true : false}
                                   label="ประเภท"
-                                  options={[
-                                    {
-                                      id: "1",
-                                      label: "Option 1",
-                                    },
-                                  ]}
+                                  options={paymentChannelData}
                                   onChange={(event, value) => {
                                     onChange(value);
                                   }}
@@ -593,25 +608,88 @@ const AppProductSalePaidCategory = ({ formMethods }) => {
     setPageSize(model.pageSize);
   };
 
-  const handleFetchProduct = async () => {
+  const handlePaymentChannel = async (Id) => {
     setLoading(true);
     try {
-      const start = pageNumber * pageSize;
-      const limit = pageSize;
-      const response = await fetch(
-        `/api/products?action=getSalePaidCategoryByProductId`,
+      const resPaymentMode = await fetch(
+        `/api/direct?action=getPaymentChannelById`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
         }
       );
+      const paymentChannelData = await resPaymentMode.json();
+      const dataSelect = Array.from(paymentChannelData).find(
+        (item) => item.id === Id
+      );
+      setPaymentChannel(paymentChannelData);
+      const _form = watch();
 
+      reset({
+        ..._form,
+        paymentChannel: dataSelect,
+      });
+    } catch (error) {
+      handleSnackAlert({
+        open: true,
+        message: "ล้มเหลวเกิดข้อผิดพลาด " + error,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFetchProduct = async () => {
+    setLoading(true);
+    try {
+      let body = JSON.stringify({
+        field: "create_date",
+        direction: "asc",
+        page_number: pageNumber,
+        page_size: pageSize,
+        product_sale_channel_id: productId,
+        min_coverage_amount: watch(`${baseName}.searchParams.minimumCoverage`),
+        max_coverage_amount: watch(`${baseName}.searchParams.MaximumCoverage`),
+      });
+      const response = await fetch(
+        `/api/direct?action=getProductPaymentMethodsById`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body,
+        }
+      );
       const data = await response.json();
+      let resultData = [];
+      if (data.status !== 204) {
+        if (data) {
+          resultData = Array.from(data).map((value) => {
+            return {
+              ...value,
+              id: value.product_payment_id,
+              paidCategory: value.payment_name,
+              StartDate: value.start_date,
+              EndDate: value.end_date,
+              createDate: value.create_date,
+              updateDate: value.update_date,
+              status: value.is_active,
+              statusText: value.name_status,
+              createBy: value.create_by,
+              updateBy: value.update_by,
+              minimumCoverage: value.min_coverage_amount,
+              maximumCoverage: value.max_coverage_amount,
+            };
+          });
+        }
+      }
 
       const resetData = watch();
-      reset({ ...resetData, salePaidCategory: { rows: [...data] } });
+      reset({ ...resetData, salePaidCategory: { rows: [...resultData] } });
     } catch (error) {
-      handleSnackAlert({ open: true, message: "ล้มเหลวเกิดข้อผิดพลาด" });
+      handleSnackAlert({
+        open: true,
+        message: "ล้มเหลวเกิดข้อผิดพลาด" + error,
+      });
     } finally {
       setLoading(false);
     }

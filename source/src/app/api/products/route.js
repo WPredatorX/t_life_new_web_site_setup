@@ -154,6 +154,7 @@ export async function POST(request) {
         data = response.data?.data;
       }
       return NextResponse.json(data);
+
     case "getSaleConditionByProductId":
       productId = url.searchParams.get("productId");
       data = {
@@ -167,74 +168,7 @@ export async function POST(request) {
         MaximumCoverage: 2000000,
       };
       return NextResponse.json(data);
-    case "getSaleRangeByProductId":
-      productId = url.searchParams.get("productId");
-      data = [
-        {
-          id: 1,
-          status: 2,
-          statusText: "รายการใหม่",
-          StartDate: new Date(),
-          EndDate: new Date(),
-          createBy: "admin",
-          createDate: new Date(),
-          updateBy: "admin",
-          updateDate: new Date(),
-        },
-        {
-          id: 2,
-          status: 3,
-          statusText: "เปิดใช้งาน",
-          StartDate: new Date(),
-          EndDate: new Date(),
-          createBy: "admin",
-          createDate: new Date(),
-          updateBy: "admin",
-          updateDate: new Date(),
-        },
-      ];
-      return NextResponse.json(data);
-    case "getSalePaidTypeByProductId":
-      productId = url.searchParams.get("productId");
-      data = [
-        {
-          id: 1,
-          paidType: "รายเดือน",
-          status: 1,
-          statusText: "แบบร่าง",
-          StartDate: new Date(),
-          EndDate: new Date(),
-          createBy: "admin",
-          createDate: new Date(),
-          updateBy: "admin",
-          updateDate: new Date(),
-        },
-        {
-          id: 2,
-          paidType: "รายปี",
-          status: 2,
-          statusText: "รายการใหม่",
-          StartDate: new Date(),
-          EndDate: new Date(),
-          createBy: "admin",
-          createDate: new Date(),
-          updateBy: "admin",
-          updateDate: new Date(),
-        },
-        {
-          id: 3,
-          paidType: "ราย 6 เดือน",
-          status: 3,
-          statusText: "เปิดใช้งาน",
-          StartDate: new Date(),
-          EndDate: new Date(),
-          createBy: "admin",
-          createDate: new Date(),
-          updateBy: "admin",
-          updateDate: new Date(),
-        },
-      ];
-      return NextResponse.json(data);
+
     case "getSalePaidCategoryByProductId":
       productId = url.searchParams.get("productId");
       data = [

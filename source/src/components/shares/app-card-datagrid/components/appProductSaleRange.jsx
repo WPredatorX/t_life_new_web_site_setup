@@ -92,23 +92,42 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
 
     insert(fields.length, re);
   };
+  const DeleteField = (index) => {
+    remove(index);
+  };
+  const UpdateField = (index) => {
+    let re = watch(`${baseName}.baseRows`);
+    update(index, re);
+  };
   const handleAdd = () => {
-    handleNotiification("จัดการระยะเวลาขาย", () => {
-      0;
+    handleNotiification("จัดการระยะเวลาขาย", "add", () => {
       setTimeout(() => {}, 400);
     });
   };
   const handleEdit = (params) => {
-    handleNotiification("จัดการระยะเวลาขาย", "edit", () => {
-      setTimeout(() => {}, 400);
-    });
+    handleNotiification(
+      "จัดการระยะเวลาขาย",
+      "edit",
+      () => {
+        setTimeout(() => {}, 400);
+      },
+      params
+    );
   };
-  const handleView = () => {
-    handleNotiification("จัดการระยะเวลาขาย", "view", () => {
-      setTimeout(() => {}, 400);
-    });
+  const handleView = (params) => {
+    handleNotiification(
+      "จัดการระยะเวลาขาย",
+      "view",
+      () => {
+        setTimeout(() => {}, 400);
+      },
+      params
+    );
   };
-  const handleNotiification = (message, mode, callback) => {
+  const handleDelete = (index) => {
+    DeleteField(index);
+  };
+  const handleNotiification = (message, mode, callback, index) => {
     dispatch(
       setDialog({
         ...dialog,
@@ -193,12 +212,31 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
               <Grid container justifyContent={"space-around"} mt={2}>
                 <Grid item xs={11}>
                   <Grid container justifyContent={"center"}>
-                    {mode !== "view" && (
+                    {mode === "add" && (
                       <Grid item xs={12} md="auto" pr={2}>
                         <Button
                           variant="contained"
                           onClick={() => {
                             AddField();
+                            dispatch(
+                              setDialog({
+                                ...dialog,
+                                open: false,
+                              })
+                            );
+                          }}
+                        >
+                          ยืนยัน
+                        </Button>
+                      </Grid>
+                    )}
+
+                    {mode === "edit" && (
+                      <Grid item xs={12} md="auto" pr={2}>
+                        <Button
+                          variant="contained"
+                          onClick={() => {
+                            UpdateField(index);
                             dispatch(
                               setDialog({
                                 ...dialog,
@@ -379,12 +417,17 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
       minWidth: 100,
       getActions: (params) => {
         const id = params?.row?.id;
+        const index = Array.from(watch(`${baseName}.rows`)).findIndex(
+          (item) => item.id === id
+        );
         let disabledView = false; // TODO: เช็คตามสิทธิ์
         let disabledEdit = false; // TODO: เช็คตามสิทธิ์
         let disabledDelete = false; // TODO: เช็คตามสิทธิ์
-        const viewFunction = disabledView ? null : () => handleView();
-        const editFunction = disabledEdit ? null : () => handleEdit();
-        const deleteFunction = disabledDelete ? null : () => handleDelete();
+        const viewFunction = disabledView ? null : () => handleView(index);
+        const editFunction = disabledEdit ? null : () => handleEdit(index);
+        const deleteFunction = disabledDelete
+          ? null
+          : () => handleDelete(index);
         const defaultProps = {
           showInMenu: true,
           sx: {

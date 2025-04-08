@@ -99,6 +99,89 @@ export async function POST(request) {
         return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
       }
       return NextResponse.json(data);
+    case "getProductPaymentMethodsById":
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}Payment/GetProductPaymentMethodsById`,
+        body,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      if (response.status === 200) {
+        data = response.data?.data;
+      }
+      if (response.status === 204) {
+        return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
+      }
+      return NextResponse.json(data);
+    case "getPaymentChannelById":
+      response = await axios.post(`${baseUrl}Payment/GetPaymentChannelById`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      if (response.status === 200) {
+        data = Array.from(response.data?.data || []).map((item) => {
+          return {
+            ...item,
+            id: item.payment_id,
+            label: item.payment_name,
+          };
+        });
+      }
+
+      if (response.status === 204) {
+        return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
+      }
+      return NextResponse.json(data);
+    case "getInstallmentTypeById":
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}Payment/GetInstallmentTypeById`,
+        body,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      if (response.status === 200) {
+        data = response.data?.data;
+      }
+      if (response.status === 204) {
+        return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
+      }
+      return NextResponse.json(data);
+    case "getProductApplicationTemplateById":
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}Products/GetProductApplicationTemplateById`,
+        body,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      if (response.status === 200) {
+        data = response.data?.data;
+      }
+      if (response.status === 204) {
+        return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
+      }
+      return NextResponse.json(data);
+    case "getApplicationTemplateById":
+      response = await axios.post(
+        `${baseUrl}Products/GetApplicationTemplateById`,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+
+      if (response.status === 200) {
+        data = Array.from(response.data?.data || []).map((item) => {
+          return {
+            ...item,
+            id: item.app_temp_id,
+            label: item.app_temp_name,
+          };
+        });
+      }
+
+      if (response.status === 204) {
+        return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
+      }
+      return NextResponse.json(data);
     case "getProductFromDirectWithMultiParam":
       //productId = url.searchParams.get("productId");
       /* response = await axios.post(

@@ -290,6 +290,20 @@ const PageCommonDataProductSale = ({ productId, type }) => {
             updateDate: format(new Date(), "yyyy-MM-dd"),
           },
         ],
+        baseRows: {
+          id: crypto.randomUUID(),
+          paidType: null,
+
+          payment_mode_id: null,
+          status: 2,
+          statusText: "รายการใหม่",
+          StartDate: format(new Date(), "yyyy-MM-dd"),
+          EndDate: format(new Date(), "yyyy-MM-dd"),
+          createBy: "admin",
+          createDate: format(new Date(), "yyyy-MM-dd"),
+          updateBy: "admin",
+          updateDate: format(new Date(), "yyyy-MM-dd"),
+        },
       },
       paymentMode: {},
 
@@ -326,6 +340,7 @@ const PageCommonDataProductSale = ({ productId, type }) => {
           },
         ],
       },
+      paymentChannel: {},
       salePrepayment: {
         searchParams: {
           status: null,
@@ -387,6 +402,7 @@ const PageCommonDataProductSale = ({ productId, type }) => {
           },
         ],
       },
+      template: {},
     },
   });
   useEffect(() => {
