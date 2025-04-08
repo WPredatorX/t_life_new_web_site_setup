@@ -89,7 +89,7 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
     setValue(`${baseName}.baseRows.updateBy`, "admin");
     setValue(`${baseName}.baseRows.updateDate`, new Date());
     let re = watch(`${baseName}.baseRows`);
-
+    debugger;
     insert(fields.length, re);
   };
   const DeleteField = (index) => {

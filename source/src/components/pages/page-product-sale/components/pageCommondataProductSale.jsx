@@ -293,7 +293,6 @@ const PageCommonDataProductSale = ({ productId, type }) => {
         baseRows: {
           id: crypto.randomUUID(),
           paidType: null,
-
           payment_mode_id: null,
           status: 2,
           statusText: "รายการใหม่",

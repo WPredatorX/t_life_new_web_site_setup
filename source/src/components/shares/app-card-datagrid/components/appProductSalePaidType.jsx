@@ -86,15 +86,18 @@ const AppProductSalePaidType = ({ formMethods, productId }) => {
   } = formMethods;
   const baseName = "salePaidType";
   const baseErrors = errors?.[baseName];
+  const baseObject = `${baseName}.rows`;
   const { fields, insert, remove } = useAppFieldArray({
     control,
-    name: baseName,
+    name: baseObject,
   });
 
   const AddField = () => {
+    const paymentModeValue = watch('paymentMode');
+    
     setValue(`${baseName}.baseRows.id`, crypto.randomUUID());
-    setValue(`${baseName}.baseRows.paidType`, watch(`paymentMode.label`));
-    setValue(`${baseName}.baseRows.payment_mode_id`, watch(`paymentMode.id`));
+    setValue(`${baseName}.baseRows.paidType`, paymentModeValue?.label || '');
+    setValue(`${baseName}.baseRows.payment_mode_id`, paymentModeValue?.id || '');
     setValue(`${baseName}.baseRows.status`, 2);
     setValue(`${baseName}.baseRows.statusText`, "รายการใหม่");
     setValue(`${baseName}.baseRows.createBy`, "admin");
@@ -103,7 +106,6 @@ const AppProductSalePaidType = ({ formMethods, productId }) => {
     setValue(`${baseName}.baseRows.updateDate`, new Date());
 
     let re = watch(`${baseName}.baseRows`);
-    let test = watch();
     debugger;
     insert(fields.length, re);
   };
@@ -111,12 +113,15 @@ const AppProductSalePaidType = ({ formMethods, productId }) => {
     remove(index);
   };
   const UpdateField = (index) => {
+    const paymentModeValue = watch('paymentMode');
+    setValue(`${baseName}.baseRows.paidType`, paymentModeValue?.label || '');
+    setValue(`${baseName}.baseRows.payment_mode_id`, paymentModeValue?.id || '');
     let re = watch(`${baseName}.baseRows`);
     update(index, re);
   };
 
   const router = useAppRouter();
-  const [paymentMode, setPaymentMode] = useState([]);
+  const [paymentModeState, setPaymentMode] = useState([]);
   const hiddenColumn = {
     id: false,
   };
@@ -320,8 +325,9 @@ const AppProductSalePaidType = ({ formMethods, productId }) => {
                         <Controller
                           name={`paymentMode`}
                           control={control}
+                          defaultValue={null}
                           render={({ field }) => {
-                            const { name, onChange, ...otherProps } = field;
+                            const { name, onChange, value, ...otherProps } = field;
 
                             return (
                               <>
@@ -332,9 +338,11 @@ const AppProductSalePaidType = ({ formMethods, productId }) => {
                                   fullWidth
                                   disabled={mode === "view" ? true : false}
                                   label="select an option"
-                                  options={paymentMode}
-                                  onChange={(event, value) => {
-                                    onChange(value);
+                                  options={paymentModeState}
+                                  value={value}
+                                  onChange={(event, newValue) => {
+                                    onChange(newValue);
+                                    setValue('paymentMode', newValue);
                                   }}
                                   {...otherProps}
                                   error={Boolean(errors?.status)}
