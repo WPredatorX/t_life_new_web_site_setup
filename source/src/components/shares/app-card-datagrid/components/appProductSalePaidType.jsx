@@ -87,17 +87,20 @@ const AppProductSalePaidType = ({ formMethods, productId }) => {
   const baseName = "salePaidType";
   const baseErrors = errors?.[baseName];
   const baseObject = `${baseName}.rows`;
-  const { fields, insert, remove } = useAppFieldArray({
+  const { fields, insert, remove, update } = useAppFieldArray({
     control,
     name: baseObject,
   });
 
   const AddField = () => {
-    const paymentModeValue = watch('paymentMode');
-    
+    const paymentModeValue = watch("paymentMode");
+
     setValue(`${baseName}.baseRows.id`, crypto.randomUUID());
-    setValue(`${baseName}.baseRows.paidType`, paymentModeValue?.label || '');
-    setValue(`${baseName}.baseRows.payment_mode_id`, paymentModeValue?.id || '');
+    setValue(`${baseName}.baseRows.paidType`, paymentModeValue?.label || "");
+    setValue(
+      `${baseName}.baseRows.payment_mode_id`,
+      paymentModeValue?.id || ""
+    );
     setValue(`${baseName}.baseRows.status`, 2);
     setValue(`${baseName}.baseRows.statusText`, "รายการใหม่");
     setValue(`${baseName}.baseRows.createBy`, "admin");
@@ -106,16 +109,20 @@ const AppProductSalePaidType = ({ formMethods, productId }) => {
     setValue(`${baseName}.baseRows.updateDate`, new Date());
 
     let re = watch(`${baseName}.baseRows`);
-    debugger;
     insert(fields.length, re);
   };
   const DeleteField = (index) => {
     remove(index);
   };
   const UpdateField = (index) => {
-    const paymentModeValue = watch('paymentMode');
-    setValue(`${baseName}.baseRows.paidType`, paymentModeValue?.label || '');
-    setValue(`${baseName}.baseRows.payment_mode_id`, paymentModeValue?.id || '');
+    const paymentModeValue = watch("paymentMode");
+    setValue(`${baseName}.baseRows.paidType`, paymentModeValue?.label || "");
+    setValue(
+      `${baseName}.baseRows.payment_mode_id`,
+      paymentModeValue?.id || ""
+    );
+    setValue(`${baseName}.baseRows.updateBy`, "admin");
+    setValue(`${baseName}.baseRows.updateDate`, new Date());
     let re = watch(`${baseName}.baseRows`);
     update(index, re);
   };
@@ -239,13 +246,19 @@ const AppProductSalePaidType = ({ formMethods, productId }) => {
         let disabledView = false; // TODO: เช็คตามสิทธิ์
         let disabledEdit = false; // TODO: เช็คตามสิทธิ์
         let disabledDelete = false; // TODO: เช็คตามสิทธิ์
+        const index = Array.from(watch(`${baseName}.rows`)).findIndex(
+          (item) => item.id === id
+        );
         const viewFunction = disabledView
           ? null
-          : () => handleView(params?.row?.payment_mode_id);
+          : () => handleView(params?.row?.payment_mode_id, index);
         const editFunction = disabledEdit
           ? null
-          : () => handleEdit(params?.row?.payment_mode_id);
-        const deleteFunction = disabledDelete ? null : () => handleDelete();
+          : () => handleEdit(params?.row?.payment_mode_id, index);
+        const deleteFunction = disabledDelete
+          ? null
+          : () => handleDelete(index);
+
         const defaultProps = {
           showInMenu: true,
           sx: {
@@ -292,22 +305,24 @@ const AppProductSalePaidType = ({ formMethods, productId }) => {
     });
   };
 
-  const handleEdit = (params) => {
+  const handleEdit = (params, index) => {
     handleFetchPaymentList(params);
-    handleNotiification("แก้ไขรูปแบบชำระเงิน", "edit", params, () => {
+    handleNotiification("แก้ไขรูปแบบชำระเงิน", "edit", index, () => {
       setTimeout(() => {}, 400);
     });
   };
-  const handleView = (params) => {
+  const handleView = (params, index) => {
     handleFetchPaymentList(params);
-    handleNotiification("รูปแบบชำระเงิน", "view", params, () => {
+    handleNotiification("รูปแบบชำระเงิน", "view", index, () => {
       setTimeout(() => {}, 400);
     });
   };
 
-  const handleDelete = () => {};
+  const handleDelete = (index) => {
+    DeleteField(index);
+  };
 
-  const handleNotiification = (message, mode, callback) => {
+  const handleNotiification = (message, mode, index, callback) => {
     dispatch(
       setDialog({
         ...dialog,
@@ -327,7 +342,8 @@ const AppProductSalePaidType = ({ formMethods, productId }) => {
                           control={control}
                           defaultValue={null}
                           render={({ field }) => {
-                            const { name, onChange, value, ...otherProps } = field;
+                            const { name, onChange, value, ...otherProps } =
+                              field;
 
                             return (
                               <>
@@ -342,7 +358,7 @@ const AppProductSalePaidType = ({ formMethods, productId }) => {
                                   value={value}
                                   onChange={(event, newValue) => {
                                     onChange(newValue);
-                                    setValue('paymentMode', newValue);
+                                    setValue("paymentMode", newValue);
                                   }}
                                   {...otherProps}
                                   error={Boolean(errors?.status)}
@@ -387,7 +403,7 @@ const AppProductSalePaidType = ({ formMethods, productId }) => {
                         <Button
                           variant="contained"
                           onClick={() => {
-                            AddField();
+                            UpdateField(index);
                             dispatch(
                               setDialog({
                                 ...dialog,

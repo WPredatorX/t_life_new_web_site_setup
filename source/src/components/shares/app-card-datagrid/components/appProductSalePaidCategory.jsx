@@ -81,11 +81,12 @@ const AppProductSalePaidCategory = ({ formMethods, productId }) => {
     control,
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = formMethods;
   const baseName = "salePaidCategory";
   const baseErrors = errors?.[baseName];
-  const { fields, insert, remove } = useAppFieldArray({
+  const { fields, insert, remove, update } = useAppFieldArray({
     control,
     name: baseName,
   });
@@ -230,13 +231,19 @@ const AppProductSalePaidCategory = ({ formMethods, productId }) => {
         let disabledView = false; // TODO: เช็คตามสิทธิ์
         let disabledEdit = false; // TODO: เช็คตามสิทธิ์
         let disabledDelete = false; // TODO: เช็คตามสิทธิ์
+        const index = Array.from(watch(`${baseName}.rows`)).findIndex(
+          (item) => item.id === id
+        );
         const viewFunction = disabledView
           ? null
           : () => handleView(params.rows.payment_id);
         const editFunction = disabledEdit
           ? null
           : () => handleEdit(params.rows.payment_id);
-        const deleteFunction = disabledDelete ? null : () => handleDelete();
+        const deleteFunction = disabledDelete
+          ? null
+          : () => handleDelete(index);
+
         const defaultProps = {
           showInMenu: true,
           sx: {
@@ -290,26 +297,45 @@ const AppProductSalePaidCategory = ({ formMethods, productId }) => {
   const handleResetForm = () => {
     reset();
   };
+  const AddField = () => {
+    const paymentModeValue = watch("paymentChannel");
+    setValue(`${baseName}.baseRows.id`, crypto.randomUUID());
+    setValue(`${baseName}.baseRows.paidCategoryId`, paymentModeValue?.id || "");
+    setValue(
+      `${baseName}.baseRows.paidCategory`,
+      paymentModeValue?.label || ""
+    );
+    setValue(`${baseName}.baseRows.status`, 2);
+    setValue(`${baseName}.baseRows.statusText`, "รายการใหม่");
+    setValue(`${baseName}.baseRows.createBy`, "admin");
+    setValue(`${baseName}.baseRows.createDate`, new Date());
+    setValue(`${baseName}.baseRows.updateBy`, "admin");
+    setValue(`${baseName}.baseRows.updateDate`, new Date());
+
+    let re = watch(`${baseName}.baseRows`);
+    debugger;
+    insert(fields.length, re);
+  };
   const handleAdd = () => {
     handleNotiification("จัดการประเภทการชำระเงิน", "add", () => {
       setTimeout(() => {}, 400);
     });
   };
-  const handleEdit = (params) => {
+  const handleEdit = (params, index) => {
     handlePaymentChannel(params);
-    handleNotiification("จัดการประเภทการชำระเงิน", "edit", () => {
+    handleNotiification("จัดการประเภทการชำระเงิน", "edit", index, () => {
       setTimeout(() => {}, 400);
     });
   };
-  const handleView = (params) => {
+  const handleView = (params, index) => {
     handlePaymentChannel(params);
-    handleNotiification("ประเภทการชำระเงิน", "view", () => {
+    handleNotiification("ประเภทการชำระเงิน", "view", index, () => {
       setTimeout(() => {}, 400);
     });
   };
 
   const handleDelete = () => {};
-  const handleNotiification = (message, mode, callback) => {
+  const handleNotiification = (message, mode, index, callback) => {
     dispatch(
       setDialog({
         ...dialog,

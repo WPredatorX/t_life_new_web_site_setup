@@ -338,6 +338,23 @@ const PageCommonDataProductSale = ({ productId, type }) => {
             updateDate: format(new Date(), "yyyy-MM-dd"),
           },
         ],
+        baseRows: [
+          {
+            id: 1,
+            paidCategoryId: null,
+            paidCategory: null,
+            status: null,
+            statusText: null,
+            minimumCoverage: null,
+            maximumCoverage: null,
+            StartDate: format(new Date(), "yyyy-MM-dd"),
+            EndDate: format(new Date(), "yyyy-MM-dd"),
+            createBy: null,
+            createDate: format(new Date(), "yyyy-MM-dd"),
+            updateBy: null,
+            updateDate: format(new Date(), "yyyy-MM-dd"),
+          },
+        ],
       },
       paymentChannel: {},
       salePrepayment: {
