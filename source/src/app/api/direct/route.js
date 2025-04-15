@@ -15,6 +15,7 @@ export async function POST(request) {
   let body = null;
   let start = null;
   let limit = null;
+  let productId = null;
   switch (action) {
     case "GetDirectGeneralInfo":
       response = await axios.post(`${baseUrl}BackOffice/GetDirectGeneralInfo`, {
@@ -180,6 +181,48 @@ export async function POST(request) {
 
       if (response.status === 204) {
         return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
+      }
+      return NextResponse.json(data);
+    case "AddOrUpdateDirect":
+      body = await request.json();
+      response = await axios.post(`${baseUrl}BackOffice/AddOrUpdateDirect`, body, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (response.status === 200) {
+        data = response.data?.data;
+      }
+      if (response.status === 204) {
+        return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
+      }
+      return NextResponse.json(data);
+    case "getSaleConditionByProductId":
+      productId = url.searchParams.get("productId");
+      body = {
+        product_sale_channel_id: productId,
+      };
+      console.log(body);
+      response = await axios.post(
+        `${baseUrl}BackOffice/GetConditionProductSale`,
+        body,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      if (response.status === 200) {
+        data = response.data?.data;
+      }
+      return NextResponse.json(data);
+    case "AddOrUpdateProductPlanByChannel":
+      body = await request.json();
+
+      response = await axios.post(
+        `${baseUrl}Products/AddOrUpdateProductPlanByChannel`,
+        body,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      if (response.status === 200) {
+
+        data = response.data?.data;
       }
       return NextResponse.json(data);
     case "getProductFromDirectWithMultiParam":

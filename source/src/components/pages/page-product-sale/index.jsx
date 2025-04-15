@@ -22,21 +22,81 @@ import { setDialog } from "@stores/slices";
 import { useAppDispatch, useAppSelector } from "@hooks";
 import { PageCommonDataProductSale, PageDataOutput } from "./components";
 
-const PageProductsSale = ({ productId, mode, type }) => {
+const PageProductsSale = ({ productPlanId, mode, type, saleChannelId }) => {
   const [tabContent, setTabContent] = useState([]);
   const [tabLabel, setTabLabel] = useState([]);
   const theme = useTheme();
+  const [productCondition, setProductCondition] = useState(null);
+  const [productPlan, setProductPlan] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const brokerId = useAppSelector((state) => state.global.brokerId);
+  const dispatch = useAppDispatch();
   useEffect(() => {
+
+    handleAddOrUpdateProduct();
+    handleFetchProductCondition();
     settab();
   }, []);
   const settab = () => {
     let data = [
-      <PageCommonDataProductSale productId={productId} type={type} />,
+      <PageCommonDataProductSale productId={productPlanId} type={type} saleChannelId={saleChannelId} />,
       <PageDataOutput />,
     ];
     let labeltab = ["ข้อมูลทั่วไป", "ข้อมูลการแสดงผล"];
     setTabContent(data);
     setTabLabel(labeltab);
+  };
+  const handleAddOrUpdateProduct = async () => {
+    setLoading(true);
+    const body = {
+      is_active: true,
+      create_date: null,
+      create_by: "Systems",
+      update_date: null,
+      update_by: null,
+      product_sale_channel_id: saleChannelId,
+      product_plan_id: productPlanId,
+      channel_id: null,
+      broker_id: brokerId,
+      min_coverage_amount: 0,
+      max_coverage_amount: 0,
+      min_age_years: 0,
+      min_age_months: 0,
+      min_age_days: 0,
+      max_age_years: 0,
+      max_age_months: 0,
+      max_age_days: 0,
+      product_sale_group_type: "1"
+    }
+    const response = await fetch(
+      `/api/direct?action=AddOrUpdateProductPlanByChannel`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      }
+    );
+
+    const data = await response.json();
+
+
+    setProductPlan(data);
+
+    setLoading(false);
+  };
+
+  const handleFetchProductCondition = async () => {
+    setLoading(true);
+    const response = await fetch(
+      `/api/direct?action=getSaleConditionByProductId&productId=${saleChannelId}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+    const data = await response.json();
+    setProductCondition(data);
+    setLoading(false);
   };
 
   return (
@@ -46,15 +106,15 @@ const PageProductsSale = ({ productId, mode, type }) => {
           <Grid container spacing={2}>
             <Grid item xs={12} md={4}>
               <Typography>Plan Code</Typography>
-              <TextField fullWidth value={productId} size="small" />
+              <TextField fullWidth value={productCondition ? productCondition.i_plan : ""} size="small" disabled />
             </Grid>
             <Grid item xs={12} md={4}>
               <Typography>ชื่อ</Typography>
-              <TextField fullWidth size="small" />
+              <TextField fullWidth value={productCondition ? productCondition.title : ""} size="small" disabled />
             </Grid>
             <Grid item xs={12} md={4}>
               <Typography>โปรโมชั่น</Typography>
-              <TextField fullWidth size="small" />
+              <TextField fullWidth value={productCondition ? productCondition.promotion : ""} size="small" disabled />
             </Grid>
           </Grid>
         </AppCard>

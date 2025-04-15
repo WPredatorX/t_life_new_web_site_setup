@@ -232,14 +232,15 @@ const AppProductList = ({ mode }) => {
       minWidth: 100,
       getActions: (params) => {
         const id = params?.row?.id;
+        const saleChannelId = params?.row?.product_sale_channel_id;
         let disabledView = false; // TODO: เช็คตามสิทธิ์
         let disabledEdit = false; // TODO: เช็คตามสิทธิ์
         const viewFunction = disabledView
           ? null
-          : () => router.push(`/productsale/${id}?mode=VIEW&type=0`);
+          : () => router.push(`/productsale/${id}?mode=VIEW&type=0&saleChannelId=${saleChannelId}`);
         const editFunction = disabledEdit
           ? null
-          : () => router.push(`/productsale/${id}?mode=EDIT&type=0`);
+          : () => router.push(`/productsale/${id}?mode=EDIT&type=0&saleChannelId=${saleChannelId}`);
 
         const defaultProps = {
           showInMenu: true,
@@ -323,10 +324,8 @@ const AppProductList = ({ mode }) => {
   const handleFetchProduct = async () => {
     setLoading(true);
     try {
-      const start = pageNumber * pageSize;
-      const limit = pageSize;
       const body = {
-        is_active: watch(`status`) ? watch(`status.id`) : null,
+        is_active: true,
         c_plan: watch(`name`) ? watch(`name`) : null,
         min_coverage_amount: watch(`fromInsuredSum`),
         max_coverage_amount: watch(`ToInsuredSum`),
@@ -345,19 +344,27 @@ const AppProductList = ({ mode }) => {
         }
       );
       const data = await response.json();
-      const mapData = data[0].detail.map((item) => {
-        return {
-          ...item,
-          id: item.product_plan_id,
-          name: item.i_plan,
-          status: item.product_status,
-          statusText: item.name_status,
-        };
-      });
-      setData({
-        rows: mapData,
-        totalRows: 100,
-      });
+      if (data.status === 204) {
+        handleSnackAlert({
+          open: true,
+          message: `ไม่พบข้อมูล`,
+        });
+      }
+      else {
+        const mapData = data[0].detail.map((item) => {
+          return {
+            ...item,
+            id: item.product_plan_id,
+            name: item.i_plan,
+            status: item.product_status,
+            statusText: item.name_status,
+          };
+        });
+        setData({
+          rows: mapData,
+          totalRows: 100,
+        });
+      }
     } catch (error) {
       handleSnackAlert({
         open: true,

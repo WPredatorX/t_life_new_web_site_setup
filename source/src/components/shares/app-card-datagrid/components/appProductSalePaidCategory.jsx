@@ -86,9 +86,10 @@ const AppProductSalePaidCategory = ({ formMethods, productId }) => {
   } = formMethods;
   const baseName = "salePaidCategory";
   const baseErrors = errors?.[baseName];
+  const baseObject = `${baseName}.rows`;
   const { fields, insert, remove, update } = useAppFieldArray({
     control,
-    name: baseName,
+    name: baseObject,
   });
   const router = useAppRouter();
   const [paymentChannelData, setPaymentChannel] = useState([]);
@@ -106,7 +107,7 @@ const AppProductSalePaidCategory = ({ formMethods, productId }) => {
 
     {
       flex: 1,
-      field: "paidCategory",
+      field: "payment_name",
       type: "string",
       headerAlign: "center",
       headerName: "ประเภท",
@@ -133,7 +134,7 @@ const AppProductSalePaidCategory = ({ formMethods, productId }) => {
     },
     {
       flex: 1,
-      field: "minimumCoverage",
+      field: "min_coverage_amount",
       type: "string",
       headerAlign: "center",
       headerName: "ความคุ้มครองต่ำสุด",
@@ -144,7 +145,7 @@ const AppProductSalePaidCategory = ({ formMethods, productId }) => {
     },
     {
       flex: 1,
-      field: "maximumCoverage",
+      field: "max_coverage_amount",
       type: "string",
       headerAlign: "center",
       headerName: "ความคุ้มครองสูงสุด",
@@ -236,10 +237,10 @@ const AppProductSalePaidCategory = ({ formMethods, productId }) => {
         );
         const viewFunction = disabledView
           ? null
-          : () => handleView(params.rows.payment_id);
+          : () => handleView(params?.rows?.payment_id, index);
         const editFunction = disabledEdit
           ? null
-          : () => handleEdit(params.rows.payment_id);
+          : () => handleEdit(params?.rows?.payment_id, index);
         const deleteFunction = disabledDelete
           ? null
           : () => handleDelete(index);
@@ -300,41 +301,59 @@ const AppProductSalePaidCategory = ({ formMethods, productId }) => {
   const AddField = () => {
     const paymentModeValue = watch("paymentChannel");
     setValue(`${baseName}.baseRows.id`, crypto.randomUUID());
-    setValue(`${baseName}.baseRows.paidCategoryId`, paymentModeValue?.id || "");
+    setValue(`${baseName}.baseRows.payment_id`, paymentModeValue?.id || "");
     setValue(
-      `${baseName}.baseRows.paidCategory`,
+      `${baseName}.baseRows.payment_name`,
       paymentModeValue?.label || ""
     );
+    setValue(`${baseName}.baseRows.payment_code`, paymentModeValue?.payment_code || "");
     setValue(`${baseName}.baseRows.status`, 2);
     setValue(`${baseName}.baseRows.statusText`, "รายการใหม่");
     setValue(`${baseName}.baseRows.createBy`, "admin");
     setValue(`${baseName}.baseRows.createDate`, new Date());
     setValue(`${baseName}.baseRows.updateBy`, "admin");
     setValue(`${baseName}.baseRows.updateDate`, new Date());
-
     let re = watch(`${baseName}.baseRows`);
-    debugger;
     insert(fields.length, re);
+  };
+  const UpdateField = (index) => {
+    const paymentModeValue = watch("paymentChannel");
+    setValue(`${baseName}.baseRows.id`, crypto.randomUUID());
+    setValue(`${baseName}.baseRows.payment_id`, paymentModeValue?.id || "");
+    setValue(
+      `${baseName}.baseRows.payment_name`,
+      paymentModeValue?.label || ""
+    );
+    setValue(`${baseName}.baseRows.payment_code`, paymentModeValue?.payment_code || "");
+    setValue(`${baseName}.baseRows.updateBy`, "admin");
+    setValue(`${baseName}.baseRows.updateDate`, new Date());
+    let re = watch(`${baseName}.baseRows`);
+    update(index, re);
+  };
+  const DeleteField = (index) => {
+    remove(index);
   };
   const handleAdd = () => {
     handleNotiification("จัดการประเภทการชำระเงิน", "add", () => {
-      setTimeout(() => {}, 400);
+      setTimeout(() => { }, 400);
     });
   };
   const handleEdit = (params, index) => {
     handlePaymentChannel(params);
     handleNotiification("จัดการประเภทการชำระเงิน", "edit", index, () => {
-      setTimeout(() => {}, 400);
+      setTimeout(() => { }, 400);
     });
   };
   const handleView = (params, index) => {
     handlePaymentChannel(params);
     handleNotiification("ประเภทการชำระเงิน", "view", index, () => {
-      setTimeout(() => {}, 400);
+      setTimeout(() => { }, 400);
     });
   };
 
-  const handleDelete = () => {};
+  const handleDelete = (index) => {
+    DeleteField(index);
+  };
   const handleNotiification = (message, mode, index, callback) => {
     dispatch(
       setDialog({
@@ -369,6 +388,7 @@ const AppProductSalePaidCategory = ({ formMethods, productId }) => {
                                   options={paymentChannelData}
                                   onChange={(event, value) => {
                                     onChange(value);
+                                    setValue("paymentChannel", value);
                                   }}
                                   {...otherProps}
                                   error={Boolean(errors?.status)}
@@ -398,8 +418,8 @@ const AppProductSalePaidCategory = ({ formMethods, productId }) => {
                           label="ความคุ้มครองต่ำสุด"
                           margin="dense"
                           size="small"
-                          id={`name`}
-                          {...register(`name`)}
+                          id={`${baseName}.baseRows.min_coverage_amount`}
+                          {...register(`${baseName}.baseRows.min_coverage_amount`)}
                           error={Boolean(errors?.name)}
                           inputProps={{ maxLength: 100 }}
                         />
@@ -415,8 +435,8 @@ const AppProductSalePaidCategory = ({ formMethods, productId }) => {
                           label="ความคุ้มครองสูงสุด"
                           margin="dense"
                           size="small"
-                          id={`name`}
-                          {...register(`name`)}
+                          id={`${baseName}.baseRows.max_coverage_amount`}
+                          {...register(`${baseName}.baseRows.max_coverage_amount`)}
                           error={Boolean(errors?.name)}
                           inputProps={{ maxLength: 100 }}
                           type="number"
@@ -442,8 +462,8 @@ const AppProductSalePaidCategory = ({ formMethods, productId }) => {
                           placeholder="0"
                           margin="dense"
                           size="small"
-                          id={`name`}
-                          {...register(`name`)}
+                          id={`${baseName}.baseRows.min_age_years`}
+                          {...register(`${baseName}.baseRows.min_age_years`)}
                           error={Boolean(errors?.name)}
                           inputProps={{ min: 0, max: 999, maxLength: 3 }}
                           type="number"
@@ -464,8 +484,8 @@ const AppProductSalePaidCategory = ({ formMethods, productId }) => {
                           placeholder="0"
                           margin="dense"
                           size="small"
-                          id={`name`}
-                          {...register(`name`)}
+                          id={`${baseName}.baseRows.min_age_months`}
+                          {...register(`${baseName}.baseRows.min_age_months`)}
                           error={Boolean(errors?.name)}
                           inputProps={{ maxLength: 100 }}
                           type="number"
@@ -488,8 +508,8 @@ const AppProductSalePaidCategory = ({ formMethods, productId }) => {
                           placeholder="0"
                           margin="dense"
                           size="small"
-                          id={`name`}
-                          {...register(`name`)}
+                          id={`${baseName}.baseRows.min_age_days`}
+                          {...register(`${baseName}.baseRows.min_age_days`)}
                           error={Boolean(errors?.name)}
                           inputProps={{ maxLength: 100 }}
                           type="number"
@@ -515,8 +535,8 @@ const AppProductSalePaidCategory = ({ formMethods, productId }) => {
                           placeholder="0"
                           margin="dense"
                           size="small"
-                          id={`name`}
-                          {...register(`name`)}
+                          id={`${baseName}.baseRows.max_age_years`}
+                          {...register(`${baseName}.baseRows.max_age_years`)}
                           error={Boolean(errors?.name)}
                           inputProps={{ maxLength: 100 }}
                           type="number"
@@ -537,8 +557,8 @@ const AppProductSalePaidCategory = ({ formMethods, productId }) => {
                           placeholder="0"
                           margin="dense"
                           size="small"
-                          id={`name`}
-                          {...register(`name`)}
+                          id={`${baseName}.baseRows.max_age_months`}
+                          {...register(`${baseName}.baseRows.max_age_months`)}
                           error={Boolean(errors?.name)}
                           inputProps={{ maxLength: 100 }}
                           type="number"
@@ -561,8 +581,8 @@ const AppProductSalePaidCategory = ({ formMethods, productId }) => {
                           placeholder="0"
                           margin="dense"
                           size="small"
-                          id={`name`}
-                          {...register(`name`)}
+                          id={`${baseName}.baseRows.max_age_days`}
+                          {...register(`${baseName}.baseRows.max_age_days`)}
                           error={Boolean(errors?.name)}
                           inputProps={{ maxLength: 100 }}
                           type="number"
@@ -585,11 +605,31 @@ const AppProductSalePaidCategory = ({ formMethods, productId }) => {
               <Grid container justifyContent={"space-around"} mt={2}>
                 <Grid item xs={11}>
                   <Grid container justifyContent={"center"}>
-                    {mode !== "view" && (
+                    {mode === "add" && (
                       <Grid item xs={12} md="auto" pr={2}>
                         <Button
                           variant="contained"
                           onClick={() => {
+                            AddField();
+                            dispatch(
+                              setDialog({
+                                ...dialog,
+                                open: false,
+                                title: message,
+                              })
+                            );
+                          }}
+                        >
+                          ยืนยัน
+                        </Button>
+                      </Grid>
+                    )}
+                    {mode === "edit" && (
+                      <Grid item xs={12} md="auto" pr={2}>
+                        <Button
+                          variant="contained"
+                          onClick={() => {
+                            UpdateField(index);
                             dispatch(
                               setDialog({
                                 ...dialog,
@@ -693,7 +733,6 @@ const AppProductSalePaidCategory = ({ formMethods, productId }) => {
             return {
               ...value,
               id: value.product_payment_id,
-              paidCategory: value.payment_name,
               StartDate: value.start_date,
               EndDate: value.end_date,
               createDate: value.create_date,
@@ -702,8 +741,6 @@ const AppProductSalePaidCategory = ({ formMethods, productId }) => {
               statusText: value.name_status,
               createBy: value.create_by,
               updateBy: value.update_by,
-              minimumCoverage: value.min_coverage_amount,
-              maximumCoverage: value.max_coverage_amount,
             };
           });
         }

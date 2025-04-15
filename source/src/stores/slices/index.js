@@ -11,6 +11,7 @@ import globalSliceReducer, {
   setAuth,
   setOpenDrawer,
   closeDialog,
+  setBrokerId,
 } from "./globalSlice";
 
 export {
@@ -28,5 +29,6 @@ export {
   setAuth,
   setOpenDrawer,
   closeDialog,
+  setBrokerId,
   // #endregion
 };

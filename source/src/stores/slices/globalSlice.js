@@ -8,6 +8,7 @@ export const initialState = {
   activeMenu: APPLICATION_DEFAULT.activeMenu,
   auth: null,
   openDrawer: true,
+  brokerId: null,
 };
 
 const globalSlice = createSlice({
@@ -47,6 +48,9 @@ const globalSlice = createSlice({
     closeDialog: (state) => {
       state.dialog = { ...state.dialog, open: false };
     },
+    setBrokerId: (state, action) => {
+      state.brokerId = action.payload;
+    },
   },
 });
 
@@ -63,4 +67,5 @@ export const {
   setAuth,
   setOpenDrawer,
   closeDialog,
+  setBrokerId,
 } = globalSlice.actions;

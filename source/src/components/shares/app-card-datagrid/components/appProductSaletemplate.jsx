@@ -70,48 +70,58 @@ const AppProductSaleTemplate = ({ formMethods, productId }) => {
     handleSubmit,
     formState: { errors },
     clearErrors,
+    setValue,
     watch,
   } = formMethods;
-  const baseObject = {
-    id: 1,
-    TemplateName: "",
-    status: 1,
-    statusText: "รายการใหม่",
-    minimumCoverage: 200,
-    maximumCoverage: 2000,
-    StartDate: new Date(),
-    EndDate: new Date(),
-    createBy: "admin",
-    createDate: new Date(),
-    updateBy: "admin",
-    updateDate: new Date(),
-  };
+
   const baseName = "saleTemplate";
   const baseErrors = errors?.[baseName];
-  const { fields, insert, remove } = useAppFieldArray({
+  const baseObject = `${baseName}.rows`;
+  const { fields, insert, remove, update } = useAppFieldArray({
     control,
-    name: baseName,
+    name: baseObject,
   });
 
   const router = useAppRouter();
+  const AddField = () => {
+    setValue(`${baseName}.baseRows.id`, crypto.randomUUID());
+    setValue(`${baseName}.baseRows.status`, 2);
+    setValue(`${baseName}.baseRows.statusText`, "รายการใหม่");
+    setValue(`${baseName}.baseRows.createBy`, "admin");
+    setValue(`${baseName}.baseRows.createDate`, new Date());
+    setValue(`${baseName}.baseRows.updateBy`, "admin");
+    setValue(`${baseName}.baseRows.updateDate`, new Date());
+    let re = watch(`${baseName}.baseRows`);
+    insert(fields.length, re);
+  };
+  const UpdateField = (index) => {
+    setValue(`${baseName}.baseRows.updateBy`, "admin");
+    setValue(`${baseName}.baseRows.updateDate`, new Date());
+    let re = watch(`${baseName}.baseRows`);
+    update(index, re);
+  };
+
   const handleAdd = () => {
-    handleNotiification("จัดการเทมเพลตใบคำขอ", () => {
-      setTimeout(() => {}, 400);
+    handleNotiification("จัดการเทมเพลตใบคำขอ", "add", () => {
+      setTimeout(() => { }, 400);
     });
   };
-  const handleEdit = (params) => {
+  const handleEdit = (params, index) => {
     handleFetchListTemplate(params);
-    handleNotiification("จัดการเทมเพลตใบคำขอ", "edit", () => {
-      setTimeout(() => {}, 400);
+    handleNotiification("จัดการเทมเพลตใบคำขอ", "edit", index, () => {
+      setTimeout(() => { }, 400);
     });
   };
-  const handleView = (params) => {
+  const handleView = (params, index) => {
     handleFetchListTemplate(params);
-    handleNotiification("จัดการเทมเพลตใบคำขอ", "view", () => {
-      setTimeout(() => {}, 400);
+    handleNotiification("จัดการเทมเพลตใบคำขอ", "view", index, () => {
+      setTimeout(() => { }, 400);
     });
   };
-  const handleNotiification = (message, mode, callback) => {
+  const handleDelete = (index) => {
+    remove(index);
+  };
+  const handleNotiification = (message, mode, index, callback) => {
     dispatch(
       setDialog({
         ...dialog,
@@ -145,6 +155,7 @@ const AppProductSaleTemplate = ({ formMethods, productId }) => {
                                   options={TemplateList}
                                   onChange={(event, value) => {
                                     onChange(value);
+                                    setValue(`template`, value);
                                   }}
                                   {...otherProps}
                                   error={Boolean(errors?.status)}
@@ -164,8 +175,8 @@ const AppProductSaleTemplate = ({ formMethods, productId }) => {
                           margin="dense"
                           disabled={mode === "view" ? true : false}
                           size="small"
-                          id={`name`}
-                          {...register(`name`)}
+                          id={`${baseName}.baseRows.TemplateName`}
+                          {...register(`${baseName}.baseRows.TemplateName`)}
                           error={Boolean(errors?.name)}
                           inputProps={{ maxLength: 100 }}
                         />
@@ -188,8 +199,8 @@ const AppProductSaleTemplate = ({ formMethods, productId }) => {
                           label="ความคุ้มครองต่ำสุด*"
                           margin="dense"
                           size="small"
-                          id={`name`}
-                          {...register(`name`)}
+                          id={`${baseName}.baseRows.minimumCoverage`}
+                          {...register(`${baseName}.baseRows.minimumCoverage`)}
                           error={Boolean(errors?.name)}
                           inputProps={{ maxLength: 100 }}
                         />
@@ -204,8 +215,8 @@ const AppProductSaleTemplate = ({ formMethods, productId }) => {
                           label="ความคุ้มครองสูงสุด*"
                           margin="dense"
                           size="small"
-                          id={`name`}
-                          {...register(`name`)}
+                          id={`${baseName}.baseRows.maximumCoverage `}
+                          {...register(`${baseName}.baseRows.maximumCoverage`)}
                           error={Boolean(errors?.name)}
                           inputProps={{ maxLength: 100 }}
                           type="number"
@@ -231,8 +242,8 @@ const AppProductSaleTemplate = ({ formMethods, productId }) => {
                           placeholder="0"
                           margin="dense"
                           size="small"
-                          id={`name`}
-                          {...register(`name`)}
+                          id={`${baseName}.baseRows.min_age_years`}
+                          {...register(`${baseName}.baseRows.min_age_years`)}
                           error={Boolean(errors?.name)}
                           inputProps={{ maxLength: 100 }}
                           type="number"
@@ -253,8 +264,8 @@ const AppProductSaleTemplate = ({ formMethods, productId }) => {
                           placeholder="0"
                           margin="dense"
                           size="small"
-                          id={`name`}
-                          {...register(`name`)}
+                          id={`${baseName}.baseRows.min_age_months`}
+                          {...register(`${baseName}.baseRows.min_age_months`)}
                           error={Boolean(errors?.name)}
                           inputProps={{ maxLength: 100 }}
                           type="number"
@@ -277,8 +288,8 @@ const AppProductSaleTemplate = ({ formMethods, productId }) => {
                           placeholder="0"
                           margin="dense"
                           size="small"
-                          id={`name`}
-                          {...register(`name`)}
+                          id={`${baseName}.baseRows.min_age_days`}
+                          {...register(`${baseName}.baseRows.min_age_days`)}
                           error={Boolean(errors?.name)}
                           inputProps={{ maxLength: 100 }}
                           type="number"
@@ -304,8 +315,8 @@ const AppProductSaleTemplate = ({ formMethods, productId }) => {
                           placeholder="0"
                           margin="dense"
                           size="small"
-                          id={`name`}
-                          {...register(`name`)}
+                          id={`${baseName}.baseRows.max_age_years`}
+                          {...register(`${baseName}.baseRows.max_age_years`)}
                           error={Boolean(errors?.name)}
                           inputProps={{ maxLength: 100 }}
                           type="number"
@@ -326,8 +337,8 @@ const AppProductSaleTemplate = ({ formMethods, productId }) => {
                           placeholder="0"
                           margin="dense"
                           size="small"
-                          id={`name`}
-                          {...register(`name`)}
+                          id={`${baseName}.baseRows.max_age_months`}
+                          {...register(`${baseName}.baseRows.max_age_months`)}
                           error={Boolean(errors?.name)}
                           inputProps={{ maxLength: 100 }}
                           type="number"
@@ -350,8 +361,8 @@ const AppProductSaleTemplate = ({ formMethods, productId }) => {
                           placeholder="0"
                           margin="dense"
                           size="small"
-                          id={`name`}
-                          {...register(`name`)}
+                          id={`${baseName}.baseRows.max_age_days`}
+                          {...register(`${baseName}.baseRows.max_age_days`)}
                           error={Boolean(errors?.name)}
                           inputProps={{ maxLength: 100 }}
                           type="number"
@@ -374,7 +385,7 @@ const AppProductSaleTemplate = ({ formMethods, productId }) => {
               <Grid container justifyContent={"space-around"} mt={2}>
                 <Grid item xs={11}>
                   <Grid container justifyContent={"center"}>
-                    {mode !== "view" && (
+                    {mode === "add" && (
                       <Grid item xs={12} md="auto" pr={2}>
                         <Button
                           variant="contained"
@@ -392,6 +403,26 @@ const AppProductSaleTemplate = ({ formMethods, productId }) => {
                         </Button>
                       </Grid>
                     )}
+                    {mode === "edit" && (
+                      <Grid item xs={12} md="auto" pr={2}>
+                        <Button
+                          variant="contained"
+                          onClick={() => {
+                            UpdateField();
+                            dispatch(
+                              setDialog({
+                                ...dialog,
+                                open: false,
+                              })
+                            );
+                          }}
+                        >
+                          ยืนยัน
+                        </Button>
+                      </Grid>
+                    )}
+
+
 
                     <Grid item xs={12} md="auto">
                       <Button
@@ -554,16 +585,19 @@ const AppProductSaleTemplate = ({ formMethods, productId }) => {
       minWidth: 100,
       getActions: (params) => {
         const id = params?.row?.id;
+        const index = Array.from(watch(`${baseName}.rows`)).findIndex(
+          (item) => item.id === id
+        );
         let disabledView = false; // TODO: เช็คตามสิทธิ์
         let disabledEdit = false; // TODO: เช็คตามสิทธิ์
         let disabledDelete = false; // TODO: เช็คตามสิทธิ์
         const viewFunction = disabledView
           ? null
-          : () => handleView(params.row.app_temp_id);
+          : () => handleView(params.row.app_temp_id, index);
         const editFunction = disabledEdit
           ? null
-          : () => handleEdit(params.row.app_temp_id);
-        const deleteFunction = disabledDelete ? null : () => handleDelete();
+          : () => handleEdit(params.row.app_temp_id, index);
+        const deleteFunction = disabledDelete ? null : () => handleDelete(index);
         const defaultProps = {
           showInMenu: true,
           sx: {

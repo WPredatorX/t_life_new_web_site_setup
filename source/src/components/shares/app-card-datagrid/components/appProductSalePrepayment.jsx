@@ -83,13 +83,15 @@ const AppProductSalePrepayment = ({ formMethods, productId }) => {
     control,
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = formMethods;
   const baseName = "salePrepayment";
   const baseErrors = errors?.[baseName];
-  const { fields, insert, remove } = useAppFieldArray({
+  const baseObject = `${baseName}.rows`;
+  const { fields, insert, remove, update } = useAppFieldArray({
     control,
-    name: baseName,
+    name: baseObject,
   });
   const router = useAppRouter();
 
@@ -215,12 +217,15 @@ const AppProductSalePrepayment = ({ formMethods, productId }) => {
       minWidth: 100,
       getActions: (params) => {
         const id = params?.row?.id;
+        const index = Array.from(watch(`${baseName}.rows`)).findIndex(
+          (item) => item.id === id
+        );
         let disabledView = false; // TODO: เช็คตามสิทธิ์
         let disabledEdit = false; // TODO: เช็คตามสิทธิ์
         let disabledDelete = false; // TODO: เช็คตามสิทธิ์
-        const viewFunction = disabledView ? null : () => handleView();
-        const editFunction = disabledEdit ? null : () => handleEdit();
-        const deleteFunction = disabledDelete ? null : () => handleDelete();
+        const viewFunction = disabledView ? null : () => handleView(index);
+        const editFunction = disabledEdit ? null : () => handleEdit(index);
+        const deleteFunction = disabledDelete ? null : () => handleDelete(index);
         const defaultProps = {
           showInMenu: true,
           sx: {
@@ -259,24 +264,48 @@ const AppProductSalePrepayment = ({ formMethods, productId }) => {
       },
     },
   ];
+  const AddField = () => {
+    setValue(`${baseName}.baseRows.id`, crypto.randomUUID());
+    setValue(`${baseName}.baseRows.status`, 2);
+    setValue(`${baseName}.baseRows.statusText`, "รายการใหม่");
+    setValue(`${baseName}.baseRows.createBy`, "admin");
+    setValue(`${baseName}.baseRows.createDate`, new Date());
+    setValue(`${baseName}.baseRows.updateBy`, "admin");
+    setValue(`${baseName}.baseRows.updateDate`, new Date());
+    let re = watch(`${baseName}.baseRows`);
+    insert(fields.length, re);
+  };
+  const UpdateField = (index) => {
+    setValue(`${baseName}.baseRows.updateBy`, "admin");
+    setValue(`${baseName}.baseRows.updateDate`, new Date());
+    let re = watch(`${baseName}.baseRows`);
+
+    update(index, re);
+  }
+  const DeleteField = (index) => {
+    remove(index);
+  }
+
   const handleAdd = () => {
     handleNotiification("จัดการงวดชำระ", "add", () => {
-      setTimeout(() => {}, 400);
+      setTimeout(() => { }, 400);
     });
   };
-  const handleEdit = (params) => {
-    handleNotiification("จัดการงวดชำระ", "edit", () => {
-      setTimeout(() => {}, 400);
+  const handleEdit = (index) => {
+    handleNotiification("จัดการงวดชำระ", "edit", index, () => {
+      setTimeout(() => { }, 400);
     });
   };
-  const handleView = () => {
-    handleNotiification("จัดการงวดชำระ", "view", () => {
-      setTimeout(() => {}, 400);
+  const handleView = (index) => {
+    handleNotiification("จัดการงวดชำระ", "view", index, () => {
+      setTimeout(() => { }, 400);
     });
   };
 
-  const handleDelete = () => {};
-  const handleNotiification = (message, mode, callback) => {
+  const handleDelete = (index) => {
+    DeleteField(index);
+  };
+  const handleNotiification = (message, mode, index, callback) => {
     dispatch(
       setDialog({
         ...dialog,
@@ -300,8 +329,8 @@ const AppProductSalePrepayment = ({ formMethods, productId }) => {
                               label="รูปแบบ"
                               margin="dense"
                               size="small"
-                              id={`name`}
-                              {...register(`name`)}
+                              id={`${baseName}.baseRows.PrepaymentForm`}
+                              {...register(`${baseName}.baseRows.PrepaymentForm`)}
                               error={Boolean(errors?.name)}
                               inputProps={{ maxLength: 100 }}
                             />
@@ -318,8 +347,8 @@ const AppProductSalePrepayment = ({ formMethods, productId }) => {
                               label="จำนวนงวด"
                               margin="dense"
                               size="small"
-                              id={`name`}
-                              {...register(`name`)}
+                              id={`${baseName}.baseRows.NumberOfInstallments`}
+                              {...register(`${baseName}.baseRows.NumberOfInstallments`)}
                               error={Boolean(errors?.name)}
                               inputProps={{ maxLength: 100 }}
                             />
@@ -335,11 +364,12 @@ const AppProductSalePrepayment = ({ formMethods, productId }) => {
               </Grid>
 
               <Grid container justifyContent={"center"} columnGap={2}>
-                {mode !== "view" && (
+                {mode === "add" && (
                   <Grid item xs={12} md="auto">
                     <Button
                       variant="contained"
                       onClick={() => {
+                        AddField();
                         dispatch(
                           setDialog({
                             ...dialog,
@@ -353,7 +383,25 @@ const AppProductSalePrepayment = ({ formMethods, productId }) => {
                     </Button>
                   </Grid>
                 )}
-
+                {mode === "edit" && (
+                  <Grid item xs={12} md="auto">
+                    <Button
+                      variant="contained"
+                      onClick={() => {
+                        UpdateField(index);
+                        dispatch(
+                          setDialog({
+                            ...dialog,
+                            open: false,
+                            title: message,
+                          })
+                        );
+                      }}
+                    >
+                      ยืนยัน
+                    </Button>
+                  </Grid>
+                )}
                 <Grid xs={12} md="auto">
                   <Button
                     variant="contained"

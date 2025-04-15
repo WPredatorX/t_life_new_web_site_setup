@@ -16,8 +16,12 @@ import { useEffect, useState } from "react";
 import { useAppForm, useAppSnackbar } from "@/hooks";
 import { Yup } from "@/utilities";
 import { yupResolver } from "@hookform/resolvers/yup";
+import { useAppDispatch, useAppSelector } from "@/hooks";
+import { setBrokerId } from "@/stores/slices";
 
 const AppCommonData = ({ mode }) => {
+  const dispatch = useAppDispatch();
+  const brokerId = useAppSelector((state) => state.global.brokerId);
   const [GeneralInfo, SetGeneralInfo] = useState();
   const [ConfirmEmail, setConfirmEmail] = useState([]);
   const [ConfirmEmailCC, setConfirmEmailCC] = useState([]);
@@ -80,6 +84,7 @@ const AppCommonData = ({ mode }) => {
       reset({ GeneralInfo: result });
 
       SetGeneralInfo(data[0]);
+      dispatch(setBrokerId(data[0].broker_id));
     } catch (error) {
       handleSnackAlert({
         open: true,
@@ -99,9 +104,55 @@ const AppCommonData = ({ mode }) => {
     handleFetchData();
   }, []);
 
-  const onSubmit = () => {
+  const onSubmit = async () => {
     setLoading(true);
     try {
+      let generalInfo = [
+        {
+          i_subbusiness_line: watch(`${baseName}.0.i_subbusiness_line`),
+          c_subbusiness_line: watch(`${baseName}.0.c_subbusiness_line`),
+          i_business_line: watch(`${baseName}.0.i_business_line`),
+          broker_id: watch(`${baseName}.0.broker_id`),
+          broker_name: watch(`${baseName}.0.broker_name`),
+          broker_logo: watch(`${baseName}.0.broker_logo`),
+          broker_license_number: watch(`${baseName}.0.broker_license_number`),
+          broker_email: watch(`${baseName}.0.broker_email`),
+          broker_url: watch(`${baseName}.0.broker_url`),
+          recipient_id: watch(`${baseName}.0.recipient_id`),
+          mail_to: ConfirmEmail.join(";"),
+          mail_cc: ConfirmEmailCC.join(";"),
+          template_code: watch(`${baseName}.0.template_code`),
+          update_by: "admin",
+          update_date: new Date().toISOString(),
+        },
+        {
+          i_subbusiness_line: watch(`${baseName}.1.i_subbusiness_line`),
+          c_subbusiness_line: watch(`${baseName}.1.c_subbusiness_line`),
+          i_business_line: watch(`${baseName}.1.i_business_line`),
+          broker_id: watch(`${baseName}.1.broker_id`),
+          broker_name: watch(`${baseName}.1.broker_name`),
+          broker_logo: watch(`${baseName}.1.broker_logo`),
+          broker_license_number: watch(`${baseName}.1.broker_license_number`),
+          broker_email: watch(`${baseName}.1.broker_email`),
+          broker_url: watch(`${baseName}.1.broker_url`),
+          recipient_id: watch(`${baseName}.1.recipient_id`),
+          mail_to: ContactEmail.join(";"),
+          mail_cc: ContactEmailCC.join(";"),
+          template_code: watch(`${baseName}.1.template_code`),
+          update_by: "admin",
+          update_date: new Date().toISOString(),
+        },
+      ];
+
+      let dataBody = generalInfo;
+      const response = await fetch(`/api/direct?action=AddOrUpdateDirect`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(dataBody),
+      });
+      if (response.status === 200) {
+        alert("บันทึกข้อมูลสำเร็จ");
+      }
     } catch (error) {
       handleSnackAlert({
         open: true,

@@ -155,19 +155,7 @@ export async function POST(request) {
       }
       return NextResponse.json(data);
 
-    case "getSaleConditionByProductId":
-      productId = url.searchParams.get("productId");
-      data = {
-        MinimumAgeYear: 1,
-        MinimumAgeMonth: 2,
-        MinimumAgeDay: 3,
-        MaximumAgeYear: 60,
-        MaximumAgeMonth: 10,
-        MaximumAgeDay: 12,
-        MinimumCoverage: 20000,
-        MaximumCoverage: 2000000,
-      };
-      return NextResponse.json(data);
+
 
     case "getSalePaidCategoryByProductId":
       productId = url.searchParams.get("productId");

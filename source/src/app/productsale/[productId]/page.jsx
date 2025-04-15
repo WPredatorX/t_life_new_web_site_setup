@@ -2,9 +2,9 @@
 import { PageProductSale } from "@/components";
 const ProductSale = ({
   params: { productId },
-  searchParams: { mode, type },
+  searchParams: { mode, type, saleChannelId },
 }) => {
-  return <PageProductSale productId={productId} mode={mode} type={type} />;
+  return <PageProductSale productPlanId={productId} mode={mode} type={type} saleChannelId={saleChannelId} />;
 };
 
 export default ProductSale;

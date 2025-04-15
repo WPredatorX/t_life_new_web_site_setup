@@ -19,7 +19,7 @@ import { Yup } from "@utilities";
 import { APPLICATION_DEFAULT } from "@constants";
 import { format, addYears, addDays, parseISO } from "date-fns";
 
-const PageCommonDataProductSale = ({ productId, type }) => {
+const PageCommonDataProductSale = ({ productId, type, saleChannelId }) => {
   const router = useAppRouter();
   const theme = useTheme();
   const [loading, setLoading] = useState(true);
@@ -146,8 +146,14 @@ const PageCommonDataProductSale = ({ productId, type }) => {
           paidCategory: Yup.string().nullable(),
           status: Yup.mixed().nullable(),
           statusText: Yup.string().nullable(),
-          minimumCoverage: Yup.mixed().nullable,
-          maximumCoverage: Yup.mixed().nullable(),
+          min_coverage_amount: Yup.mixed().nullable(),
+          max_coverage_amount: Yup.mixed().nullable(),
+          min_age_years: Yup.number().nullable().min(0),
+          min_age_months: Yup.number().nullable().min(0).max(11),
+          min_age_days: Yup.number().nullable().min(0).max(31),
+          max_age_years: Yup.number().nullable().min(0),
+          max_age_months: Yup.number().nullable().min(0).max(11),
+          max_age_days: Yup.number().nullable().min(0).max(31),
           StartDate: Yup.date().nullable(),
           EndDate: Yup.date().nullable(),
           createBy: Yup.string().nullable(),
@@ -325,11 +331,19 @@ const PageCommonDataProductSale = ({ productId, type }) => {
         rows: [
           {
             id: 1,
-            paidCategory: null,
+            payment_id: null,
+            payment_code: null,
+            payment_name: null,
             status: null,
             statusText: null,
-            minimumCoverage: null,
-            maximumCoverage: null,
+            min_coverage_amount: null,
+            max_coverage_amount: null,
+            min_age_years: null,
+            min_age_months: null,
+            min_age_days: null,
+            max_age_years: null,
+            max_age_months: null,
+            max_age_days: null,
             StartDate: format(new Date(), "yyyy-MM-dd"),
             EndDate: format(new Date(), "yyyy-MM-dd"),
             createBy: null,
@@ -341,12 +355,22 @@ const PageCommonDataProductSale = ({ productId, type }) => {
         baseRows: [
           {
             id: 1,
-            paidCategoryId: null,
-            paidCategory: null,
+            payment_id: null,
+            payment_code: null,
+            payment_name: null,
             status: null,
             statusText: null,
-            minimumCoverage: null,
-            maximumCoverage: null,
+            min_coverage_amount: null,
+            max_coverage_amount: null,
+            min_age_years: null,
+            min_age_months: null,
+            min_age_days: null,
+            max_age_years: null,
+            max_age_months: null,
+            max_age_days: null,
+            StartDate: format(new Date(), "yyyy-MM-dd"),
+            maximumAgeMonth: null,
+            maximumAgeDay: null,
             StartDate: format(new Date(), "yyyy-MM-dd"),
             EndDate: format(new Date(), "yyyy-MM-dd"),
             createBy: null,
@@ -386,6 +410,20 @@ const PageCommonDataProductSale = ({ productId, type }) => {
             updateDate: format(new Date(), "yyyy-MM-dd"),
           },
         ],
+        baseRows: [
+          {
+            id: crypto.randomUUID(),
+            PrepaymentForm: "",
+            NumberOfInstallments: "",
+            status: 2,
+            statusText: "รายการใหม่",
+            StartDate: format(new Date(), "yyyy-MM-dd"),
+            EndDate: format(new Date(), "yyyy-MM-dd"),
+            createBy: "admin",
+            createDate: format(new Date(), "yyyy-MM-dd"),
+            updateBy: "admin",
+          },
+        ]
       },
       saleTemplate: {
         searchParams: {
@@ -417,26 +455,52 @@ const PageCommonDataProductSale = ({ productId, type }) => {
             updateDate: format(new Date(), "yyyy-MM-dd"),
           },
         ],
+        baseRows: [
+          {
+            id: crypto.randomUUID(),
+            TemplateName: "",
+            status: 1,
+            statusText: "รายการใหม่",
+            minimumCoverage: 200,
+            maximumCoverage: 2000,
+            StartDate: format(new Date(), "yyyy-MM-dd"),
+            EndDate: format(new Date(), "yyyy-MM-dd"),
+            min_age_years: null,
+            min_age_months: null,
+            min_age_days: null,
+            max_age_years: null,
+            max_age_months: null,
+            max_age_days: null,
+            createBy: "admin",
+            createDate: format(new Date(), "yyyy-MM-dd"),
+            updateBy: "admin",
+            updateDate: format(new Date(), "yyyy-MM-dd"),
+          }
+        ],
+
       },
       template: {},
     },
   });
+
   useEffect(() => {
-    handleProductCondition();
+    handleFetchProductCondition();
   }, []);
-  const handleProductCondition = async () => {
+  const handleFetchProductCondition = async () => {
     setLoading(true);
     const response = await fetch(
-      `/api/products?action=getSaleConditionByProductId`,
+      `/api/direct?action=getSaleConditionByProductId&productId=${saleChannelId}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       }
     );
-
     const data = await response.json();
     setConditionData(data);
+    setLoading(false);
   };
+
+
   return (
     <Grid container>
       <Grid item xs={12} mt={2}>
@@ -450,7 +514,7 @@ const PageCommonDataProductSale = ({ productId, type }) => {
             </Grid>
             <Grid item xs={2}>
               <TextField
-                value={ConditionData.MinimumAgeYear}
+                value={ConditionData ? ConditionData.min_age_years : ""}
                 fullWidth
                 size="small"
                 type="number"
@@ -463,7 +527,7 @@ const PageCommonDataProductSale = ({ productId, type }) => {
             </Grid>
             <Grid item xs={2}>
               <TextField
-                value={ConditionData.MinimumAgeMonth}
+                value={ConditionData ? ConditionData.min_age_months : ""}
                 fullWidth
                 size="small"
                 type="number"
@@ -476,7 +540,7 @@ const PageCommonDataProductSale = ({ productId, type }) => {
             </Grid>
             <Grid item xs={2}>
               <TextField
-                value={ConditionData.MinimumAgeDay}
+                value={ConditionData ? ConditionData.min_age_days : ""}
                 fullWidth
                 size="small"
                 type="number"
@@ -494,7 +558,7 @@ const PageCommonDataProductSale = ({ productId, type }) => {
             </Grid>
             <Grid item xs={2}>
               <TextField
-                value={ConditionData.MaximumAgeYear}
+                value={ConditionData ? ConditionData.max_age_years : ""}
                 fullWidth
                 size="small"
                 type="number"
@@ -507,7 +571,7 @@ const PageCommonDataProductSale = ({ productId, type }) => {
             </Grid>
             <Grid item xs={2}>
               <TextField
-                value={ConditionData.MaximumAgeMonth}
+                value={ConditionData ? ConditionData.max_age_months : ""}
                 fullWidth
                 size="small"
                 type="number"
@@ -520,7 +584,7 @@ const PageCommonDataProductSale = ({ productId, type }) => {
             </Grid>
             <Grid item xs={2}>
               <TextField
-                value={ConditionData.MaximumAgeDay}
+                value={ConditionData ? ConditionData.max_age_days : ""}
                 fullWidth
                 size="small"
                 type="number"
@@ -538,7 +602,7 @@ const PageCommonDataProductSale = ({ productId, type }) => {
             </Grid>
             <Grid item xs={4}>
               <TextField
-                value={ConditionData.MinimumCoverage}
+                value={ConditionData ? ConditionData.min_coverage_amount : ""}
                 fullWidth
                 size="small"
                 inputProps={{
@@ -560,7 +624,7 @@ const PageCommonDataProductSale = ({ productId, type }) => {
             </Grid>
             <Grid item xs={4}>
               <TextField
-                value={ConditionData.MaximumCoverage}
+                value={ConditionData ? ConditionData.max_coverage_amount : ""}
                 fullWidth
                 size="small"
                 inputProps={{
