@@ -1,7 +1,11 @@
 import { AppCard, AppCardDataGrid, AppNumericFormat } from "@/components";
 
 import {
+  Button,
+  Card,
+  CircularProgress,
   FormControlLabel,
+  FormHelperText,
   Grid,
   InputAdornment,
   Switch,
@@ -19,13 +23,19 @@ import { Yup } from "@utilities";
 import { APPLICATION_DEFAULT } from "@constants";
 import { format, addYears, addDays, parseISO } from "date-fns";
 
-const PageCommonDataProductSale = ({ productId, type, saleChannelId }) => {
+const PageCommonDataProductSale = ({
+  productId,
+  type,
+  saleChannelId,
+  productCondition,
+}) => {
   const router = useAppRouter();
   const theme = useTheme();
   const [loading, setLoading] = useState(true);
   const dispatch = useAppDispatch();
   const { dialog } = useAppSelector((state) => state.global);
   const [ConditionData, setConditionData] = useState({});
+  const brokerId = useAppSelector((state) => state.global.brokerId);
   const ValidationSchema = Yup.object().shape({
     saleRange: Yup.object().shape({
       searchParams: Yup.object().shape({}),
@@ -225,6 +235,19 @@ const PageCommonDataProductSale = ({ productId, type, saleChannelId }) => {
     reValidateMode: "onChange",
     resolver: yupResolver(ValidationSchema),
     defaultValues: {
+      ConditionData: {
+        i_plan: "20-01-02",
+        title: "SMART SAVING 10/2",
+        promotion: null,
+        min_age_years: 0,
+        min_age_months: 0,
+        min_age_days: 0,
+        max_age_years: 0,
+        max_age_months: 0,
+        max_age_days: 0,
+        min_coverage_amount: 0,
+        max_coverage_amount: 0,
+      },
       saleRange: {
         searchParams: {
           status: null,
@@ -423,7 +446,7 @@ const PageCommonDataProductSale = ({ productId, type, saleChannelId }) => {
             createDate: format(new Date(), "yyyy-MM-dd"),
             updateBy: "admin",
           },
-        ]
+        ],
       },
       saleTemplate: {
         searchParams: {
@@ -475,32 +498,49 @@ const PageCommonDataProductSale = ({ productId, type, saleChannelId }) => {
             createDate: format(new Date(), "yyyy-MM-dd"),
             updateBy: "admin",
             updateDate: format(new Date(), "yyyy-MM-dd"),
-          }
+          },
         ],
-
       },
       template: {},
     },
   });
+
+  const {
+    watch,
+    reset,
+    control,
+    register,
+    handleSubmit,
+    setValue,
+    formState: { errors },
+  } = formMethods;
+
+  const handleResetForm = () => {
+    reset();
+  };
 
   useEffect(() => {
     handleFetchProductCondition();
   }, []);
   const handleFetchProductCondition = async () => {
     setLoading(true);
-    const response = await fetch(
-      `/api/direct?action=getSaleConditionByProductId&productId=${saleChannelId}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      }
-    );
-    const data = await response.json();
-    setConditionData(data);
-    setLoading(false);
+    try {
+      const resetData = watch();
+      reset({ ...resetData, ConditionData: { ...productCondition } });
+      const w = watch();
+      console.log(w);
+    } catch (error) {
+      handleSnackAlert({
+        open: true,
+        message: "ล้มเหลวเกิดข้อผิดพลาด " + error,
+      });
+    } finally {
+      setLoading(false);
+    }
   };
-
-
+  if (loading) {
+    return <CircularProgress />;
+  }
   return (
     <Grid container>
       <Grid item xs={12} mt={2}>
@@ -514,42 +554,72 @@ const PageCommonDataProductSale = ({ productId, type, saleChannelId }) => {
             </Grid>
             <Grid item xs={2}>
               <TextField
-                value={ConditionData ? ConditionData.min_age_years : ""}
+                defaultValue={
+                  watch("ConditionData.min_age_years")
+                    ? watch("ConditionData.min_age_years")
+                    : ""
+                }
                 fullWidth
                 size="small"
                 type="number"
+                id={`ConditionData.min_age_years`}
+                {...register(`ConditionData.min_age_years`)}
+                error={Boolean(errors?.name)}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">ปี</InputAdornment>
                   ),
                 }}
-              ></TextField>
+              />
+              <FormHelperText error={errors?.name}>
+                {errors?.name?.message}
+              </FormHelperText>
             </Grid>
             <Grid item xs={2}>
               <TextField
-                value={ConditionData ? ConditionData.min_age_months : ""}
+                defaultValue={
+                  watch("ConditionData.min_age_months")
+                    ? watch("ConditionData.min_age_months")
+                    : ""
+                }
                 fullWidth
                 size="small"
                 type="number"
+                id={`ConditionData.min_age_months`}
+                {...register(`ConditionData.min_age_months`)}
+                error={Boolean(errors?.name)}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">เดือน</InputAdornment>
                   ),
                 }}
-              ></TextField>
+              />
+              <FormHelperText error={errors?.name}>
+                {errors?.name?.message}
+              </FormHelperText>
             </Grid>
             <Grid item xs={2}>
               <TextField
-                value={ConditionData ? ConditionData.min_age_days : ""}
+                defaultValue={
+                  watch("ConditionData.min_age_days")
+                    ? watch("ConditionData.min_age_days")
+                    : ""
+                }
                 fullWidth
                 size="small"
                 type="number"
+                id={`ConditionData.min_age_days`}
+                {...register(`ConditionData.min_age_days`)}
+                error={Boolean(errors?.name)}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">วัน</InputAdornment>
                   ),
                 }}
-              ></TextField>
+              />
+              <FormHelperText error={errors?.name}>
+                {errors?.name?.message}
+              </FormHelperText>
             </Grid>
           </Grid>
           <Grid container spacing={2} mt={2}>
@@ -558,42 +628,71 @@ const PageCommonDataProductSale = ({ productId, type, saleChannelId }) => {
             </Grid>
             <Grid item xs={2}>
               <TextField
-                value={ConditionData ? ConditionData.max_age_years : ""}
+                defaultValue={
+                  watch("ConditionData.max_age_years")
+                    ? watch("ConditionData.max_age_years")
+                    : ""
+                }
                 fullWidth
                 size="small"
                 type="number"
+                id={`ConditionData.max_age_years`}
+                {...register(`ConditionData.max_age_years`)}
+                error={Boolean(errors?.name)}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">ปี</InputAdornment>
                   ),
                 }}
-              ></TextField>
+              />
+              <FormHelperText error={errors?.name}>
+                {errors?.name?.message}
+              </FormHelperText>
             </Grid>
             <Grid item xs={2}>
               <TextField
-                value={ConditionData ? ConditionData.max_age_months : ""}
+                defaultValue={
+                  watch("ConditionData.max_age_months")
+                    ? watch("ConditionData.max_age_months")
+                    : ""
+                }
                 fullWidth
                 size="small"
                 type="number"
+                id={`ConditionData.max_age_months`}
+                {...register(`ConditionData.max_age_months`)}
+                error={Boolean(errors?.name)}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">เดือน</InputAdornment>
                   ),
                 }}
-              ></TextField>
+              />
+              <FormHelperText error={errors?.name}>
+                {errors?.name?.message}
+              </FormHelperText>
             </Grid>
             <Grid item xs={2}>
               <TextField
-                value={ConditionData ? ConditionData.max_age_days : ""}
+                defaultValue={
+                  watch("ConditionData.max_age_days")
+                    ? watch("ConditionData.max_age_days")
+                    : ""
+                }
                 fullWidth
                 size="small"
                 type="number"
+                id={`ConditionData.max_age_days`}
+                {...register(`ConditionData.max_age_days`)}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">วัน</InputAdornment>
                   ),
                 }}
-              ></TextField>
+              />
+              <FormHelperText error={errors?.name}>
+                {errors?.name?.message}
+              </FormHelperText>
             </Grid>
           </Grid>
           <Grid container spacing={2} mt={2}>
@@ -602,7 +701,7 @@ const PageCommonDataProductSale = ({ productId, type, saleChannelId }) => {
             </Grid>
             <Grid item xs={4}>
               <TextField
-                value={ConditionData ? ConditionData.min_coverage_amount : ""}
+                value={watch("ConditionData.min_coverage_amount")}
                 fullWidth
                 size="small"
                 inputProps={{
@@ -615,7 +714,12 @@ const PageCommonDataProductSale = ({ productId, type, saleChannelId }) => {
                     <InputAdornment position="end">บาท</InputAdornment>
                   ),
                 }}
-              ></TextField>
+                id={`ConditionData.min_coverage_amount`}
+                {...register(`ConditionData.min_coverage_amount`)}
+              />
+              <FormHelperText error={errors?.name}>
+                {errors?.name?.message}
+              </FormHelperText>
             </Grid>
           </Grid>
           <Grid container spacing={2} mt={2}>
@@ -624,7 +728,7 @@ const PageCommonDataProductSale = ({ productId, type, saleChannelId }) => {
             </Grid>
             <Grid item xs={4}>
               <TextField
-                value={ConditionData ? ConditionData.max_coverage_amount : ""}
+                value={watch("ConditionData.max_coverage_amount")}
                 fullWidth
                 size="small"
                 inputProps={{
@@ -637,7 +741,10 @@ const PageCommonDataProductSale = ({ productId, type, saleChannelId }) => {
                     <InputAdornment position="end">บาท</InputAdornment>
                   ),
                 }}
-              ></TextField>
+              />
+              <FormHelperText error={errors?.name}>
+                {errors?.name?.message}
+              </FormHelperText>
             </Grid>
           </Grid>
         </AppCard>
@@ -739,6 +846,56 @@ const PageCommonDataProductSale = ({ productId, type, saleChannelId }) => {
           </AppCard>
         </Grid>
       )}
+      <Grid item xs={12}>
+        <Card>
+          <Grid container spacing={2} justifyContent={"end"}>
+            <Grid item xs={11.3}>
+              <Grid container justifyContent={"end"} spacing={2}>
+                <Grid item xs={12} md="auto">
+                  <Button
+                    variant="contained"
+                    sx={{
+                      color: theme.palette.common.white,
+                      backgroundColor: theme.palette.primary.main,
+                    }}
+                  >
+                    ขออนุมัติ
+                  </Button>
+                </Grid>
+                <Grid item xs={12} md="auto">
+                  <Button variant="outlined">ยกเลิก</Button>
+                </Grid>
+                <Grid item xs={12} md="auto">
+                  <Button variant="outlined">ล้างค่า</Button>
+                </Grid>
+
+                <Grid item xs={12} md="auto">
+                  <Button
+                    variant="contained"
+                    sx={{
+                      color: theme.palette.common.white,
+                      backgroundColor: theme.palette.primary.main,
+                    }}
+                  >
+                    บันทึกแบบร่าง
+                  </Button>
+                </Grid>
+                <Grid item xs={12} md="auto">
+                  <Button
+                    variant="contained"
+                    sx={{
+                      color: theme.palette.common.white,
+                      backgroundColor: theme.palette.primary.main,
+                    }}
+                  >
+                    ดูตัวอย่าง
+                  </Button>
+                </Grid>
+              </Grid>
+            </Grid>
+          </Grid>
+        </Card>
+      </Grid>
     </Grid>
   );
 };

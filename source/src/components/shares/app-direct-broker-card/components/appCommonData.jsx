@@ -96,8 +96,6 @@ const AppCommonData = ({ mode }) => {
       setConfirmEmailCC(watch(`${baseName}.0.mail_cc`));
       setContactEmail(watch(`${baseName}.1.mail_to`));
       setContactEmailCC(watch(`${baseName}.1.mail_cc`));
-      let w = watch();
-      console.log(w);
     }
   };
   useEffect(() => {

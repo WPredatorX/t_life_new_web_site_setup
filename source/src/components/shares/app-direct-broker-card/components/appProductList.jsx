@@ -29,7 +29,13 @@ import {
 import { Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { Transform, Yup } from "@utilities";
-import { useAppSnackbar, useAppRouter, useAppForm } from "@hooks";
+import {
+  useAppSnackbar,
+  useAppRouter,
+  useAppForm,
+  useAppDispatch,
+  useAppSelector,
+} from "@hooks";
 import { APPLICATION_DEFAULT } from "@constants";
 import { format, addYears, addDays, parseISO } from "date-fns";
 import {
@@ -48,7 +54,8 @@ const AppProductList = ({ mode }) => {
   const router = useAppRouter();
   const { handleSnackAlert } = useAppSnackbar();
   const theme = useTheme();
-
+  const dispatch = useAppDispatch();
+  const brokerId = useAppSelector((state) => state.global.brokerId);
   const validationSchema = Yup.object().shape({
     statusList: Yup.array().of(Yup.mixed()).nullable(),
     status: Yup.mixed().nullable(),
@@ -237,10 +244,13 @@ const AppProductList = ({ mode }) => {
         let disabledEdit = false; // TODO: เช็คตามสิทธิ์
         const viewFunction = disabledView
           ? null
-          : () => router.push(`/productsale/${id}?mode=VIEW&type=0&saleChannelId=${saleChannelId}`);
+          : () =>
+              router.push(
+                `/productsale/${id}?mode=VIEW&type=0&saleChannelId=${saleChannelId}`
+              );
         const editFunction = disabledEdit
           ? null
-          : () => router.push(`/productsale/${id}?mode=EDIT&type=0&saleChannelId=${saleChannelId}`);
+          : () => handleAddOrUpdateProduct(params.row);
 
         const defaultProps = {
           showInMenu: true,
@@ -326,6 +336,11 @@ const AppProductList = ({ mode }) => {
     try {
       const body = {
         is_active: true,
+        product_status: watch("status")
+          ? watch("status").id === "0"
+            ? null
+            : watch("status").id
+          : null,
         c_plan: watch(`name`) ? watch(`name`) : null,
         min_coverage_amount: watch(`fromInsuredSum`),
         max_coverage_amount: watch(`ToInsuredSum`),
@@ -349,8 +364,7 @@ const AppProductList = ({ mode }) => {
           open: true,
           message: `ไม่พบข้อมูล`,
         });
-      }
-      else {
+      } else {
         const mapData = data[0].detail.map((item) => {
           return {
             ...item,
@@ -392,6 +406,54 @@ const AppProductList = ({ mode }) => {
       });
     } catch (error) {
       handleSnackAlert({ open: true, message: "ล้มเหลวเกิดข้อผิดพลาด" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddOrUpdateProduct = async (params) => {
+    setLoading(true);
+    try {
+      const body = {
+        is_active: true,
+        product_status: "1",
+        create_date: params.create_date,
+        create_by: params.create_by,
+        update_date: new Date(),
+        update_by: "admin",
+        product_sale_channel_id: params.product_sale_channel_id,
+        product_plan_id: params.product_plan_id,
+        channel_id: null,
+        broker_id: brokerId,
+        min_coverage_amount: params.min_coverage_amount,
+        max_coverage_amount: params.max_coverage_amount,
+        min_age_years: params.min_age_years,
+        min_age_months: params.min_age_months,
+        min_age_days: params.min_age_days,
+        max_age_years: params.max_age_years,
+        max_age_months: params.max_age_months,
+        max_age_days: params.max_age_days,
+        product_sale_group_type: "1",
+      };
+      const response = await fetch(
+        `/api/direct?action=AddOrUpdateProductPlanByChannel`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
+      );
+
+      const data = await response.json();
+
+      router.push(
+        `/productsale/${params.id}?mode=EDIT&type=0&saleChannelId=${data}`
+      );
+    } catch (error) {
+      handleSnackAlert({
+        open: true,
+        message: "ล้มเหลวเกิดข้อผิดพลาด " + error,
+      });
     } finally {
       setLoading(false);
     }
@@ -477,8 +539,9 @@ const AppProductList = ({ mode }) => {
                               label: "ทั้งหมด",
                             },
                             { id: "1", label: "แบบร่าง" },
-                            { id: "2", label: "เปิดใช้งาน" },
-                            { id: "3", label: "ยกเลิกใช้งาน" },
+                            { id: "2", label: "รออนุมัติ" },
+                            { id: "3", label: "เปิดใช้งาน" },
+                            { id: "4", label: "ยกเลิกใช้งาน" },
                           ]}
                           onChange={(event, value) => {
                             onChange(value);

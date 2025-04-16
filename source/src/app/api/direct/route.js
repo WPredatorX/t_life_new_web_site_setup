@@ -23,6 +23,7 @@ export async function POST(request) {
       });
       if (response.status === 200) {
         data = response.data?.data;
+        data = data.sort((a, b) => a.template_code - b.template_code);
       }
       return NextResponse.json(data);
     case "TestSendMail":
@@ -185,9 +186,13 @@ export async function POST(request) {
       return NextResponse.json(data);
     case "AddOrUpdateDirect":
       body = await request.json();
-      response = await axios.post(`${baseUrl}BackOffice/AddOrUpdateDirect`, body, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
+      response = await axios.post(
+        `${baseUrl}BackOffice/AddOrUpdateDirect`,
+        body,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
       if (response.status === 200) {
         data = response.data?.data;
       }
@@ -221,7 +226,6 @@ export async function POST(request) {
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       if (response.status === 200) {
-
         data = response.data?.data;
       }
       return NextResponse.json(data);
