@@ -230,6 +230,62 @@ const PageCommonDataProductSale = ({
     },
   ];
 
+  const handleMinCoverage = (e) => {
+    let value = parseInt(e.target.value) || 0;
+    setValue(`ConditionData.min_coverage_amount`, value, {
+      shouldValidate: true,
+    });
+  };
+
+  const handleMaxCoverage = (e) => {
+    let value = parseInt(e.target.value) || 0;
+    setValue(`ConditionData.max_coverage_amount`, value, {
+      shouldValidate: true,
+    });
+  };
+
+  const handleMinYear = (e) => {
+    let value = parseInt(e.target.value) || 0;
+    setValue(`ConditionData.min_age_years`, value, {
+      shouldValidate: true,
+    });
+  };
+
+  const handleMinMonth = (e) => {
+    let value = parseInt(e.target.value) || 0;
+    setValue(`ConditionData.min_age_months`, value, {
+      shouldValidate: true,
+    });
+  };
+
+  const handleMinDay = (e) => {
+    let value = parseInt(e.target.value) || 0;
+    setValue(`ConditionData.min_age_days`, value, {
+      shouldValidate: true,
+    });
+  };
+
+  const handleMaxYear = (e) => {
+    let value = parseInt(e.target.value) || 0;
+    setValue(`ConditionData.max_age_years`, value, {
+      shouldValidate: true,
+    });
+  };
+
+  const handleMaxMonth = (e) => {
+    let value = parseInt(e.target.value) || 0;
+    setValue(`ConditionData.max_age_months`, value, {
+      shouldValidate: true,
+    });
+  };
+
+  const handleMaxDay = (e) => {
+    let value = parseInt(e.target.value) || 0;
+    setValue(`ConditionData.max_age_days`, value, {
+      shouldValidate: true,
+    });
+  };
+
   const formMethods = useAppForm({
     mode: "onBlur",
     reValidateMode: "onChange",
@@ -271,24 +327,24 @@ const PageCommonDataProductSale = ({
             id: 1,
             status: null,
             statusText: null,
-            StartDate: format(new Date(), "yyyy-MM-dd"),
-            EndDate: format(new Date(), "yyyy-MM-dd"),
-            createBy: null,
-            createDate: format(new Date(), "yyyy-MM-dd"),
-            updateBy: null,
-            updateDate: format(new Date(), "yyyy-MM-dd"),
+            sale_start_date: format(new Date(), "yyyy-MM-dd"),
+            sale_end_date: format(new Date(), "yyyy-MM-dd"),
+            create_by: null,
+            create_date: format(new Date(), "yyyy-MM-dd"),
+            update_by: null,
+            update_date: format(new Date(), "yyyy-MM-dd"),
           },
         ],
         baseRows: {
           id: crypto.randomUUID(),
           status: 2,
           statusText: "รายการใหม่",
-          StartDate: format(new Date(), "yyyy-MM-dd"),
-          EndDate: format(new Date(), "yyyy-MM-dd"),
-          createBy: "admin",
-          createDate: format(new Date(), "yyyy-MM-dd"),
-          updateBy: "admin",
-          updateDate: format(new Date(), "yyyy-MM-dd"),
+          sale_start_date: format(new Date(), "yyyy-MM-dd"),
+          sale_end_date: format(new Date(), "yyyy-MM-dd"),
+          create_by: "admin",
+          create_date: format(new Date(), "yyyy-MM-dd"),
+          update_by: "admin",
+          update_date: format(new Date(), "yyyy-MM-dd"),
         },
       },
       salePaidType: {
@@ -465,11 +521,12 @@ const PageCommonDataProductSale = ({
         rows: [
           {
             id: 1,
+            app_temp_id: "",
             TemplateName: "",
             status: 1,
             statusText: "รายการใหม่",
-            minimumCoverage: 200,
-            maximumCoverage: 2000,
+            min_coverage_amount: 200,
+            max_coverage_amount: 2000,
             StartDate: format(new Date(), "yyyy-MM-dd"),
             EndDate: format(new Date(), "yyyy-MM-dd"),
             createBy: "admin",
@@ -481,11 +538,12 @@ const PageCommonDataProductSale = ({
         baseRows: [
           {
             id: crypto.randomUUID(),
+            app_temp_id: "",
             TemplateName: "",
             status: 1,
             statusText: "รายการใหม่",
-            minimumCoverage: 200,
-            maximumCoverage: 2000,
+            min_coverage_amount: 200,
+            max_coverage_amount: 2000,
             StartDate: format(new Date(), "yyyy-MM-dd"),
             EndDate: format(new Date(), "yyyy-MM-dd"),
             min_age_years: null,
@@ -519,6 +577,190 @@ const PageCommonDataProductSale = ({
     reset();
   };
 
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      let ConditionPayload = {
+        is_active: true,
+        product_status: "1",
+        update_date: new Date(),
+        update_by: "admin",
+        product_sale_channel_id: saleChannelId,
+        product_plan_id: productId,
+        channel_id: null,
+        broker_id: brokerId,
+        min_coverage_amount: watch("ConditionData.min_coverage_amount"),
+        max_coverage_amount: watch("ConditionData.max_coverage_amount"),
+        min_age_years: watch("ConditionData.min_age_years"),
+        min_age_months: watch("ConditionData.min_age_months"),
+        min_age_days: watch("ConditionData.min_age_days"),
+        max_age_years: watch("ConditionData.max_age_years"),
+        max_age_months: watch("ConditionData.max_age_months"),
+        max_age_days: watch("ConditionData.max_age_days"),
+        product_sale_group_type: type,
+      };
+      console.log(ConditionPayload);
+      const responseCondition = await fetch(
+        `/api/direct?action=AddOrUpdateProductPlanByChannel`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(ConditionPayload),
+        }
+      );
+
+      let SalePeriodArray = watch("saleRange.rows");
+
+      SalePeriodArray.forEach(async (element) => {
+        let SalePeriodPayload = JSON.stringify({
+          is_active: true,
+          create_by: element.create_by,
+          update_by: element.update_by, //to do User authorize
+          sale_period_id: element.id,
+          product_sale_channel_id: saleChannelId,
+          sale_start_date: element.sale_start_date,
+          sale_end_date: element.sale_end_date,
+        });
+
+        const responseSalePeriod = await fetch(
+          `/api/direct?action=AddOrUpdateProductSalePeriod`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: SalePeriodPayload,
+          }
+        );
+        if (!responseSalePeriod.ok) {
+          throw new Error(`HTTP error! status: ${responseSalePeriod.status}`);
+        }
+      });
+
+      let PaymentModeArray = watch("salePaidType.rows");
+
+      PaymentModeArray.forEach(async (element) => {
+        let PaymentModePayload = {
+          is_active: true,
+          update_by: element.updateBy,
+          product_payment_mode_id: element.id,
+          product_sale_channel_id: saleChannelId,
+          payment_mode_id: element.payment_mode_id,
+        };
+
+        const responsePaymentMode = await fetch(
+          `/api/direct?action=AddOrUpdateProductPaymentMode`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(PaymentModePayload),
+          }
+        );
+        if (!responsePaymentMode.ok) {
+          throw new Error(`HTTP error! status: ${responsePaymentMode.status}`);
+        }
+      });
+
+      let PaymentMethodsArray = watch("salePaidCategory.rows");
+      PaymentMethodsArray.forEach(async (element) => {
+        let PaymentMethodsPayload = {
+          is_active: true,
+          update_by: element.updateBy,
+          product_payment_id: element.id,
+          product_sale_channel_id: saleChannelId,
+          payment_id: element.payment_id,
+          min_coverage_amount: element.min_coverage_amount,
+          max_coverage_amount: element.max_coverage_amount,
+          min_age_years: element.min_age_years,
+          min_age_months: element.min_age_months,
+          min_age_days: element.min_age_days,
+          max_age_years: element.max_age_years,
+          max_age_months: element.max_age_months,
+          max_age_days: element.max_age_days,
+        };
+
+        const responsePaymentMethods = await fetch(
+          `/api/direct?action=AddOrUpdateProductPaymentMethods`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(PaymentMethodsPayload),
+          }
+        );
+        if (!responsePaymentMethods.ok) {
+          throw new Error(
+            `HTTP error! status: ${responsePaymentMethods.status}`
+          );
+        }
+      });
+
+      let InstallmentTypeArray = watch("salePrepayment.rows");
+      InstallmentTypeArray.forEach(async (element) => {
+        let InstallmentTypePayload = {
+          installment_id: element.id,
+          is_active: true,
+          create_by: element.createBy,
+          update_by: element.updateBy,
+          product_sale_channel_id: saleChannelId,
+          installment_description: element.PrepaymentForm,
+          num_installments: element.NumberOfInstallments,
+        };
+
+        const responseInstallmentType = await fetch(
+          `/api/direct?action=AddOrUpdateInstallmentType`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(InstallmentTypePayload),
+          }
+        );
+        if (!responseInstallmentType.ok) {
+          throw new Error(
+            `HTTP error! status: ${responseInstallmentType.status}`
+          );
+        }
+      });
+      let ApplicationTemplateArray = watch("saleTemplate.rows");
+      ApplicationTemplateArray.forEach(async (element) => {
+        let ApplicationTemplatePayload = {
+          is_active: true,
+          create_by: element.createBy,
+          update_by: element.updateBy,
+          product_app_temp_id: element.id,
+          product_sale_channel_id: saleChannelId,
+          app_temp_id: element.app_temp_id,
+          app_temp_name: element.TemplateName,
+          min_coverage_amount: element.min_coverage_amount,
+          max_coverage_amount: element.max_coverage_amount,
+          min_age_years: element.min_age_years,
+          min_age_months: element.min_age_months,
+          min_age_days: element.min_age_days,
+          max_age_years: element.max_age_years,
+          max_age_months: element.max_age_months,
+          max_age_days: element.max_age_days,
+        };
+        const responseInstallmentType = await fetch(
+          `/api/direct?action=AddOrUpdateProductApplicationTemplate`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(ApplicationTemplatePayload),
+          }
+        );
+        if (!responseInstallmentType.ok) {
+          throw new Error(
+            `HTTP error! status: ${responseInstallmentType.status}`
+          );
+        }
+      });
+    } catch (error) {
+      handleSnackAlert({
+        open: true,
+        message: "ล้มเหลวเกิดข้อผิดพลาด " + error,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     handleFetchProductCondition();
   }, []);
@@ -527,8 +769,6 @@ const PageCommonDataProductSale = ({
     try {
       const resetData = watch();
       reset({ ...resetData, ConditionData: { ...productCondition } });
-      const w = watch();
-      console.log(w);
     } catch (error) {
       handleSnackAlert({
         open: true,
@@ -554,16 +794,11 @@ const PageCommonDataProductSale = ({
             </Grid>
             <Grid item xs={2}>
               <TextField
-                defaultValue={
-                  watch("ConditionData.min_age_years")
-                    ? watch("ConditionData.min_age_years")
-                    : ""
-                }
+                value={watch("ConditionData.min_age_years")}
                 fullWidth
                 size="small"
                 type="number"
-                id={`ConditionData.min_age_years`}
-                {...register(`ConditionData.min_age_years`)}
+                onChange={handleMinYear}
                 error={Boolean(errors?.name)}
                 InputProps={{
                   endAdornment: (
@@ -577,16 +812,11 @@ const PageCommonDataProductSale = ({
             </Grid>
             <Grid item xs={2}>
               <TextField
-                defaultValue={
-                  watch("ConditionData.min_age_months")
-                    ? watch("ConditionData.min_age_months")
-                    : ""
-                }
+                value={watch("ConditionData.min_age_months")}
                 fullWidth
                 size="small"
                 type="number"
-                id={`ConditionData.min_age_months`}
-                {...register(`ConditionData.min_age_months`)}
+                onChange={handleMinMonth}
                 error={Boolean(errors?.name)}
                 InputProps={{
                   endAdornment: (
@@ -600,16 +830,11 @@ const PageCommonDataProductSale = ({
             </Grid>
             <Grid item xs={2}>
               <TextField
-                defaultValue={
-                  watch("ConditionData.min_age_days")
-                    ? watch("ConditionData.min_age_days")
-                    : ""
-                }
+                value={watch("ConditionData.min_age_days")}
                 fullWidth
                 size="small"
                 type="number"
-                id={`ConditionData.min_age_days`}
-                {...register(`ConditionData.min_age_days`)}
+                onChange={handleMinDay}
                 error={Boolean(errors?.name)}
                 InputProps={{
                   endAdornment: (
@@ -628,16 +853,11 @@ const PageCommonDataProductSale = ({
             </Grid>
             <Grid item xs={2}>
               <TextField
-                defaultValue={
-                  watch("ConditionData.max_age_years")
-                    ? watch("ConditionData.max_age_years")
-                    : ""
-                }
+                value={watch("ConditionData.max_age_years")}
                 fullWidth
                 size="small"
                 type="number"
-                id={`ConditionData.max_age_years`}
-                {...register(`ConditionData.max_age_years`)}
+                onChange={handleMaxYear}
                 error={Boolean(errors?.name)}
                 InputProps={{
                   endAdornment: (
@@ -651,16 +871,11 @@ const PageCommonDataProductSale = ({
             </Grid>
             <Grid item xs={2}>
               <TextField
-                defaultValue={
-                  watch("ConditionData.max_age_months")
-                    ? watch("ConditionData.max_age_months")
-                    : ""
-                }
+                value={watch("ConditionData.max_age_months")}
                 fullWidth
                 size="small"
                 type="number"
-                id={`ConditionData.max_age_months`}
-                {...register(`ConditionData.max_age_months`)}
+                onChange={handleMaxMonth}
                 error={Boolean(errors?.name)}
                 InputProps={{
                   endAdornment: (
@@ -674,16 +889,11 @@ const PageCommonDataProductSale = ({
             </Grid>
             <Grid item xs={2}>
               <TextField
-                defaultValue={
-                  watch("ConditionData.max_age_days")
-                    ? watch("ConditionData.max_age_days")
-                    : ""
-                }
+                value={watch("ConditionData.max_age_days")}
                 fullWidth
                 size="small"
                 type="number"
-                id={`ConditionData.max_age_days`}
-                {...register(`ConditionData.max_age_days`)}
+                onChange={handleMaxDay}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">วัน</InputAdornment>
@@ -714,8 +924,7 @@ const PageCommonDataProductSale = ({
                     <InputAdornment position="end">บาท</InputAdornment>
                   ),
                 }}
-                id={`ConditionData.min_coverage_amount`}
-                {...register(`ConditionData.min_coverage_amount`)}
+                onChange={handleMinCoverage}
               />
               <FormHelperText error={errors?.name}>
                 {errors?.name?.message}
@@ -741,6 +950,7 @@ const PageCommonDataProductSale = ({
                     <InputAdornment position="end">บาท</InputAdornment>
                   ),
                 }}
+                onChange={handleMaxCoverage}
               />
               <FormHelperText error={errors?.name}>
                 {errors?.name?.message}
@@ -753,38 +963,38 @@ const PageCommonDataProductSale = ({
         <AppCardDataGrid
           mode={1}
           formMethods={{ ...formMethods }}
-          productId={productId}
+          productId={saleChannelId}
         />
       </Grid>
       <Grid item xs={12} mt={2}>
         <AppCardDataGrid
           mode={2}
           formMethods={{ ...formMethods }}
-          productId={productId}
+          productId={saleChannelId}
         />
       </Grid>
       <Grid item xs={12} mt={2}>
         <AppCardDataGrid
           mode={3}
           formMethods={{ ...formMethods }}
-          productId={productId}
+          productId={saleChannelId}
         />
       </Grid>
       <Grid item xs={12} mt={2}>
         <AppCardDataGrid
           mode={4}
           formMethods={{ ...formMethods }}
-          productId={productId}
+          productId={saleChannelId}
         />
       </Grid>
       <Grid item xs={12} mt={2}>
         <AppCardDataGrid
           mode={5}
           formMethods={{ ...formMethods }}
-          productId={productId}
+          productId={saleChannelId}
         />
       </Grid>
-      {type === "1" && (
+      {type === "2" && (
         <Grid item xs={12} mt={2}>
           <AppCard
             title={`การตั้งค่ารายผลิตภัณฑ์`}
@@ -866,7 +1076,9 @@ const PageCommonDataProductSale = ({
                   <Button variant="outlined">ยกเลิก</Button>
                 </Grid>
                 <Grid item xs={12} md="auto">
-                  <Button variant="outlined">ล้างค่า</Button>
+                  <Button variant="outlined" onClick={handleResetForm}>
+                    ล้างค่า
+                  </Button>
                 </Grid>
 
                 <Grid item xs={12} md="auto">
@@ -876,6 +1088,7 @@ const PageCommonDataProductSale = ({
                       color: theme.palette.common.white,
                       backgroundColor: theme.palette.primary.main,
                     }}
+                    onClick={handleSave}
                   >
                     บันทึกแบบร่าง
                   </Button>

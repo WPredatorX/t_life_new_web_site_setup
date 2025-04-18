@@ -306,8 +306,11 @@ const AppProductSalePaidCategory = ({ formMethods, productId }) => {
       `${baseName}.baseRows.payment_name`,
       paymentModeValue?.label || ""
     );
-    setValue(`${baseName}.baseRows.payment_code`, paymentModeValue?.payment_code || "");
-    setValue(`${baseName}.baseRows.status`, 2);
+    setValue(
+      `${baseName}.baseRows.payment_code`,
+      paymentModeValue?.payment_code || ""
+    );
+    setValue(`${baseName}.baseRows.status`, 1);
     setValue(`${baseName}.baseRows.statusText`, "รายการใหม่");
     setValue(`${baseName}.baseRows.createBy`, "admin");
     setValue(`${baseName}.baseRows.createDate`, new Date());
@@ -317,14 +320,21 @@ const AppProductSalePaidCategory = ({ formMethods, productId }) => {
     insert(fields.length, re);
   };
   const UpdateField = (index) => {
+    let oldValue = watch(`${baseName}.rows.${index}`);
+    setValue(`${baseName}.baseRows.id`, oldValue.id);
+    setValue(`${baseName}.baseRows.status`, oldValue.status);
+    setValue(`${baseName}.baseRows.statusText`, oldValue.statusText);
+
     const paymentModeValue = watch("paymentChannel");
-    setValue(`${baseName}.baseRows.id`, crypto.randomUUID());
     setValue(`${baseName}.baseRows.payment_id`, paymentModeValue?.id || "");
     setValue(
       `${baseName}.baseRows.payment_name`,
       paymentModeValue?.label || ""
     );
-    setValue(`${baseName}.baseRows.payment_code`, paymentModeValue?.payment_code || "");
+    setValue(
+      `${baseName}.baseRows.payment_code`,
+      paymentModeValue?.payment_code || ""
+    );
     setValue(`${baseName}.baseRows.updateBy`, "admin");
     setValue(`${baseName}.baseRows.updateDate`, new Date());
     let re = watch(`${baseName}.baseRows`);
@@ -335,19 +345,19 @@ const AppProductSalePaidCategory = ({ formMethods, productId }) => {
   };
   const handleAdd = () => {
     handleNotiification("จัดการประเภทการชำระเงิน", "add", () => {
-      setTimeout(() => { }, 400);
+      setTimeout(() => {}, 400);
     });
   };
   const handleEdit = (params, index) => {
     handlePaymentChannel(params);
     handleNotiification("จัดการประเภทการชำระเงิน", "edit", index, () => {
-      setTimeout(() => { }, 400);
+      setTimeout(() => {}, 400);
     });
   };
   const handleView = (params, index) => {
     handlePaymentChannel(params);
     handleNotiification("ประเภทการชำระเงิน", "view", index, () => {
-      setTimeout(() => { }, 400);
+      setTimeout(() => {}, 400);
     });
   };
 
@@ -419,7 +429,9 @@ const AppProductSalePaidCategory = ({ formMethods, productId }) => {
                           margin="dense"
                           size="small"
                           id={`${baseName}.baseRows.min_coverage_amount`}
-                          {...register(`${baseName}.baseRows.min_coverage_amount`)}
+                          {...register(
+                            `${baseName}.baseRows.min_coverage_amount`
+                          )}
                           error={Boolean(errors?.name)}
                           inputProps={{ maxLength: 100 }}
                         />
@@ -436,7 +448,9 @@ const AppProductSalePaidCategory = ({ formMethods, productId }) => {
                           margin="dense"
                           size="small"
                           id={`${baseName}.baseRows.max_coverage_amount`}
-                          {...register(`${baseName}.baseRows.max_coverage_amount`)}
+                          {...register(
+                            `${baseName}.baseRows.max_coverage_amount`
+                          )}
                           error={Boolean(errors?.name)}
                           inputProps={{ maxLength: 100 }}
                           type="number"
@@ -788,7 +802,15 @@ const AppProductSalePaidCategory = ({ formMethods, productId }) => {
                           options={[
                             {
                               id: "1",
-                              label: "Option 1",
+                              label: "เปิดใช้งาน",
+                            },
+                            {
+                              id: "2",
+                              label: "ยกเลิกการใช้งาน",
+                            },
+                            {
+                              id: "3",
+                              label: "รายการใหม่",
                             },
                           ]}
                           onChange={(event, value) => {

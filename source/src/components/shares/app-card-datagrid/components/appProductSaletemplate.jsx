@@ -22,6 +22,7 @@ import {
   AppDatePicker,
   AppCollapseCard,
   AppStatusBool,
+  AppNumericFormat,
 } from "@/components";
 import { Controller } from "react-hook-form";
 
@@ -84,8 +85,10 @@ const AppProductSaleTemplate = ({ formMethods, productId }) => {
 
   const router = useAppRouter();
   const AddField = () => {
+    const template = watch("template");
     setValue(`${baseName}.baseRows.id`, crypto.randomUUID());
-    setValue(`${baseName}.baseRows.status`, 2);
+    setValue(`${baseName}.baseRows.app_temp_id`, template?.id || "");
+    setValue(`${baseName}.baseRows.status`, 1);
     setValue(`${baseName}.baseRows.statusText`, "รายการใหม่");
     setValue(`${baseName}.baseRows.createBy`, "admin");
     setValue(`${baseName}.baseRows.createDate`, new Date());
@@ -95,32 +98,96 @@ const AppProductSaleTemplate = ({ formMethods, productId }) => {
     insert(fields.length, re);
   };
   const UpdateField = (index) => {
+    let oldValue = watch(`${baseName}.rows.${index}`);
+    debugger;
+    setValue(`${baseName}.baseRows.id`, oldValue.id);
+    setValue(`${baseName}.baseRows.status`, oldValue.status);
+    setValue(`${baseName}.baseRows.statusText`, oldValue.statusText);
     setValue(`${baseName}.baseRows.updateBy`, "admin");
     setValue(`${baseName}.baseRows.updateDate`, new Date());
+    const template = watch("template");
+    setValue(`${baseName}.baseRows.app_temp_id`, template?.id || "");
     let re = watch(`${baseName}.baseRows`);
     update(index, re);
   };
 
   const handleAdd = () => {
     handleNotiification("จัดการเทมเพลตใบคำขอ", "add", () => {
-      setTimeout(() => { }, 400);
+      setTimeout(() => {}, 400);
     });
   };
   const handleEdit = (params, index) => {
     handleFetchListTemplate(params);
     handleNotiification("จัดการเทมเพลตใบคำขอ", "edit", index, () => {
-      setTimeout(() => { }, 400);
+      setTimeout(() => {}, 400);
     });
   };
   const handleView = (params, index) => {
     handleFetchListTemplate(params);
     handleNotiification("จัดการเทมเพลตใบคำขอ", "view", index, () => {
-      setTimeout(() => { }, 400);
+      setTimeout(() => {}, 400);
     });
   };
   const handleDelete = (index) => {
     remove(index);
   };
+
+  const handleMinCoverage = (e) => {
+    let value = parseInt(e.target.value) || 0;
+    setValue(`${baseName}.baseRows.min_coverage_amount`, value, {
+      shouldValidate: true,
+    });
+  };
+
+  const handleMaxCoverage = (e) => {
+    let value = parseInt(e.target.value) || 0;
+    setValue(`${baseName}.baseRows.max_coverage_amount`, value, {
+      shouldValidate: true,
+    });
+  };
+
+  const handleMinYear = (e) => {
+    let value = parseInt(e.target.value) || 0;
+    setValue(`${baseName}.baseRows.min_age_years`, value, {
+      shouldValidate: true,
+    });
+  };
+
+  const handleMinMonth = (e) => {
+    let value = parseInt(e.target.value) || 0;
+    setValue(`${baseName}.baseRows.min_age_months`, value, {
+      shouldValidate: true,
+    });
+  };
+
+  const handleMinDay = (e) => {
+    let value = parseInt(e.target.value) || 0;
+    setValue(`${baseName}.baseRows.min_age_days`, value, {
+      shouldValidate: true,
+    });
+  };
+
+  const handleMaxYear = (e) => {
+    let value = parseInt(e.target.value) || 0;
+    setValue(`${baseName}.baseRows.max_age_years`, value, {
+      shouldValidate: true,
+    });
+  };
+
+  const handleMaxMonth = (e) => {
+    let value = parseInt(e.target.value) || 0;
+    setValue(`${baseName}.baseRows.max_age_months`, value, {
+      shouldValidate: true,
+    });
+  };
+
+  const handleMaxDay = (e) => {
+    let value = parseInt(e.target.value) || 0;
+    setValue(`${baseName}.baseRows.max_age_days`, value, {
+      shouldValidate: true,
+    });
+  };
+
   const handleNotiification = (message, mode, index, callback) => {
     dispatch(
       setDialog({
@@ -186,9 +253,9 @@ const AppProductSaleTemplate = ({ formMethods, productId }) => {
                       </Grid>
                       <Grid item xs={5.5}>
                         <TextField
-                          type="number"
                           disabled={mode === "view" ? true : false}
                           InputProps={{
+                            inputComponent: AppNumericFormat,
                             endAdornment: (
                               <InputAdornment position="end">
                                 บาท
@@ -199,10 +266,12 @@ const AppProductSaleTemplate = ({ formMethods, productId }) => {
                           label="ความคุ้มครองต่ำสุด*"
                           margin="dense"
                           size="small"
-                          id={`${baseName}.baseRows.minimumCoverage`}
-                          {...register(`${baseName}.baseRows.minimumCoverage`)}
+                          value={watch(
+                            `${baseObject}.${index}.min_coverage_amount`
+                          )}
+                          onChange={handleMinCoverage}
                           error={Boolean(errors?.name)}
-                          inputProps={{ maxLength: 100 }}
+                          inputProps={{ allowNegative: false }}
                         />
                         <FormHelperText error={errors?.name}>
                           {errors?.name?.message}
@@ -215,12 +284,14 @@ const AppProductSaleTemplate = ({ formMethods, productId }) => {
                           label="ความคุ้มครองสูงสุด*"
                           margin="dense"
                           size="small"
-                          id={`${baseName}.baseRows.maximumCoverage `}
-                          {...register(`${baseName}.baseRows.maximumCoverage`)}
+                          value={watch(
+                            `${baseObject}.${index}.max_coverage_amount`
+                          )}
+                          onChange={handleMaxCoverage}
                           error={Boolean(errors?.name)}
-                          inputProps={{ maxLength: 100 }}
-                          type="number"
+                          inputProps={{ allowNegative: false }}
                           InputProps={{
+                            inputComponent: AppNumericFormat,
                             endAdornment: (
                               <InputAdornment position="end">
                                 บาท
@@ -242,8 +313,8 @@ const AppProductSaleTemplate = ({ formMethods, productId }) => {
                           placeholder="0"
                           margin="dense"
                           size="small"
-                          id={`${baseName}.baseRows.min_age_years`}
-                          {...register(`${baseName}.baseRows.min_age_years`)}
+                          value={watch(`${baseObject}.${index}.min_age_years`)}
+                          onChange={handleMinYear}
                           error={Boolean(errors?.name)}
                           inputProps={{ maxLength: 100 }}
                           type="number"
@@ -264,8 +335,8 @@ const AppProductSaleTemplate = ({ formMethods, productId }) => {
                           placeholder="0"
                           margin="dense"
                           size="small"
-                          id={`${baseName}.baseRows.min_age_months`}
-                          {...register(`${baseName}.baseRows.min_age_months`)}
+                          value={watch(`${baseObject}.${index}.min_age_months`)}
+                          onChange={handleMinMonth}
                           error={Boolean(errors?.name)}
                           inputProps={{ maxLength: 100 }}
                           type="number"
@@ -288,8 +359,8 @@ const AppProductSaleTemplate = ({ formMethods, productId }) => {
                           placeholder="0"
                           margin="dense"
                           size="small"
-                          id={`${baseName}.baseRows.min_age_days`}
-                          {...register(`${baseName}.baseRows.min_age_days`)}
+                          value={watch(`${baseObject}.${index}.min_age_days`)}
+                          onChange={handleMinDay}
                           error={Boolean(errors?.name)}
                           inputProps={{ maxLength: 100 }}
                           type="number"
@@ -315,8 +386,8 @@ const AppProductSaleTemplate = ({ formMethods, productId }) => {
                           placeholder="0"
                           margin="dense"
                           size="small"
-                          id={`${baseName}.baseRows.max_age_years`}
-                          {...register(`${baseName}.baseRows.max_age_years`)}
+                          value={watch(`${baseObject}.${index}.max_age_years`)}
+                          onChange={handleMaxYear}
                           error={Boolean(errors?.name)}
                           inputProps={{ maxLength: 100 }}
                           type="number"
@@ -337,8 +408,8 @@ const AppProductSaleTemplate = ({ formMethods, productId }) => {
                           placeholder="0"
                           margin="dense"
                           size="small"
-                          id={`${baseName}.baseRows.max_age_months`}
-                          {...register(`${baseName}.baseRows.max_age_months`)}
+                          value={watch(`${baseObject}.${index}.max_age_months`)}
+                          onChange={handleMaxMonth}
                           error={Boolean(errors?.name)}
                           inputProps={{ maxLength: 100 }}
                           type="number"
@@ -361,8 +432,8 @@ const AppProductSaleTemplate = ({ formMethods, productId }) => {
                           placeholder="0"
                           margin="dense"
                           size="small"
-                          id={`${baseName}.baseRows.max_age_days`}
-                          {...register(`${baseName}.baseRows.max_age_days`)}
+                          value={watch(`${baseObject}.${index}.max_age_days`)}
+                          onChange={handleMaxDay}
                           error={Boolean(errors?.name)}
                           inputProps={{ maxLength: 100 }}
                           type="number"
@@ -408,7 +479,7 @@ const AppProductSaleTemplate = ({ formMethods, productId }) => {
                         <Button
                           variant="contained"
                           onClick={() => {
-                            UpdateField();
+                            UpdateField(index);
                             dispatch(
                               setDialog({
                                 ...dialog,
@@ -421,8 +492,6 @@ const AppProductSaleTemplate = ({ formMethods, productId }) => {
                         </Button>
                       </Grid>
                     )}
-
-
 
                     <Grid item xs={12} md="auto">
                       <Button
@@ -491,7 +560,7 @@ const AppProductSaleTemplate = ({ formMethods, productId }) => {
     },
     {
       flex: 1,
-      field: "minimumCoverage",
+      field: "min_coverage_amount",
       type: "string",
       headerAlign: "center",
       headerName: "ความคุ้มครองต่ำสุด",
@@ -502,7 +571,7 @@ const AppProductSaleTemplate = ({ formMethods, productId }) => {
     },
     {
       flex: 1,
-      field: "maximumCoverage",
+      field: "max_coverage_amount",
       type: "string",
       headerAlign: "center",
       headerName: "ความคุ้มครองสูงสุด",
@@ -597,7 +666,9 @@ const AppProductSaleTemplate = ({ formMethods, productId }) => {
         const editFunction = disabledEdit
           ? null
           : () => handleEdit(params.row.app_temp_id, index);
-        const deleteFunction = disabledDelete ? null : () => handleDelete(index);
+        const deleteFunction = disabledDelete
+          ? null
+          : () => handleDelete(index);
         const defaultProps = {
           showInMenu: true,
           sx: {
@@ -723,8 +794,6 @@ const AppProductSaleTemplate = ({ formMethods, productId }) => {
               statusText: value.name_status,
               createBy: value.create_by,
               updateBy: value.update_by,
-              minimumCoverage: value.min_coverage_amount,
-              maximumCoverage: value.max_coverage_amount,
             };
           });
         }

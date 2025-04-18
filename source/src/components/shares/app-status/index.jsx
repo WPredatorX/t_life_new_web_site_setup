@@ -4,7 +4,10 @@ import { Chip } from "@mui/material";
 
 const AppStatus = ({ status, statusText }) => {
   const getColor = () => {
-    switch (status) {
+    let MainStatus = parseInt(status);
+    switch (MainStatus) {
+      case 1:
+        return "primary";
       case 2:
         return "warning";
       case 3:

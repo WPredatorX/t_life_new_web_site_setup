@@ -229,6 +229,69 @@ export async function POST(request) {
         data = response.data?.data;
       }
       return NextResponse.json(data);
+    case "AddOrUpdateProductSalePeriod":
+      body = await request.json();
+      console.log("AddOrUpdateProductSalePeriod", body);
+      response = await axios.post(
+        `${baseUrl}Products/AddOrUpdateProductSalePeriod`,
+        body,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      data = response.data?.data;
+      return NextResponse.json(data);
+    case "AddOrUpdateProductPaymentMode":
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}Payment/AddOrUpdateProductPaymentMode`,
+        body,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      data = response.data?.data;
+      return NextResponse.json(data);
+    case "AddOrUpdateProductPaymentMethods":
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}Payment/AddOrUpdateProductPaymentMethods`,
+        body,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      data = response.data?.data;
+      return NextResponse.json(data);
+    case "AddOrUpdateInstallmentType":
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}Payment/AddOrUpdateInstallmentType`,
+        body,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      data = response.data?.data;
+      return NextResponse.json(data);
+    case "AddOrUpdateProductApplicationTemplate":
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}Products/AddOrUpdateProductApplicationTemplate`,
+        body,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      data = response.data?.data;
+      return NextResponse.json(data);
+    case "GetAllProductSaleGroupRider":
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}BackOffice/GetAllProductSaleGroupRider`,
+        body,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      if (response.status === 200) {
+        data = response.data?.data;
+      }
+
+      if (response.status === 204) {
+        return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
+      }
+      return NextResponse.json(data);
     case "getProductFromDirectWithMultiParam":
       //productId = url.searchParams.get("productId");
       /* response = await axios.post(

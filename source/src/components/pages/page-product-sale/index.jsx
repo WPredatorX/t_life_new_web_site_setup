@@ -41,7 +41,6 @@ const PageProductsSale = ({
     settab();
   }, []);
   const settab = () => {
-    console.log("productcondition index", productCondition);
     let data = [
       <PageCommonDataProductSale
         productId={productPlanId}
@@ -68,7 +67,7 @@ const PageProductsSale = ({
               <Typography>Plan Code</Typography>
               <TextField
                 fullWidth
-                value={productCondition ? productCondition.i_plan : ""}
+                value={productCondition.i_plan ? productCondition.i_plan : ""}
                 size="small"
                 disabled
               />
@@ -77,7 +76,7 @@ const PageProductsSale = ({
               <Typography>ชื่อ</Typography>
               <TextField
                 fullWidth
-                value={productCondition ? productCondition.title : ""}
+                value={productCondition.title ? productCondition.title : ""}
                 size="small"
                 disabled
               />
@@ -86,7 +85,9 @@ const PageProductsSale = ({
               <Typography>โปรโมชั่น</Typography>
               <TextField
                 fullWidth
-                value={productCondition ? productCondition.promotion : ""}
+                value={
+                  productCondition.promotion ? productCondition.promotion : ""
+                }
                 size="small"
                 disabled
               />

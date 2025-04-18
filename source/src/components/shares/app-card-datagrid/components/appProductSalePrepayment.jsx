@@ -225,7 +225,9 @@ const AppProductSalePrepayment = ({ formMethods, productId }) => {
         let disabledDelete = false; // TODO: เช็คตามสิทธิ์
         const viewFunction = disabledView ? null : () => handleView(index);
         const editFunction = disabledEdit ? null : () => handleEdit(index);
-        const deleteFunction = disabledDelete ? null : () => handleDelete(index);
+        const deleteFunction = disabledDelete
+          ? null
+          : () => handleDelete(index);
         const defaultProps = {
           showInMenu: true,
           sx: {
@@ -266,7 +268,7 @@ const AppProductSalePrepayment = ({ formMethods, productId }) => {
   ];
   const AddField = () => {
     setValue(`${baseName}.baseRows.id`, crypto.randomUUID());
-    setValue(`${baseName}.baseRows.status`, 2);
+    setValue(`${baseName}.baseRows.status`, 1);
     setValue(`${baseName}.baseRows.statusText`, "รายการใหม่");
     setValue(`${baseName}.baseRows.createBy`, "admin");
     setValue(`${baseName}.baseRows.createDate`, new Date());
@@ -276,29 +278,33 @@ const AppProductSalePrepayment = ({ formMethods, productId }) => {
     insert(fields.length, re);
   };
   const UpdateField = (index) => {
+    let oldValue = watch(`${baseName}.rows.${index}`);
+    setValue(`${baseName}.baseRows.id`, oldValue.id);
+    setValue(`${baseName}.baseRows.status`, oldValue.status);
+    setValue(`${baseName}.baseRows.statusText`, oldValue.statusText);
     setValue(`${baseName}.baseRows.updateBy`, "admin");
     setValue(`${baseName}.baseRows.updateDate`, new Date());
     let re = watch(`${baseName}.baseRows`);
 
     update(index, re);
-  }
+  };
   const DeleteField = (index) => {
     remove(index);
-  }
+  };
 
   const handleAdd = () => {
     handleNotiification("จัดการงวดชำระ", "add", () => {
-      setTimeout(() => { }, 400);
+      setTimeout(() => {}, 400);
     });
   };
   const handleEdit = (index) => {
     handleNotiification("จัดการงวดชำระ", "edit", index, () => {
-      setTimeout(() => { }, 400);
+      setTimeout(() => {}, 400);
     });
   };
   const handleView = (index) => {
     handleNotiification("จัดการงวดชำระ", "view", index, () => {
-      setTimeout(() => { }, 400);
+      setTimeout(() => {}, 400);
     });
   };
 
@@ -330,7 +336,9 @@ const AppProductSalePrepayment = ({ formMethods, productId }) => {
                               margin="dense"
                               size="small"
                               id={`${baseName}.baseRows.PrepaymentForm`}
-                              {...register(`${baseName}.baseRows.PrepaymentForm`)}
+                              {...register(
+                                `${baseName}.baseRows.PrepaymentForm`
+                              )}
                               error={Boolean(errors?.name)}
                               inputProps={{ maxLength: 100 }}
                             />
@@ -348,7 +356,9 @@ const AppProductSalePrepayment = ({ formMethods, productId }) => {
                               margin="dense"
                               size="small"
                               id={`${baseName}.baseRows.NumberOfInstallments`}
-                              {...register(`${baseName}.baseRows.NumberOfInstallments`)}
+                              {...register(
+                                `${baseName}.baseRows.NumberOfInstallments`
+                              )}
                               error={Boolean(errors?.name)}
                               inputProps={{ maxLength: 100 }}
                             />
@@ -526,7 +536,15 @@ const AppProductSalePrepayment = ({ formMethods, productId }) => {
                           options={[
                             {
                               id: "1",
-                              label: "Option 1",
+                              label: "เปิดใช้งาน",
+                            },
+                            {
+                              id: "2",
+                              label: "ยกเลิกการใช้งาน",
+                            },
+                            {
+                              id: "3",
+                              label: "รายการใหม่",
                             },
                           ]}
                           onChange={(event, value) => {

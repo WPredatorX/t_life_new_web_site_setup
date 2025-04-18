@@ -81,21 +81,28 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
   });
   const router = useAppRouter();
   const AddField = () => {
-    setValue(`${baseName}.baseRows.id`, crypto.randomUUID());
-    setValue(`${baseName}.baseRows.status`, 2);
+    let newid = crypto.randomUUID();
+    setValue(`${baseName}.baseRows.id`, newid);
+    setValue(`${baseName}.baseRows.status`, 1);
     setValue(`${baseName}.baseRows.statusText`, "รายการใหม่");
-    setValue(`${baseName}.baseRows.createBy`, "admin");
-    setValue(`${baseName}.baseRows.createDate`, new Date());
-    setValue(`${baseName}.baseRows.updateBy`, "admin");
-    setValue(`${baseName}.baseRows.updateDate`, new Date());
+    setValue(`${baseName}.baseRows.create_by`, "admin");
+    setValue(`${baseName}.baseRows.create_date`, new Date());
+    setValue(`${baseName}.baseRows.update_by`, "admin");
+    setValue(`${baseName}.baseRows.update_date`, new Date());
     let re = watch(`${baseName}.baseRows`);
-    debugger;
+
     insert(fields.length, re);
   };
   const DeleteField = (index) => {
     remove(index);
   };
   const UpdateField = (index) => {
+    let oldValue = watch(`${baseName}.rows.${index}`);
+    setValue(`${baseName}.baseRows.id`, oldValue.id);
+    setValue(`${baseName}.baseRows.status`, oldValue.status);
+    setValue(`${baseName}.baseRows.statusText`, oldValue.statusText);
+    setValue(`${baseName}.baseRows.update_by`, "admin");
+    setValue(`${baseName}.baseRows.update_date`, new Date());
     let re = watch(`${baseName}.baseRows`);
     update(index, re);
   };
@@ -143,7 +150,7 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
                     <Grid container justifyContent={"center"}>
                       <Grid item xs={11}>
                         <Controller
-                          name={`${baseName}.baseRows.StartDate`}
+                          name={`${baseName}.baseRows.sale_start_date`}
                           control={control}
                           render={({ field }) => {
                             const { name, onChange, ...otherProps } = field;
@@ -175,7 +182,7 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
                       </Grid>
                       <Grid item xs={11} mb={2}>
                         <Controller
-                          name={`${baseName}.baseRows.EndDate`}
+                          name={`${baseName}.baseRows.sale_end_date`}
                           control={control}
                           disabled={mode === "view" ? true : false}
                           render={({ field }) => {
@@ -300,7 +307,7 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
     },
     {
       flex: 1,
-      field: "StartDate",
+      field: "sale_start_date",
       type: "string",
       headerAlign: "center",
       headerName: "วันที่เริ่มต้น",
@@ -322,10 +329,10 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
     },
     {
       flex: 1,
-      field: "EndDate",
+      field: "sale_end_date",
       type: "string",
       headerAlign: "center",
-      headerName: "วันที่เริ่มต้น",
+      headerName: "วันที่สิ้นสุด",
       headerClassName: "header-main",
       align: "left",
       minWidth: 100,
@@ -345,7 +352,7 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
 
     {
       flex: 1,
-      field: "createBy",
+      field: "create_by",
       type: "string",
       headerAlign: "center",
       headerName: "สร้างโดย",
@@ -355,7 +362,7 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
     },
     {
       flex: 1,
-      field: "createDate",
+      field: "create_date",
       type: "string",
       headerAlign: "center",
       headerName: "สร้างเมื่อ",
@@ -377,7 +384,7 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
     },
     {
       flex: 1,
-      field: "updateBy",
+      field: "update_by",
       type: "string",
       headerAlign: "center",
       headerName: "แก้ไขโดย",
@@ -387,7 +394,7 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
     },
     {
       flex: 1,
-      field: "updateDate",
+      field: "update_date",
       type: "string",
       headerAlign: "center",
       headerName: "แก้ไขเมื่อ",
@@ -493,8 +500,8 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
       const start = pageNumber;
       const limit = pageSize;
       const body = {
-        field: "",
-        direction: "",
+        field: "create_date",
+        direction: "desc",
         page_number: start,
         page_size: limit,
         product_sale_channel_id: productId,
@@ -510,20 +517,14 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
 
       const data = await response.json();
       let resultData = [];
-      if (data.status === 200) {
+      if (data.status !== 204) {
         if (data) {
           resultData = data.map((value) => {
             return {
               ...value,
               id: value.sale_period_id,
-              StartDate: value.start_date,
-              EndDate: value.end_date,
-              createDate: value.create_date,
-              updateDate: value.update_date,
               status: value.is_active,
               statusText: value.name_status,
-              createBy: value.create_by,
-              updateBy: value.update_by,
             };
           });
         }
@@ -569,7 +570,19 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
                           options={[
                             {
                               id: "1",
-                              label: "Option 1",
+                              label: "เปิดใช้งาน",
+                            },
+                            {
+                              id: "2",
+                              label: "ยกเลิกการใช้งาน",
+                            },
+                            {
+                              id: "3",
+                              label: "รออนุมัติ",
+                            },
+                            {
+                              id: "4",
+                              label: "แบบร่าง",
                             },
                           ]}
                           onChange={(event, value) => {

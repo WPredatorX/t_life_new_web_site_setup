@@ -101,7 +101,7 @@ const AppProductSalePaidType = ({ formMethods, productId }) => {
       `${baseName}.baseRows.payment_mode_id`,
       paymentModeValue?.id || ""
     );
-    setValue(`${baseName}.baseRows.status`, 2);
+    setValue(`${baseName}.baseRows.status`, 1);
     setValue(`${baseName}.baseRows.statusText`, "รายการใหม่");
     setValue(`${baseName}.baseRows.createBy`, "admin");
     setValue(`${baseName}.baseRows.createDate`, new Date());
@@ -115,6 +115,11 @@ const AppProductSalePaidType = ({ formMethods, productId }) => {
     remove(index);
   };
   const UpdateField = (index) => {
+    let oldValue = watch(`${baseName}.rows.${index}`);
+    setValue(`${baseName}.baseRows.id`, oldValue.id);
+    setValue(`${baseName}.baseRows.status`, oldValue.status);
+    setValue(`${baseName}.baseRows.statusText`, oldValue.statusText);
+
     const paymentModeValue = watch("paymentMode");
     setValue(`${baseName}.baseRows.paidType`, paymentModeValue?.label || "");
     setValue(
@@ -123,6 +128,7 @@ const AppProductSalePaidType = ({ formMethods, productId }) => {
     );
     setValue(`${baseName}.baseRows.updateBy`, "admin");
     setValue(`${baseName}.baseRows.updateDate`, new Date());
+
     let re = watch(`${baseName}.baseRows`);
     update(index, re);
   };
@@ -578,7 +584,15 @@ const AppProductSalePaidType = ({ formMethods, productId }) => {
                           options={[
                             {
                               id: "1",
-                              label: "Option 1",
+                              label: "เปิดใช้งาน",
+                            },
+                            {
+                              id: "2",
+                              label: "ยกเลิกการใช้งาน",
+                            },
+                            {
+                              id: "3",
+                              label: "รายการใหม่",
                             },
                           ]}
                           onChange={(event, value) => {

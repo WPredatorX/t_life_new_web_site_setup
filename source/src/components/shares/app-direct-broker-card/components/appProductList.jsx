@@ -137,8 +137,8 @@ const AppProductList = ({ mode }) => {
       minWidth: 200,
       renderCell: (params) => (
         <AppStatus
-          status={params.row.is_active}
-          statusText={params.row.name_status}
+          status={params.row.status}
+          statusText={params.row.statusText}
         />
       ),
     },
@@ -246,7 +246,7 @@ const AppProductList = ({ mode }) => {
           ? null
           : () =>
               router.push(
-                `/productsale/${id}?mode=VIEW&type=0&saleChannelId=${saleChannelId}`
+                `/productsale/${id}?mode=VIEW&type=1&saleChannelId=${saleChannelId}`
               );
         const editFunction = disabledEdit
           ? null
@@ -365,13 +365,13 @@ const AppProductList = ({ mode }) => {
           message: `ไม่พบข้อมูล`,
         });
       } else {
-        const mapData = data[0].detail.map((item) => {
+        const mapData = data.map((item) => {
           return {
             ...item,
             id: item.product_plan_id,
             name: item.i_plan,
             status: item.product_status,
-            statusText: item.name_status,
+            statusText: item.product_status_name,
           };
         });
         setData({
@@ -447,7 +447,7 @@ const AppProductList = ({ mode }) => {
       const data = await response.json();
 
       router.push(
-        `/productsale/${params.id}?mode=EDIT&type=0&saleChannelId=${data}`
+        `/productsale/${params.id}?mode=EDIT&type=1&saleChannelId=${data}`
       );
     } catch (error) {
       handleSnackAlert({
