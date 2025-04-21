@@ -24,6 +24,7 @@ const AppDataGrid = ({
   labelDisplayedRows = ({ from, to, count }) => `${from}–${to} จาก ${count}`,
   sortField = "",
   sortDirection = "asc",
+  onRowClick = {},
 }) => {
   return (
     <DataGrid
@@ -33,6 +34,7 @@ const AppDataGrid = ({
       columns={columns}
       loading={loading}
       rowCount={rowCount}
+      onRowClick={onRowClick}
       initialState={{
         pagination: {
           paginationModel: { page: 0, pageSize: pageSize },

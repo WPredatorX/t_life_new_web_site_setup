@@ -48,7 +48,7 @@ const PageProductsSale = ({
         saleChannelId={saleChannelId}
         productCondition={productCondition}
       />,
-      <PageDataOutput />,
+      <PageDataOutput saleChannelId={saleChannelId} />,
     ];
     let labeltab = ["ข้อมูลทั่วไป", "ข้อมูลการแสดงผล"];
     setTabContent(data);

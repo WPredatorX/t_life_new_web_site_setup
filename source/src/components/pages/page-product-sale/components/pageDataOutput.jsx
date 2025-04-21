@@ -14,6 +14,7 @@ import {
   AccordionActions,
   AccordionDetails,
   AccordionSummary,
+  CircularProgress,
 } from "@mui/material";
 import {
   AppCard,
@@ -23,6 +24,7 @@ import {
   AppDatePicker,
   AppCollapseCard,
   AppWyswig,
+  AppStatusBool,
 } from "@/components";
 import { useAppDispatch, useAppFieldArray, useAppSelector } from "@hooks";
 import { useState, useEffect } from "react";
@@ -35,10 +37,59 @@ import { APPLICATION_DEFAULT } from "@constants";
 import { format, addYears, addDays, parseISO } from "date-fns";
 import Image from "next/image";
 import { ArrowDropDown } from "@mui/icons-material";
-const PageDataOutput = () => {
+const PageDataOutput = ({ saleChannelId }) => {
+  const { handleSnackAlert } = useAppSnackbar();
+  const brokerId = useAppSelector((state) => state.global.brokerId);
   const validationSchema = Yup.object().shape({
     id: Yup.string().nullable(),
     InsuranceGroup: Yup.string().nullable(),
+    SubBodyContent: Yup.object().shape({
+      id: Yup.string().required("Required"),
+      main_id: Yup.string().required("Required"),
+      product_sale_group_id: Yup.string().required("Required"),
+      product_sale_group_type: Yup.string().required("Required"),
+      product_sale_channel_id: Yup.string().required("Required"),
+      seq_content: Yup.number().nullable(),
+      icon: Yup.string().nullable(),
+      title: Yup.string().nullable(),
+      sub_title: Yup.string().nullable(),
+      description: Yup.string().nullable(),
+      tag_promotion: Yup.string().nullable(),
+      tag_sale: Yup.string().nullable(),
+      more_link_url: Yup.string().nullable().url("Must be a valid URL"),
+      buy_link_url: Yup.string().nullable().url("Must be a valid URL"),
+      content_additional_url: Yup.string()
+        .nullable()
+        .url("Must be a valid URL"),
+      description_placement: Yup.string().nullable(),
+      content_url: Yup.string().nullable(),
+      content_1: Yup.string().nullable(),
+      content_2: Yup.string().nullable(),
+    }),
+    ContentSection: Yup.object().shape({
+      item_id: Yup.string().required("Required"),
+      title_item: Yup.string().required("Required"),
+      section_content_item: Yup.string().required("Required"),
+      content_item_file_name: Yup.string().nullable(),
+      content_item_file_type: Yup.string().nullable(),
+      section_condition_id: Yup.string().nullable(),
+      condition_title: Yup.string().nullable(),
+      description: Yup.string().nullable(),
+      section_id: Yup.string().required("Required"),
+      product_sale_channel_id: Yup.string().required("Required"),
+      seq_content: Yup.number().nullable(),
+      section_name: Yup.string().required("Required"),
+      section_content: Yup.string().nullable(),
+      section_content_name: Yup.string().nullable(),
+      section_content_type: Yup.string().nullable(),
+      tag_promotion: Yup.string().nullable(),
+      is_full: Yup.boolean().nullable(),
+      is_active: Yup.boolean().nullable(),
+      create_date: Yup.date().required(),
+      create_by: Yup.string().nullable(),
+      update_date: Yup.date().required(),
+      update_by: Yup.string().nullable(),
+    }),
     name: Yup.string().nullable(),
     Popularity: Yup.mixed().nullable(),
     caption: Yup.string().nullable(),
@@ -83,6 +134,51 @@ const PageDataOutput = () => {
     defaultValues: {
       id: "",
       InsuranceGroup: null,
+      SubBodyContent: {
+        id: "",
+        main_id: "",
+        product_sale_group_id: "",
+        product_sale_group_type: "",
+        product_sale_channel_id: "",
+        seq_content: null,
+        icon: "",
+        title: "",
+        sub_title: "",
+        description: "",
+        tag_promotion: "",
+        tag_sale: "",
+        more_link_url: null,
+        buy_link_url: null,
+        content_additional_url: null,
+        description_placement: null,
+        content_url: "",
+        content_1: "",
+        content_2: "",
+      },
+      ContentSection: {
+        item_id: "",
+        title_item: "",
+        section_content_item: "",
+        content_item_file_name: null,
+        content_item_file_type: null,
+        section_condition_id: null,
+        condition_title: null,
+        description: null,
+        section_id: "",
+        product_sale_channel_id: "",
+        seq_content: null,
+        section_name: "",
+        section_content: null,
+        section_content_name: null,
+        section_content_type: null,
+        tag_promotion: null,
+        is_full: false,
+        is_active: true,
+        create_date: new Date(),
+        create_by: null,
+        update_date: new Date(),
+        update_by: null,
+      },
       name: "",
       Popularity: false,
       caption: "",
@@ -146,6 +242,7 @@ const PageDataOutput = () => {
   ];
   const theme = useTheme();
   const [ProfileData, setProfileData] = useState();
+  const [ProfileOption, setProfileOption] = useState([]);
 
   const [loading, setLoading] = useState(false);
   const [pageNumber, setPageNumber] = useState(
@@ -163,7 +260,7 @@ const PageDataOutput = () => {
     },
     {
       flex: 1,
-      field: "name",
+      field: "title",
       type: "string",
       headerAlign: "center",
       headerName: "ชื่อ",
@@ -181,12 +278,15 @@ const PageDataOutput = () => {
       align: "center",
       minWidth: 200,
       renderCell: (params) => (
-        <AppStatus status={params.value} statusText={params.row.statusText} />
+        <AppStatusBool
+          status={params.row.is_active}
+          statusText={params.row.name_status}
+        />
       ),
     },
     {
       flex: 1,
-      field: "createBy",
+      field: "create_by",
       type: "string",
       headerAlign: "center",
       headerName: "สร้างโดย",
@@ -196,7 +296,7 @@ const PageDataOutput = () => {
     },
     {
       flex: 1,
-      field: "createDate",
+      field: "create_date",
       type: "string",
       headerAlign: "center",
       headerName: "สร้างเมื่อ",
@@ -204,15 +304,21 @@ const PageDataOutput = () => {
       align: "center",
       minWidth: 100,
       valueGetter: (value) => {
-        let date;
-        date = typeof value === "string" ? parseISO(value) : new Date(value);
-        let formattedValue = format(addYears(date, 543), "dd/MM/yyyy");
-        return formattedValue;
+        if (!value) return "";
+        try {
+          let date;
+          date = typeof value === "string" ? parseISO(value) : new Date(value);
+          if (isNaN(date.getTime())) return value;
+          let formattedValue = format(addYears(date, 543), "dd/MM/yyyy");
+          return formattedValue;
+        } catch (error) {
+          return value;
+        }
       },
     },
     {
       flex: 1,
-      field: "updateBy",
+      field: "update_by",
       type: "string",
       headerAlign: "center",
       headerName: "แก้ไขโดย",
@@ -222,7 +328,7 @@ const PageDataOutput = () => {
     },
     {
       flex: 1,
-      field: "updateDate",
+      field: "update_date",
       type: "string",
       headerAlign: "center",
       headerName: "แก้ไขเมื่อ",
@@ -230,10 +336,16 @@ const PageDataOutput = () => {
       align: "center",
       minWidth: 100,
       valueGetter: (value) => {
-        let date;
-        date = typeof value === "string" ? parseISO(value) : new Date(value);
-        let formattedValue = format(addYears(date, 543), "dd/MM/yyyy");
-        return formattedValue;
+        if (!value) return "";
+        try {
+          let date;
+          date = typeof value === "string" ? parseISO(value) : new Date(value);
+          if (isNaN(date.getTime())) return value;
+          let formattedValue = format(addYears(date, 543), "dd/MM/yyyy");
+          return formattedValue;
+        } catch (error) {
+          return value;
+        }
       },
     },
   ];
@@ -246,14 +358,72 @@ const PageDataOutput = () => {
   const handleFetchProfile = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/direct?action=GetProfileByProductId`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
+      const response = await fetch(
+        `/api/direct/productSale/profile?action=GetBrokerProfiles&brokerId=${brokerId}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
       const data = await response.json();
+
       setProfileData(data);
     } catch (error) {
       handleSnackAlert({ open: true, message: "ล้มเหลวเกิดข้อผิดพลาด" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOnRowClick = async (e) => {
+    setLoading(true);
+    try {
+      let body = JSON.stringify({
+        broker_profile_id: e.id,
+        page_content: "HOME",
+      });
+      const response = await fetch(
+        `/api/direct/productSale/profile?action=GetMainBodyById`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: body,
+        }
+      );
+      const data = await response.json();
+      setProfileOption(data);
+    } catch (error) {
+      handleSnackAlert({
+        open: true,
+        message: "ล้มเหลวเกิดข้อผิดพลาด : " + error,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubBody = async (e) => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `/api/direct/productSale/profile?action=GetSubBodyContentByMainBodyIdAndSaleId&mainBodyId=${e.id}&SaleChannelId=${saleChannelId}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+      const data = await response.json();
+
+      const resetData = watch();
+      if (data.tag_sale) {
+        reset({ ...resetData, Popularity: true });
+      }
+      reset({ ...resetData, SubBodyContent: { ...data } });
+    } catch (error) {
+      handleSnackAlert({
+        open: true,
+        message: "ล้มเหลวเกิดข้อผิดพลาด : " + error,
+      });
     } finally {
       setLoading(false);
     }
@@ -266,6 +436,9 @@ const PageDataOutput = () => {
     setPageNumber(model.page);
     setPageSize(model.pageSize);
   };
+  if (loading) {
+    return <CircularProgress />;
+  }
   return (
     <Grid container mt={2}>
       <Grid container spacing={2} justifyContent={"end"}>
@@ -286,6 +459,7 @@ const PageDataOutput = () => {
             pageNumber={APPLICATION_DEFAULT.dataGrid.pageNumber}
             pageSize={APPLICATION_DEFAULT.dataGrid.pageSize}
             onPaginationModelChange={handlePageModelChange}
+            onRowClick={handleOnRowClick}
           />
         </Grid>
       </Grid>
@@ -329,18 +503,10 @@ const PageDataOutput = () => {
                         disablePortal
                         fullWidth
                         label="กลุ่มแบบประกัน"
-                        options={[
-                          {
-                            id: "1",
-                            label: "ออมทรัพย์",
-                          },
-                          {
-                            id: "2",
-                            label: "คุ้มครอง",
-                          },
-                        ]}
+                        options={ProfileOption}
                         onChange={(event, value) => {
                           onChange(value);
+                          handleSubBody(value);
                         }}
                         {...otherProps}
                         error={Boolean(errors?.status)}
@@ -361,12 +527,12 @@ const PageDataOutput = () => {
             <Grid container>
               <Grid item xs={12} md={6}>
                 <TextField
+                  disabled
                   fullWidth
                   label="ชื่อ"
                   margin="dense"
                   size="small"
-                  id={`name`}
-                  {...register(`name`)}
+                  value={watch("SubBodyContent.title")}
                   error={Boolean(errors?.name)}
                   inputProps={{ maxLength: 100 }}
                 />
@@ -383,12 +549,12 @@ const PageDataOutput = () => {
             <Grid container>
               <Grid item xs={12} md={6}>
                 <TextField
+                  disabled
                   fullWidth
                   label="แคปชั่น"
                   margin="dense"
                   size="small"
-                  id={`caption`}
-                  {...register(`caption`)}
+                  value={watch("SubBodyContent.sub_title")}
                   error={Boolean(errors?.name)}
                   inputProps={{ maxLength: 100 }}
                 />
@@ -409,8 +575,7 @@ const PageDataOutput = () => {
                   label="รายละเอียด"
                   margin="dense"
                   size="small"
-                  id={`detail`}
-                  {...register(`detail`)}
+                  value={watch("SubBodyContent.description")}
                   multiline
                   rows={5}
                   error={Boolean(errors?.name)}
@@ -433,8 +598,7 @@ const PageDataOutput = () => {
                   label="รายละเอียดบนการ์ด"
                   margin="dense"
                   size="small"
-                  id={`cardDetail`}
-                  {...register(`cardDetail`)}
+                  value={watch("SubBodyContent.tag_promotion")}
                   multiline
                   rows={5}
                   error={Boolean(errors?.name)}
@@ -458,8 +622,7 @@ const PageDataOutput = () => {
                   label="หมายเหตุ"
                   margin="dense"
                   size="small"
-                  id={`cardDetail`}
-                  {...register(`cardDetail`)}
+                  value={watch("SubBodyContent.description_placement")}
                   error={Boolean(errors?.name)}
                   inputProps={{ maxLength: 100 }}
                 />
@@ -480,8 +643,7 @@ const PageDataOutput = () => {
                   label="ลิ้งเข้าถึงผลิตภัณฑ์"
                   margin="dense"
                   size="small"
-                  id={`link`}
-                  {...register(`link`)}
+                  value={watch("SubBodyContent.buy_link_url")}
                   error={Boolean(errors?.name)}
                   inputProps={{ maxLength: 100 }}
                   InputProps={{
@@ -512,8 +674,7 @@ const PageDataOutput = () => {
                   label="ลิ้งเข้าถึงผลิตภัณฑ์แบบมีพารามิเตอร์"
                   margin="dense"
                   size="small"
-                  id={`link`}
-                  {...register(`parameterLink`)}
+                  value={watch("SubBodyContent.more_link_url")}
                   error={Boolean(errors?.name)}
                   inputProps={{ maxLength: 100 }}
                   InputProps={{
@@ -544,8 +705,7 @@ const PageDataOutput = () => {
                   label="เอกสารโบรชัวร์"
                   margin="dense"
                   size="small"
-                  id={`link`}
-                  {...register(`BrochureLink`)}
+                  value={watch("SubBodyContent.content_additional_url")}
                   error={Boolean(errors?.name)}
                   inputProps={{ maxLength: 100 }}
                   InputProps={{
@@ -959,6 +1119,56 @@ const PageDataOutput = () => {
       {
         //#endregion
       }
+      <Grid item xs={12} mt={2}>
+        <Card>
+          <Grid container spacing={2} justifyContent={"end"}>
+            <Grid item xs={11.3}>
+              <Grid container justifyContent={"end"} spacing={2}>
+                <Grid item xs={12} md="auto">
+                  <Button
+                    variant="contained"
+                    sx={{
+                      color: theme.palette.common.white,
+                      backgroundColor: theme.palette.primary.main,
+                    }}
+                  >
+                    ขออนุมัติ
+                  </Button>
+                </Grid>
+                <Grid item xs={12} md="auto">
+                  <Button variant="outlined">ยกเลิก</Button>
+                </Grid>
+                <Grid item xs={12} md="auto">
+                  <Button variant="outlined">ล้างค่า</Button>
+                </Grid>
+
+                <Grid item xs={12} md="auto">
+                  <Button
+                    variant="contained"
+                    sx={{
+                      color: theme.palette.common.white,
+                      backgroundColor: theme.palette.primary.main,
+                    }}
+                  >
+                    บันทึกแบบร่าง
+                  </Button>
+                </Grid>
+                <Grid item xs={12} md="auto">
+                  <Button
+                    variant="contained"
+                    sx={{
+                      color: theme.palette.common.white,
+                      backgroundColor: theme.palette.primary.main,
+                    }}
+                  >
+                    ดูตัวอย่าง
+                  </Button>
+                </Grid>
+              </Grid>
+            </Grid>
+          </Grid>
+        </Card>
+      </Grid>
     </Grid>
   );
 };
