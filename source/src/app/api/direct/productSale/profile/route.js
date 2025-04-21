@@ -62,5 +62,29 @@ export async function POST(request) {
       }
       console.log(data);
       return NextResponse.json(data);
+    case "GetContentSectionItemsById":
+      body = await request.json();
+      response = await axios.post(`${baseUrl}BackOffice/GetContentSectionItemsById`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        body,
+      });
+      if (response.status === 200) {
+        data = response.data?.data;
+        console.log(data)
+      }
+      if (response.status === 204) {
+        return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
+      }
+      return NextResponse.json(data);
+    case "AddOrUpdateContentSection":
+      body = await request.json();
+      response = await axios.post(`${baseUrl}BackOffice/AddOrUpdateContentSection`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        body,
+      });
+      if (response.status === 200) {
+        data = response.data?.data;
+      }
+      return NextResponse.json(data);
   }
 }

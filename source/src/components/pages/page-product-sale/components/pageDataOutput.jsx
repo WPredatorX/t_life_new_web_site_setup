@@ -203,43 +203,9 @@ const PageDataOutput = ({ saleChannelId }) => {
       ],
     },
   });
-  const content = [
-    {
-      name: "จุดเด่นแบบประกัน",
-      fullOutput: false,
-      fileType: "",
-      file: "",
-      detail: "",
-    },
-    {
-      name: "ข้อมูลแบบประกัน",
-      fullOutput: false,
-      fileType: "",
-      file: "",
-      detail: "",
-    },
-    {
-      name: "CLIP VDO",
-      fullOutput: false,
-      fileType: "",
-      file: "",
-      detail: "",
-    },
-    {
-      name: "วัตถุประสงค์ของแบบประกัน",
-      fullOutput: false,
-      fileType: "",
-      file: "",
-      detail: "",
-    },
-    {
-      name: "ข้อยกเว้นความคุ้มครอง",
-      fullOutput: false,
-      fileType: "",
-      file: "",
-      detail: "",
-    },
-  ];
+  const [contentSection, setContentSection] = useState([]);
+
+  ;
   const theme = useTheme();
   const [ProfileData, setProfileData] = useState();
   const [ProfileOption, setProfileOption] = useState([]);
@@ -419,6 +385,8 @@ const PageDataOutput = ({ saleChannelId }) => {
         reset({ ...resetData, Popularity: true });
       }
       reset({ ...resetData, SubBodyContent: { ...data } });
+      const subBodyContent = watch("SubBodyContent")
+      console.log(subBodyContent)
     } catch (error) {
       handleSnackAlert({
         open: true,
@@ -429,8 +397,33 @@ const PageDataOutput = ({ saleChannelId }) => {
     }
   };
 
+  const handleContentSection = async (e) => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `/api/direct/productSale/profile?action=GetContentSectionItemsById`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            product_sale_channel_id: saleChannelId,
+          }),
+        }
+      );
+      const data = await response.json();
+      setContentSection(data);
+    } catch (error) {
+      handleSnackAlert({
+        open: true,
+        message: "ล้มเหลวเกิดข้อผิดพลาด : " + error,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
   useEffect(() => {
     handleFetchProfile();
+    handleContentSection();
   }, [pageNumber, pageSize]);
   const handlePageModelChange = (model, detail) => {
     setPageNumber(model.page);
@@ -532,7 +525,7 @@ const PageDataOutput = ({ saleChannelId }) => {
                   label="ชื่อ"
                   margin="dense"
                   size="small"
-                  value={watch("SubBodyContent.title")}
+                  value={watch("SubBodyContent.title") && watch("SubBodyContent.title")}
                   error={Boolean(errors?.name)}
                   inputProps={{ maxLength: 100 }}
                 />
@@ -554,7 +547,7 @@ const PageDataOutput = ({ saleChannelId }) => {
                   label="แคปชั่น"
                   margin="dense"
                   size="small"
-                  value={watch("SubBodyContent.sub_title")}
+                  value={watch("SubBodyContent.sub_title") && watch("SubBodyContent.sub_title")}
                   error={Boolean(errors?.name)}
                   inputProps={{ maxLength: 100 }}
                 />
@@ -575,7 +568,7 @@ const PageDataOutput = ({ saleChannelId }) => {
                   label="รายละเอียด"
                   margin="dense"
                   size="small"
-                  value={watch("SubBodyContent.description")}
+                  value={watch("SubBodyContent.description") && watch("SubBodyContent.description")}
                   multiline
                   rows={5}
                   error={Boolean(errors?.name)}
@@ -598,7 +591,7 @@ const PageDataOutput = ({ saleChannelId }) => {
                   label="รายละเอียดบนการ์ด"
                   margin="dense"
                   size="small"
-                  value={watch("SubBodyContent.tag_promotion")}
+                  value={watch("SubBodyContent.tag_promotion") && watch("SubBodyContent.tag_promotion")}
                   multiline
                   rows={5}
                   error={Boolean(errors?.name)}
@@ -622,7 +615,7 @@ const PageDataOutput = ({ saleChannelId }) => {
                   label="หมายเหตุ"
                   margin="dense"
                   size="small"
-                  value={watch("SubBodyContent.description_placement")}
+                  value={watch("SubBodyContent.description_placement") && watch("SubBodyContent.description_placement")}
                   error={Boolean(errors?.name)}
                   inputProps={{ maxLength: 100 }}
                 />
@@ -643,7 +636,7 @@ const PageDataOutput = ({ saleChannelId }) => {
                   label="ลิ้งเข้าถึงผลิตภัณฑ์"
                   margin="dense"
                   size="small"
-                  value={watch("SubBodyContent.buy_link_url")}
+                  value={watch("SubBodyContent.buy_link_url") && watch("SubBodyContent.buy_link_url")}
                   error={Boolean(errors?.name)}
                   inputProps={{ maxLength: 100 }}
                   InputProps={{
@@ -674,7 +667,7 @@ const PageDataOutput = ({ saleChannelId }) => {
                   label="ลิ้งเข้าถึงผลิตภัณฑ์แบบมีพารามิเตอร์"
                   margin="dense"
                   size="small"
-                  value={watch("SubBodyContent.more_link_url")}
+                  value={watch("SubBodyContent.more_link_url") && watch("SubBodyContent.more_link_url")}
                   error={Boolean(errors?.name)}
                   inputProps={{ maxLength: 100 }}
                   InputProps={{
@@ -705,7 +698,7 @@ const PageDataOutput = ({ saleChannelId }) => {
                   label="เอกสารโบรชัวร์"
                   margin="dense"
                   size="small"
-                  value={watch("SubBodyContent.content_additional_url")}
+                  value={watch("SubBodyContent.content_additional_url") && watch("SubBodyContent.content_additional_url")}
                   error={Boolean(errors?.name)}
                   inputProps={{ maxLength: 100 }}
                   InputProps={{
@@ -937,7 +930,7 @@ const PageDataOutput = ({ saleChannelId }) => {
                 <Button variant="contained">เพิ่ม</Button>
               </Grid>
             </Grid>
-            {content.map((value, index) => (
+            {contentSection.map((value, index) => (
               <Accordion
                 aria-controls="panel1-content"
                 key={index}
@@ -958,10 +951,7 @@ const PageDataOutput = ({ saleChannelId }) => {
                         fullWidth
                         margin="dense"
                         size="small"
-                        defaultValue={value.name}
-                        //id={`other`}
-                        //{...register(`other`)}
-                        //error={Boolean(errors?.name)}
+                        value={value.title_item}
                         inputProps={{ maxLength: 100 }}
                       />
                       {/*                   <FormHelperText error={errors?.name}>
@@ -981,26 +971,9 @@ const PageDataOutput = ({ saleChannelId }) => {
                     <Grid item xs={12}>
                       <Grid container spacing={2}>
                         <Grid item xs={12}>
-                          <Switch /> <Typography>แสดงแบบเต็มกล่อง</Typography>
-                          {/*  <Controller
-                            name="Popularity"
-                            control={control}
-                            render={({ field }) => {
-                              const { name, onChange, value, ...otherProps } =
-                                field;
-                              return (
-                                <FormControlLabel
-                                  control={
-                                    <Switch
-                                      checked={value}
-                                      onChange={onChange}
-                                    />
-                                  }
-                                  label="ยอดนิยม"
-                                />
-                              );
-                            }}
-                          /> */}
+                          <Switch checked={value.is_full} onChange={() => {
+                            setContentSection(contentSection.map(item => item.id === value.id ? { ...item, is_full: !item.is_full } : item))
+                          }} /> <Typography>แสดงแบบเต็มกล่อง</Typography>
                         </Grid>
                         <Grid item xs={6}>
                           <Grid container>
@@ -1010,7 +983,7 @@ const PageDataOutput = ({ saleChannelId }) => {
                               </Typography>
                             </Grid>
                             <Grid item xs={12}>
-                              <AppAutocomplete
+                              {/*   <AppAutocomplete
                                 disablePortal
                                 fullWidth
                                 label="ประเภท"
@@ -1028,7 +1001,11 @@ const PageDataOutput = ({ saleChannelId }) => {
                                     label: "Youtube Link",
                                   },
                                 ]}
-                              />
+                                value={value.content_item_file_type || { id: '', label: '' }}
+                                onChange={(e, value) => {
+                                  setContentSection(contentSection.map(item => item.id === value.id ? { ...item, content_item_file_type: value } : item))
+                                }}
+                              /> */}
                             </Grid>
                           </Grid>
                         </Grid>
@@ -1044,6 +1021,10 @@ const PageDataOutput = ({ saleChannelId }) => {
                                 fullWidth
                                 margin="dense"
                                 size="small"
+                                value={value.section_content_item && value.section_content_item}
+                                onChange={(e) => {
+                                  setContentSection(contentSection.map(item => item.id === value.id ? { ...item, section_content_item: e.target.value } : item))
+                                }}
                                 //id={`other`}
                                 //{...register(`other`)}
                                 //error={Boolean(errors?.name)}
@@ -1051,7 +1032,26 @@ const PageDataOutput = ({ saleChannelId }) => {
                                 InputProps={{
                                   endAdornment: (
                                     <InputAdornment position="end">
-                                      <Button sx={{ color: "GrayText" }}>
+                                      <Button sx={{ color: "GrayText" }} onClick={() => {
+                                        const input = document.createElement("input");
+                                        input.type = "file";
+                                        input.accept = "image/*";
+                                        input.onchange = (e) => {
+                                          const file = e.target.files[0];
+                                          if (file) {
+                                            const reader = new FileReader();
+                                            reader.onload = () => {
+                                              setContentSection(contentSection.map(item =>
+                                                item.id === value.id ?
+                                                  { ...item, section_content_item: reader.result } :
+                                                  item
+                                              ));
+                                            };
+                                            reader.readAsDataURL(file);
+                                          }
+                                        };
+                                        input.click();
+                                      }}>
                                         อัพโหลด
                                       </Button>
                                     </InputAdornment>
@@ -1086,9 +1086,7 @@ const PageDataOutput = ({ saleChannelId }) => {
                             fullWidth
                             margin="dense"
                             size="small"
-                            //id={`other`}
-                            //{...register(`other`)}
-                            //error={Boolean(errors?.name)}
+                            value={value.condition_title}
                             inputProps={{ maxLength: 100 }}
                           />
                         </Grid>
@@ -1099,7 +1097,9 @@ const PageDataOutput = ({ saleChannelId }) => {
                       <Typography variant="h5" mt={2}>
                         คำอธิบาย
                       </Typography>
-                      <AppWyswig />
+                      <AppWyswig value={value.description} onChange={(e) => {
+                        setContentSection(contentSection.map(item => item.id === value.id ? { ...item, description: e.target.value } : item))
+                      }} />
                     </Grid>
 
                     <Grid item xs={12}>

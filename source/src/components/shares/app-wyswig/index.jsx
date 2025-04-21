@@ -137,17 +137,17 @@ const FontSize = Extension.create({
     return {
       setFontSize:
         (fontSize) =>
-        ({ chain }) => {
-          return chain().setMark("textStyle", { fontSize }).run();
-        },
+          ({ chain }) => {
+            return chain().setMark("textStyle", { fontSize }).run();
+          },
       unsetFontSize:
         () =>
-        ({ chain }) => {
-          return chain()
-            .setMark("textStyle", { fontSize: null })
-            .removeEmptyTextStyle()
-            .run();
-        },
+          ({ chain }) => {
+            return chain()
+              .setMark("textStyle", { fontSize: null })
+              .removeEmptyTextStyle()
+              .run();
+          },
     };
   },
 });
@@ -194,7 +194,7 @@ const HtmlParser = (htmlString) => {
   return updatedHtmlString;
 };
 
-const ClientComponent = () => {
+const ClientComponent = ({ value, onChange }) => {
   const rteRef = useRef(null);
   const [submittedContent, setSubmittedContent] = useState("");
   const extensions = [
@@ -234,7 +234,7 @@ const ClientComponent = () => {
           setSubmittedContent(parsed);
         }}
         extensions={extensions}
-        content=""
+        content={value}
         renderControls={() => (
           <ThemeProvider theme={themeMenu}>
             <MenuControlsContainer>
