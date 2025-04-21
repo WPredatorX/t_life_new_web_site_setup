@@ -64,13 +64,13 @@ export async function POST(request) {
       return NextResponse.json(data);
     case "GetContentSectionItemsById":
       body = await request.json();
-      response = await axios.post(`${baseUrl}BackOffice/GetContentSectionItemsById`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        body,
-      });
+      response = await axios.post(
+        `${baseUrl}BackOffice/GetContentSectionItemsById`,
+        body
+      );
+      console.log(response);
       if (response.status === 200) {
         data = response.data?.data;
-        console.log(data)
       }
       if (response.status === 204) {
         return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
@@ -78,10 +78,11 @@ export async function POST(request) {
       return NextResponse.json(data);
     case "AddOrUpdateContentSection":
       body = await request.json();
-      response = await axios.post(`${baseUrl}BackOffice/AddOrUpdateContentSection`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
+      response = await axios.post(
+        `${baseUrl}BackOffice/AddOrUpdateContentSection`,
         body,
-      });
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
       if (response.status === 200) {
         data = response.data?.data;
       }
