@@ -119,6 +119,7 @@ const PageDataOutput = ({ saleChannelId }) => {
       })
     ),
   });
+  
   const {
     reset,
     control,
@@ -205,7 +206,7 @@ const PageDataOutput = ({ saleChannelId }) => {
   });
   const [contentSection, setContentSection] = useState([]);
 
-  ;
+
   const theme = useTheme();
   const [ProfileData, setProfileData] = useState();
   const [ProfileOption, setProfileOption] = useState([]);
@@ -421,6 +422,48 @@ const PageDataOutput = ({ saleChannelId }) => {
       setLoading(false);
     }
   };
+
+  const handleSave = async () => {
+    try {
+      let body = JSON.stringify({
+        is_active: contentSection.is_active,
+        create_by: contentSection.create_by,
+        update_by: contentSection.update_by,
+        product_sale_channel_id: contentSection.product_sale_channel_id,
+        section_name: contentSection.section_name,
+        section_content: contentSection.section_content,
+        section_content_name: contentSection.section_content_name,
+        section_content_type: contentSection.section_content_type,
+        tag_promotion: contentSection.tag_promotion,
+        is_full: contentSection.is_full,
+        seq_content: contentSection.seq_content,
+        title_item: contentSection.title_item,
+        section_content_item: contentSection.section_content_item,
+        content_item_file_name: contentSection.content_item_file_name,
+        content_item_file_type: contentSection.content_item_file_type,
+        condition_title: contentSection.condition_title,
+        description: contentSection.description,
+        sub_description: contentSection.sub_description,
+        file_content_item: contentSection.file_content_item
+      });
+      const response = await fetch(`/api/direct/productSale/profile?action=AddOrUpdateContentSection`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: body,
+      });
+      const data = await response.json();
+      console.log(data);
+      alert("บันทึกข้อมูลสำเร็จ");
+    } catch (error) {
+      handleSnackAlert({
+        open: true,
+        message: "ล้มเหลวเกิดข้อผิดพลาด : " + error,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     handleFetchProfile();
     handleContentSection();
@@ -1051,6 +1094,7 @@ const PageDataOutput = ({ saleChannelId }) => {
                                           }
                                         };
                                         input.click();
+                                        alert("อัพโหลดสำเร็จ");
                                       }}>
                                         อัพโหลด
                                       </Button>

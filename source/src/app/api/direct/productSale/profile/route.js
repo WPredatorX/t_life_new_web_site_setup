@@ -66,9 +66,9 @@ export async function POST(request) {
       body = await request.json();
       response = await axios.post(
         `${baseUrl}BackOffice/GetContentSectionItemsById`,
-        body
+        body,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
       );
-      console.log(response);
       if (response.status === 200) {
         data = response.data?.data;
       }
