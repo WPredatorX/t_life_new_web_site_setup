@@ -46,6 +46,7 @@ import {
 import { setDialog, closeDialog } from "@stores/slices";
 import { GridActionsCellItem } from "@mui/x-data-grid";
 import Image from "next/image";
+import { hi } from "date-fns/locale";
 const AppPromotion = () => {
   const { handleSnackAlert } = useAppSnackbar();
   const theme = useTheme();
@@ -74,9 +75,51 @@ const AppPromotion = () => {
     toUpdateDate: Yup.date().nullable(),
     fromInsuredSum: Yup.number().nullable(),
     ToInsuredSum: Yup.number().nullable(),
+    promotion: Yup.array()
+      .of(
+        Yup.object().shape({
+          promotion_id: Yup.string().nullable(),
+          i_campaign: Yup.mixed().nullable(),
+          i_campaign_mkt: Yup.string().nullable(),
+          promotion_code: Yup.string().nullable(),
+          c_campaign: Yup.string().nullable(),
+          c_campaign_short: Yup.string().nullable(),
+          d_begin: Yup.date().nullable(),
+          d_end: Yup.date().nullable(),
+          discount_percent: Yup.number().nullable(),
+          discount_amount: Yup.number().nullable(),
+          discount_type: Yup.string().nullable(),
+          content_url: Yup.string().nullable(),
+          minimum_purchase: Yup.number().nullable(),
+          is_first_time_discount: Yup.boolean().nullable(),
+          promotion_status: Yup.number().nullable(),
+          promotion_status_message: Yup.string().nullable(),
+          min_premium_amount: Yup.number().nullable(),
+          max_premium_amount: Yup.number().nullable(),
+          min_coverage_amount: Yup.number().nullable(),
+          max_coverage_amount: Yup.number().nullable(),
+          condition_content: Yup.string().nullable(),
+          tag_promotion: Yup.string().nullable(),
+          remark_promotion_name: Yup.string().nullable(),
+          is_active: Yup.boolean().nullable(),
+          create_date: Yup.date().nullable(),
+          create_by: Yup.string().nullable(),
+          update_date: Yup.date().nullable(),
+          update_by: Yup.string().nullable(),
+          total_records: Yup.number().nullable(),
+          total_pages: Yup.number().nullable(),
+        })
+      )
+      .nullable(),
+    promotiontype: Yup.object().shape({
+      id: Yup.string().nullable(),
+      label: Yup.string().nullable(),
+    }),
   });
   const {
     reset,
+    watch,
+    setValue,
     control,
     register,
     handleSubmit,
@@ -90,16 +133,58 @@ const AppPromotion = () => {
       type: null,
       status: null,
       name: "",
-      fromCreateDate: addDays(new Date(), -7),
-      toCreateDate: new Date(),
+      fromCreateDate: null,
+      toCreateDate: null,
       fromUpdateDate: null,
       toUpdateDate: null,
+      promotiontype: {},
+      promotion: [
+        {
+          id: "CAMPMKT01",
+          promotion_id: "",
+          i_campaign: null,
+          i_campaign_mkt: "CAMPMKT01",
+          promotion_code: "",
+          c_campaign: "",
+          c_campaign_short: "",
+          d_begin: new Date(),
+          d_end: new Date(),
+          discount_percent: 0,
+          discount_amount: 0,
+          discount_type: "",
+          content_url: "",
+          minimum_purchase: 0,
+          is_first_time_discount: false,
+          promotion_status: 1,
+          promotion_status_message: "",
+          min_premium_amount: 0,
+          max_premium_amount: 0,
+          min_coverage_amount: 0,
+          max_coverage_amount: 0,
+          condition_content: "",
+          tag_promotion: "",
+          remark_promotion_name: "",
+          is_active: true,
+          create_date: new Date(),
+          create_by: "admin",
+          update_date: new Date(),
+          update_by: "admin",
+          total_records: 2,
+          total_pages: 1,
+        },
+      ],
     },
   });
+  const hiddenColumn = {
+    id: false,
+  };
   const columns = [
     {
-      flex: 1,
       field: "id",
+    },
+    {
+      flex: 1,
+      field: "promotion_code",
       type: "string",
       headerAlign: "center",
       headerName: "รหัส Promotion",
@@ -110,7 +195,7 @@ const AppPromotion = () => {
 
     {
       flex: 1,
-      field: "status",
+      field: "promotion_status",
       type: "string",
       headerAlign: "center",
       headerName: "สถานะ",
@@ -118,12 +203,15 @@ const AppPromotion = () => {
       align: "center",
       minWidth: 200,
       renderCell: (params) => (
-        <AppStatus status={params.value} statusText={params.row.statusText} />
+        <AppStatus
+          status={params.value}
+          statusText={params.row.promotion_status_message}
+        />
       ),
     },
     {
       flex: 1,
-      field: "discountPer",
+      field: "discount_percent",
       type: "string",
       headerAlign: "center",
       headerName: "ส่วนลด(%)",
@@ -134,7 +222,7 @@ const AppPromotion = () => {
     },
     {
       flex: 1,
-      field: "discount",
+      field: "discount_amount",
       type: "string",
       headerAlign: "center",
       headerName: "ส่วนลด(บาท)",
@@ -145,7 +233,7 @@ const AppPromotion = () => {
     },
     {
       flex: 1,
-      field: "createBy",
+      field: "create_by",
       type: "string",
       headerAlign: "center",
       headerName: "สร้างโดย",
@@ -155,7 +243,7 @@ const AppPromotion = () => {
     },
     {
       flex: 1,
-      field: "createDate",
+      field: "create_date",
       type: "string",
       headerAlign: "center",
       headerName: "สร้างเมื่อ",
@@ -163,16 +251,21 @@ const AppPromotion = () => {
       align: "center",
       minWidth: 100,
       valueGetter: (value) => {
-        let formattedValue = format(
-          addYears(parseISO(value), 543),
-          "dd/MM/yyyy"
-        );
-        return formattedValue;
+        if (!value) return "";
+        try {
+          let date;
+          date = typeof value === "string" ? parseISO(value) : new Date(value);
+          if (isNaN(date.getTime())) return value;
+          let formattedValue = format(addYears(date, 543), "dd/MM/yyyy");
+          return formattedValue;
+        } catch (error) {
+          return value;
+        }
       },
     },
     {
       flex: 1,
-      field: "updateBy",
+      field: "update_by",
       type: "string",
       headerAlign: "center",
       headerName: "แก้ไขโดย",
@@ -182,7 +275,7 @@ const AppPromotion = () => {
     },
     {
       flex: 1,
-      field: "updateDate",
+      field: "update_date",
       type: "string",
       headerAlign: "center",
       headerName: "แก้ไขเมื่อ",
@@ -190,23 +283,17 @@ const AppPromotion = () => {
       align: "center",
       minWidth: 100,
       valueGetter: (value) => {
-        let formattedValue = format(
-          addYears(parseISO(value), 543),
-          "dd/MM/yyyy"
-        );
-        return formattedValue;
+        if (!value) return "";
+        try {
+          let date;
+          date = typeof value === "string" ? parseISO(value) : new Date(value);
+          if (isNaN(date.getTime())) return value;
+          let formattedValue = format(addYears(date, 543), "dd/MM/yyyy");
+          return formattedValue;
+        } catch (error) {
+          return value;
+        }
       },
-    },
-
-    {
-      flex: 1,
-      field: "isactive",
-      type: "string",
-      headerAlign: "center",
-      headerName: "Is active",
-      headerClassName: "header-main",
-      align: "center",
-      minWidth: 100,
     },
     {
       flex: 1,
@@ -218,14 +305,21 @@ const AppPromotion = () => {
       minWidth: 100,
       getActions: (params) => {
         const id = params?.row?.id;
+        const index = Array.from(watch(`promotion`)).findIndex(
+          (item) => item.id === id
+        );
         let disabledView = false; // TODO: เช็คตามสิทธิ์
         let disabledEdit = false; // TODO: เช็คตามสิทธิ์
         let disabledDelete = false; // TODO: เช็คตามสิทธิ์
         let disabledApprove = false;
-        const viewFunction = disabledView ? null : () => handleView();
-        const editFunction = disabledEdit ? null : () => handleEdit();
-        const deleteFunction = disabledDelete ? null : () => handleDelete();
-        const ApproveFunction = disabledApprove ? null : () => handleApprove();
+        const viewFunction = disabledView ? null : () => handleView(index);
+        const editFunction = disabledEdit ? null : () => handleEdit(index);
+        const deleteFunction = disabledDelete
+          ? null
+          : () => handleDelete(index);
+        const ApproveFunction = disabledApprove
+          ? null
+          : () => handleApprove(index);
         const defaultProps = {
           showInMenu: true,
           sx: {
@@ -272,8 +366,8 @@ const AppPromotion = () => {
       },
     },
   ];
-  const handleView = () => {
-    handleNotification("จัดการโปรโมชั่น", "view", () => {
+  const handleView = (index) => {
+    handleNotification("จัดการโปรโมชั่น", "view", index, () => {
       setTimeout(() => {}, 400);
     });
   };
@@ -282,13 +376,13 @@ const AppPromotion = () => {
       setTimeout(() => {}, 400);
     });
   };
-  const handleApprove = () => {
-    handleNotification("จัดการโปรโมชั่น", "Approve", () => {
+  const handleApprove = (index) => {
+    handleNotification("จัดการโปรโมชั่น", "Approve", index, () => {
       setTimeout(() => {}, 400);
     });
   };
-  const handleEdit = (params) => {
-    handleNotification("จัดการโปรโมชั่น", "edit", () => {
+  const handleEdit = (index) => {
+    handleNotification("จัดการโปรโมชั่น", "edit", index, () => {
       setTimeout(() => {}, 400);
     });
   };
@@ -318,24 +412,88 @@ const AppPromotion = () => {
   const handleFetchProduct = async () => {
     setLoading(true);
     try {
-      const start = pageNumber * pageSize;
-      const limit = pageSize;
-      const response = await fetch(`/api/direct?action=GetPromotionById`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
+      const body = {
+        promotion_id: null,
+        promotion_code: "",
+        create_date_start: watch("fromCreateDate"),
+        create_date_end: watch("toCreateDate"),
+        update_date_start: watch("fromUpdateDate"),
+        update_date_end: watch("toUpdateDate"),
+        field: "CreateDate",
+        direction: "desc",
+        page_number: pageNumber,
+        page_size: pageSize,
+        promotion_status: watch("status")?.id,
+      };
+      console.log("body", body);
+      const response = await fetch(
+        `/api/direct/promotion?action=getPromotion`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
+      );
       const data = await response.json();
-      setData({
-        rows: data,
-        totalRows: 100,
+      console.log("data", data);
+      const resultData = Array.from(data).map((item) => {
+        return {
+          ...item,
+          id: item.i_campaign_mkt,
+        };
       });
+
+      const resetData = watch();
+      reset({ ...resetData, promotion: [...resultData] });
     } catch (error) {
-      handleSnackAlert({ open: true, message: "ล้มเหลวเกิดข้อผิดพลาด" });
+      handleSnackAlert({
+        open: true,
+        message: "ล้มเหลวเกิดข้อผิดพลาด" + error,
+      });
     } finally {
       setLoading(false);
     }
   };
-  const handleNotification = (message, mode, callback) => {
+
+  const handleUploadImage = async (field, index) => {
+    try {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+      input.onchange = async (event) => {
+        const file = event.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const base64String = reader.result.split(",")[1];
+            setValue(`promotion.${index}.${field}`, base64String);
+            handleSnackAlert({
+              open: true,
+              message: "อัพโหลดสำเร็จ",
+              severity: "success",
+            });
+          };
+          reader.onerror = () => {
+            handleSnackAlert({
+              open: true,
+              message: "เกิดข้อผิดพลาดในการแปลงไฟล์",
+              severity: "error",
+            });
+          };
+          reader.readAsDataURL(file);
+        }
+      };
+      input.click();
+    } catch (error) {
+      handleSnackAlert({
+        open: true,
+        message: "เกิดข้อผิดพลาดในการอัพโหลด",
+        severity: "error",
+      });
+    }
+  };
+  //#region dialog
+  const handleNotification = (message, mode, index, callback) => {
     dispatch(
       setDialog({
         ...dialog,
@@ -364,14 +522,64 @@ const AppPromotion = () => {
                                   : false
                               }
                               size="small"
-                              id={`name`}
-                              {...register(`name`)}
-                              error={Boolean(errors?.name)}
-                              inputProps={{ maxLength: 100 }}
+                              value={watch(`promotion.${index}.promotion_code`)}
+                              id={`promotion.${index}.promotion_code`}
                             />
                             <FormHelperText error={errors?.name}>
                               {errors?.name?.message}
                             </FormHelperText>
+                          </Grid>
+                          <Grid item xs={6}>
+                            <Controller
+                              name={`promotiontype`}
+                              control={control}
+                              render={({ field }) => {
+                                const { name, onChange, ...otherProps } = field;
+
+                                return (
+                                  <>
+                                    <AppAutocomplete
+                                      id={name}
+                                      name={name}
+                                      disablePortal
+                                      fullWidth
+                                      label="สถานะ"
+                                      options={[
+                                        {
+                                          id: null,
+                                          label: "ทั้งหมด",
+                                        },
+
+                                        {
+                                          id: "1",
+                                          label: "แบบร่าง",
+                                        },
+                                        {
+                                          id: "2",
+                                          label: "รอการอนุมัติ",
+                                        },
+                                        {
+                                          id: "3",
+                                          label: "เปิดใช้งาน",
+                                        },
+                                        {
+                                          id: "4",
+                                          label: "ยกเลิกการใช้งาน",
+                                        },
+                                      ]}
+                                      onChange={(event, value) => {
+                                        onChange(value);
+                                      }}
+                                      {...otherProps}
+                                      error={Boolean(errors?.status)}
+                                    />
+                                    <FormHelperText error={errors?.status}>
+                                      {errors?.status?.message}
+                                    </FormHelperText>
+                                  </>
+                                );
+                              }}
+                            />
                           </Grid>
                         </Grid>
                       </Grid>
@@ -385,15 +593,15 @@ const AppPromotion = () => {
                               label="ส่วนลด(%)"
                               margin="dense"
                               disabled={
-                                mode === "view" ||
-                                mode === "Approve" ||
-                                mode === "Approve"
+                                mode === "view" || mode === "Approve"
                                   ? true
                                   : false
                               }
                               size="small"
-                              id={`name`}
-                              {...register(`name`)}
+                              value={watch(
+                                `promotion.${index}.discount_percent`
+                              )}
+                              id={`promotion.${index}.discount_percent`}
                               error={Boolean(errors?.name)}
                               inputProps={{ maxLength: 100 }}
                             />
@@ -414,8 +622,10 @@ const AppPromotion = () => {
                                   : false
                               }
                               size="small"
-                              id={`name`}
-                              {...register(`name`)}
+                              value={watch(
+                                `promotion.${index}.discount_amount`
+                              )}
+                              id={`promotion.${index}.discount_amount`}
                               error={Boolean(errors?.name)}
                               inputProps={{ maxLength: 100 }}
                             />
@@ -448,8 +658,10 @@ const AppPromotion = () => {
                                       : false
                                   }
                                   size="small"
-                                  id={`name`}
-                                  {...register(`name`)}
+                                  value={watch(
+                                    `promotion.${index}.min_premium_amount`
+                                  )}
+                                  id={`promotion.${index}.min_premium_amount`}
                                   error={Boolean(errors?.name)}
                                   inputProps={{ maxLength: 100 }}
                                 />
@@ -470,8 +682,10 @@ const AppPromotion = () => {
                                       : false
                                   }
                                   size="small"
-                                  id={`name`}
-                                  {...register(`name`)}
+                                  value={watch(
+                                    `promotion.${index}.max_premium_amount`
+                                  )}
+                                  id={`promotion.${index}.max_premium_amount`}
                                   error={Boolean(errors?.name)}
                                   inputProps={{ maxLength: 100 }}
                                 />
@@ -496,8 +710,10 @@ const AppPromotion = () => {
                                       : false
                                   }
                                   size="small"
-                                  id={`name`}
-                                  {...register(`name`)}
+                                  id={`promotion.${index}.min_coverage_amount`}
+                                  value={watch(
+                                    `promotion.${index}.min_coverage_amount`
+                                  )}
                                   error={Boolean(errors?.name)}
                                   inputProps={{ maxLength: 100 }}
                                 />
@@ -518,8 +734,10 @@ const AppPromotion = () => {
                                       : false
                                   }
                                   size="small"
-                                  id={`name`}
-                                  {...register(`name`)}
+                                  value={watch(
+                                    `promotion.${index}.max_coverage_amount`
+                                  )}
+                                  id={`promotion.${index}.max_coverage_amount`}
                                   error={Boolean(errors?.name)}
                                   inputProps={{ maxLength: 100 }}
                                 />
@@ -545,11 +763,7 @@ const AppPromotion = () => {
                                 <Grid item xs={12}>
                                   <TextField
                                     fullWidth
-                                    disabled={
-                                      mode === "view" || mode === "Approve"
-                                        ? true
-                                        : false
-                                    }
+                                    disabled
                                     margin="dense"
                                     size="small"
                                     label="รูปภาพแท็ก (แสดงมุมมล่างขวาของแบนเนอร์) 600x200"
@@ -597,8 +811,10 @@ const AppPromotion = () => {
                                         : false
                                     }
                                     size="small"
-                                    id={`name`}
-                                    {...register(`name`)}
+                                    value={watch(
+                                      `promotion.${index}.c_campaign_short`
+                                    )}
+                                    id={`promotion.${index}.c_campaign_short`}
                                     error={Boolean(errors?.name)}
                                     inputProps={{ maxLength: 100 }}
                                   />
@@ -618,8 +834,10 @@ const AppPromotion = () => {
                                         : false
                                     }
                                     size="small"
-                                    id={`name`}
-                                    {...register(`name`)}
+                                    value={watch(
+                                      `promotion.${index}.c_campaign`
+                                    )}
+                                    id={`promotion.${index}.c_campaign`}
                                     error={Boolean(errors?.name)}
                                     inputProps={{ maxLength: 100 }}
                                   />
@@ -642,13 +860,22 @@ const AppPromotion = () => {
                                 margin="dense"
                                 size="small"
                                 label="รูปภาพแบนเนอร์ (1600 x 2000 px)"
+                                value={watch(`promotion.${index}.content_url`)}
                                 //id={`banner`}
                                 //error={Boolean(errors?.name)}
                                 inputProps={{ maxLength: 100 }}
                                 InputProps={{
                                   endAdornment: (
                                     <InputAdornment position="end">
-                                      <Button sx={{ color: "GrayText" }}>
+                                      <Button
+                                        sx={{ color: "GrayText" }}
+                                        onclick={() =>
+                                          handleUploadImage(
+                                            "content_url",
+                                            index
+                                          )
+                                        }
+                                      >
                                         อัพโหลด
                                       </Button>
                                     </InputAdornment>
@@ -673,7 +900,11 @@ const AppPromotion = () => {
                             <Grid item xs={12}>
                               <Typography mt={2}>คำอธิบาย</Typography>
 
-                              <AppWyswig />
+                              <AppWyswig
+                                value={watch(
+                                  `promotion.${index}.condition_content`
+                                )}
+                              />
                             </Grid>
                           </Grid>
                         </AppCard>
@@ -775,6 +1006,8 @@ const AppPromotion = () => {
       })
     );
   };
+  //#endregion
+
   return (
     <Grid container justifyContent={"center"} my={2}>
       <Grid item xs={11.6}>
@@ -804,12 +1037,25 @@ const AppPromotion = () => {
                           label="สถานะ"
                           options={[
                             {
+                              id: null,
+                              label: "ทั้งหมด",
+                            },
+
+                            {
                               id: "1",
-                              label: "เปิดใช้งาน",
+                              label: "แบบร่าง",
                             },
                             {
                               id: "2",
-                              label: "ยกเลิการใช้งาน",
+                              label: "รอการอนุมัติ",
+                            },
+                            {
+                              id: "3",
+                              label: "เปิดใช้งาน",
+                            },
+                            {
+                              id: "4",
+                              label: "ยกเลิกการใช้งาน",
                             },
                           ]}
                           onChange={(event, value) => {
@@ -1010,11 +1256,13 @@ const AppPromotion = () => {
           </form>
           <Grid item xs={12} sx={{ height: "25rem" }}>
             <AppDataGrid
-              rows={data.rows}
-              rowCount={100}
+              rows={watch("promotion")}
+              rowCount={watch("promotion.0.total_records")}
               columns={columns}
-              pageNumber={APPLICATION_DEFAULT.dataGrid.pageNumber}
-              pageSize={APPLICATION_DEFAULT.dataGrid.pageSize}
+              loading={loading}
+              hiddenColumn={hiddenColumn}
+              pageNumber={pageNumber}
+              pageSize={pageSize}
               onPaginationModelChange={handlePageModelChange}
             />
           </Grid>
