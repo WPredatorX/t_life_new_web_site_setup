@@ -32,6 +32,18 @@ export async function POST(request) {
         return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
       }
       return NextResponse.json(data);
-    case "getPromotionById":
+    case "AddOrUpdatePromotion":
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}Products/AddOrUpdatePromotion`,
+        body,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+      data = response.data?.data;
+      return NextResponse.json(data);
   }
 }
