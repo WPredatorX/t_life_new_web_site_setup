@@ -19,13 +19,114 @@ import {
   MenuItem,
   Typography,
 } from "@mui/material";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { format, addYears, addDays, parseISO } from "date-fns";
-const AppProductListItem = ({ data, hiddenColumn }) => {
+const AppProductListItem = ({ hiddenColumn, formMethods }) => {
   const router = useAppRouter();
+  const [pageNumber, setPageNumber] = useState(
+    APPLICATION_DEFAULT.dataGrid.pageNumber
+  );
+  const [pageSize, setPageSize] = useState(
+    APPLICATION_DEFAULT.dataGrid.pageSize
+  );
+  const [dataSub, setDataSub] = useState({
+    rows: [],
+    details: [],
+    groupType: 0,
+    totalRows: 0,
+  });
+  const [dataSubNoGroup, setDataSubNoGroup] = useState({
+    rows: [],
+    details: [],
+    groupType: 0,
+    totalRows: 0,
+  });
   const handlePageModelChange = (model, detail) => {
     setPageNumber(model.page);
     setPageSize(model.pageSize);
+  };
+  const {
+    watch,
+    reset,
+    control,
+    register,
+    handleSubmit,
+    setValue,
+    formState: { errors },
+  } = formMethods;
+  useEffect(() => {
+    handleFetchProductSub();
+  }, [pageNumber, pageSize]);
+  const handleFetchProductSub = async () => {
+    setLoading(true);
+    try {
+      const body = {
+        is_active: true,
+        product_status: watch("status")
+          ? watch("status").id === "0"
+            ? null
+            : watch("status").id
+          : null,
+        c_plan: watch(`name`) ? watch(`name`) : null,
+
+        min_coverage_amount_start: watch(`min_coverage_amount_start`),
+        min_coverage_amount_end: watch(`min_coverage_amount_end`),
+        max_coverage_amount_start: watch(`max_coverage_amount_start`),
+        max_coverage_amount_end: watch(`max_coverage_amount_end`),
+        create_date_start: watch(`create_date_start`),
+        create_date_end: watch(`create_date_end`),
+        update_date_start: watch(`update_date_start`),
+        update_date_end: watch(`update_date_end`),
+      };
+
+      const response = await fetch(
+        `/api/direct?action=GetAllProductSaleGroupRider`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
+      );
+      const data = await response.json();
+      const mapData = data.map((item) => {
+        return {
+          ...item,
+          id: item.item_id,
+        };
+      });
+      setDataSub({
+        rows: data,
+        details: mapData,
+        groupType: data.product_sale_group_type,
+        totalRows: data.total_records,
+      });
+
+      const responseNoGroup = await fetch(
+        `/api/direct?action=GetAllProductSaleRiderDirect`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
+      );
+      const dataNoGroup = await responseNoGroup.json();
+      const mapDataNoGroup = dataNoGroup.map((item) => {
+        return {
+          ...item,
+          id: item.item_id,
+        };
+      });
+      setDataSubNoGroup({
+        rows: dataNoGroup,
+        details: mapDataNoGroup,
+        groupType: dataNoGroup.product_sale_group_type,
+        totalRows: dataNoGroup.total_records,
+      });
+    } catch (error) {
+      handleSnackAlert({ open: true, message: "ล้มเหลวเกิดข้อผิดพลาด" });
+    } finally {
+      setLoading(false);
+    }
   };
   const subColumn = [
     {
@@ -34,7 +135,7 @@ const AppProductListItem = ({ data, hiddenColumn }) => {
 
     {
       flex: 1,
-      field: "name",
+      field: "title",
       type: "string",
       headerAlign: "center",
       headerName: "ชื่อผลิตภัณฑ์",
@@ -44,7 +145,7 @@ const AppProductListItem = ({ data, hiddenColumn }) => {
     },
     {
       flex: 1,
-      field: "status",
+      field: "product_status",
       type: "string",
       headerAlign: "center",
       headerName: "สถานะ",
@@ -52,12 +153,15 @@ const AppProductListItem = ({ data, hiddenColumn }) => {
       align: "center",
       minWidth: 200,
       renderCell: (params) => (
-        <AppStatus status={params.value} statusText={params.row.statusText} />
+        <AppStatus
+          status={params.value}
+          statusText={params.row.product_status_name}
+        />
       ),
     },
     {
       flex: 1,
-      field: "minimumInsured",
+      field: "min_coverage_amount",
       type: "string",
       headerAlign: "center",
       headerName: "ทุนประกันต่ำสุด",
@@ -68,7 +172,7 @@ const AppProductListItem = ({ data, hiddenColumn }) => {
     },
     {
       flex: 1,
-      field: "maximumInsured",
+      field: "max_coverage_amount",
       type: "string",
       headerAlign: "center",
       headerName: "ทุนประกันต่ำสุด",
@@ -80,7 +184,7 @@ const AppProductListItem = ({ data, hiddenColumn }) => {
 
     {
       flex: 1,
-      field: "createBy",
+      field: "create_by",
       type: "string",
       headerAlign: "center",
       headerName: "สร้างโดย",
@@ -90,7 +194,7 @@ const AppProductListItem = ({ data, hiddenColumn }) => {
     },
     {
       flex: 1,
-      field: "createDate",
+      field: "create_date",
       type: "string",
       headerAlign: "center",
       headerName: "สร้างเมื่อ",
@@ -107,7 +211,7 @@ const AppProductListItem = ({ data, hiddenColumn }) => {
     },
     {
       flex: 1,
-      field: "updateBy",
+      field: "update_by",
       type: "string",
       headerAlign: "center",
       headerName: "แก้ไขโดย",
@@ -117,7 +221,7 @@ const AppProductListItem = ({ data, hiddenColumn }) => {
     },
     {
       flex: 1,
-      field: "updateDate",
+      field: "update_date",
       type: "string",
       headerAlign: "center",
       headerName: "แก้ไขเมื่อ",
@@ -198,7 +302,7 @@ const AppProductListItem = ({ data, hiddenColumn }) => {
           <Grid container spacing={2}>
             <Grid item xs="auto">
               <Typography variant="h5" sx={{ fontWeight: 900 }}>
-                {data.name}
+                {data.product_sale_group_name}
               </Typography>
             </Grid>
             <Grid item xs></Grid>
@@ -261,12 +365,12 @@ const AppProductListItem = ({ data, hiddenColumn }) => {
           <Grid container>
             <Grid item xs={12} sx={{ height: "25rem" }}>
               <AppDataGrid
-                rows={data.subData}
-                rowCount={100}
+                rows={dataSub.details}
+                rowCount={dataSub.total_records}
                 columns={subColumn}
                 hiddenColumn={hiddenColumn}
-                pageNumber={APPLICATION_DEFAULT.dataGrid.pageNumber}
-                pageSize={APPLICATION_DEFAULT.dataGrid.pageSize}
+                pageNumber={pageNumber}
+                pageSize={pageSize}
                 onPaginationModelChange={handlePageModelChange}
               />
             </Grid>

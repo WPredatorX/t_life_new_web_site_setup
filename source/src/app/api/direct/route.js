@@ -292,6 +292,38 @@ export async function POST(request) {
         return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
       }
       return NextResponse.json(data);
+    case "GetAllProductSaleGroupRider":
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}BackOffice/GetAllProductSaleGroupRider`,
+        body,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      if (response.status === 200) {
+        data = response.data?.data;
+      }
+      if (response.status === 204) {
+        return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
+      }
+      return NextResponse.json(data);
+    case "GetAllProductSaleRiderDirect": //ไม่มีกลุ่ม
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}BackOffice/GetAllProductSaleRiderDirect`,
+        body,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      if (response.status === 200) {
+        data = response.data?.data;
+      }
+      if (response.status === 204) {
+        return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
+      }
+      return NextResponse.json(data);
     case "getProductFromDirectWithMultiParam":
       //productId = url.searchParams.get("productId");
       /* response = await axios.post(

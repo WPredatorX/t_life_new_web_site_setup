@@ -57,15 +57,16 @@ const AppProductList = ({ mode }) => {
   const dispatch = useAppDispatch();
   const brokerId = useAppSelector((state) => state.global.brokerId);
   const validationSchema = Yup.object().shape({
-    statusList: Yup.array().of(Yup.mixed()).nullable(),
-    status: Yup.mixed().nullable(),
+    status: Yup.object().nullable(),
     name: Yup.string().nullable(),
-    fromCreateDate: Yup.date().nullable(),
-    toCreateDate: Yup.date().nullable(),
-    fromUpdateDate: Yup.date().nullable(),
-    toUpdateDate: Yup.date().nullable(),
-    fromInsuredSum: Yup.number().nullable(),
-    ToInsuredSum: Yup.number().nullable(),
+    create_date_start: Yup.date().nullable(),
+    create_date_end: Yup.date().nullable(),
+    update_date_start: Yup.date().nullable(),
+    update_date_end: Yup.date().nullable(),
+    min_coverage_amount_start: Yup.number().nullable(),
+    min_coverage_amount_end: Yup.number().nullable(),
+    max_coverage_amount_start: Yup.number().nullable(),
+    max_coverage_amount_end: Yup.number().nullable(),
   });
   const [pageNumber, setPageNumber] = useState(
     APPLICATION_DEFAULT.dataGrid.pageNumber
@@ -78,13 +79,26 @@ const AppProductList = ({ mode }) => {
     rows: [],
     totalRows: 0,
   });
-  const [dataSub, setDataSub] = useState({
-    rows: [],
-    totalRows: 0,
-  });
+
   const [tabContentP, setTabContent] = useState();
   const [tabLabelP, setTabLabel] = useState();
-
+  const formMethods = useAppForm({
+    mode: "onBlur",
+    reValidateMode: "onChange",
+    resolver: yupResolver(validationSchema),
+    defaultValues: {
+      status: null,
+      name: "",
+      create_date_start: null,
+      create_date_end: null,
+      update_date_start: null,
+      update_date_end: null,
+      min_coverage_amount_start: null,
+      min_coverage_amount_end: null,
+      max_coverage_amount_start: null,
+      max_coverage_amount_end: null,
+    },
+  });
   const {
     reset,
     control,
@@ -92,21 +106,7 @@ const AppProductList = ({ mode }) => {
     watch,
     handleSubmit,
     formState: { errors },
-  } = useAppForm({
-    mode: "onBlur",
-    reValidateMode: "onChange",
-    resolver: yupResolver(validationSchema),
-    defaultValues: {
-      status: null,
-      name: "",
-      fromCreateDate: addDays(new Date(), -7),
-      toCreateDate: new Date(),
-      fromUpdateDate: null,
-      toUpdateDate: null,
-      fromInsuredSum: null,
-      ToInsuredSum: null,
-    },
-  });
+  } = formMethods;
   const hiddenColumn = {
     id: false,
   };
@@ -309,7 +309,7 @@ const AppProductList = ({ mode }) => {
     if (!loading) {
       setTab();
     }
-  }, [data, dataSub]);
+  }, [data]);
 
   const onSubmit = async (data) => {
     setLoading(true);
@@ -342,12 +342,15 @@ const AppProductList = ({ mode }) => {
             : watch("status").id
           : null,
         c_plan: watch(`name`) ? watch(`name`) : null,
-        min_coverage_amount: watch(`fromInsuredSum`),
-        max_coverage_amount: watch(`ToInsuredSum`),
-        create_date_start: null, //watch(`fromCreateDate`) ,
-        create_date_end: null, //watch(`toCreateDate`),
-        update_date_start: null, //watch(`fromUpdateDate`),
-        update_date_end: null, //watch("toUpdateDate"),
+
+        min_coverage_amount_start: watch(`min_coverage_amount_start`),
+        min_coverage_amount_end: watch(`min_coverage_amount_end`),
+        max_coverage_amount_start: watch(`max_coverage_amount_start`),
+        max_coverage_amount_end: watch(`max_coverage_amount_end`),
+        create_date_start: watch(`create_date_start`),
+        create_date_end: watch(`create_date_end`),
+        update_date_start: watch(`update_date_start`),
+        update_date_end: watch(`update_date_end`),
       };
 
       const response = await fetch(
@@ -384,28 +387,6 @@ const AppProductList = ({ mode }) => {
         open: true,
         message: `ล้มเหลวเกิดข้อผิดพลาด ${error}`,
       });
-    } finally {
-      handleFetchProductSub();
-      setLoading(false);
-    }
-  };
-
-  const handleFetchProductSub = async () => {
-    setLoading(true);
-    try {
-      const start = pageNumber * pageSize;
-      const limit = pageSize;
-      const response = await fetch(`/api/direct?action=GetProductMainAndSub`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      const data = await response.json();
-      setDataSub({
-        rows: data,
-        totalRows: 100,
-      });
-    } catch (error) {
-      handleSnackAlert({ open: true, message: "ล้มเหลวเกิดข้อผิดพลาด" });
     } finally {
       setLoading(false);
     }
@@ -462,14 +443,11 @@ const AppProductList = ({ mode }) => {
   const setDataTabs = () => {
     return (
       <Grid container rowGap={2}>
-        {dataSub &&
-          dataSub.rows.map((value, index) => (
-            <AppProductListItem
-              key={index}
-              data={value}
-              hiddenColumn={hiddenColumn}
-            />
-          ))}
+        <AppProductListItem
+          formMethods={{ ...formMethods }}
+          hiddenColumn={hiddenColumn}
+          group={true}
+        />
       </Grid>
     );
   };
@@ -479,11 +457,11 @@ const AppProductList = ({ mode }) => {
       <Grid item xs={12} sx={{ height: "25rem" }}>
         <AppDataGrid
           rows={data.rows}
-          rowCount={100}
+          rowCount={data.totalRows}
           columns={mainColumn}
           hiddenColumn={hiddenColumn}
-          pageNumber={APPLICATION_DEFAULT.dataGrid.pageNumber}
-          pageSize={APPLICATION_DEFAULT.dataGrid.pageSize}
+          pageNumber={pageNumber}
+          pageSize={pageSize}
           onPaginationModelChange={handlePageModelChange}
         />
       </Grid>
