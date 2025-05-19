@@ -18,14 +18,20 @@ export async function POST(request) {
   let productId = null;
   switch (action) {
     case "GetDirectGeneralInfo":
-      response = await axios.post(`${baseUrl}BackOffice/GetDirectGeneralInfo`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}BackOffice/GetDirectGeneralInfo`,
+        body,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
       if (response.status === 200) {
         data = response.data?.data;
         data = data.sort((a, b) => a.template_code - b.template_code);
       }
       return NextResponse.json(data);
+
     case "TestSendMail":
       body = await request.json();
       response = await axios.post(`${baseUrl}BackOffice/SendEmailTest`, body, {
@@ -35,6 +41,7 @@ export async function POST(request) {
         data = response.data;
       }
       return NextResponse.json(data);
+
     case "getAllProductSaleDirect":
       body = await request.json();
       response = await axios.post(
@@ -51,6 +58,7 @@ export async function POST(request) {
         return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
       }
       return NextResponse.json(data);
+
     case "getProductSalePeriodById":
       body = await request.json();
       response = await axios.post(
@@ -101,6 +109,7 @@ export async function POST(request) {
         return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
       }
       return NextResponse.json(data);
+
     case "getProductPaymentMethodsById":
       body = await request.json();
       response = await axios.post(
@@ -115,6 +124,7 @@ export async function POST(request) {
         return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
       }
       return NextResponse.json(data);
+
     case "getPaymentChannelById":
       response = await axios.post(`${baseUrl}Payment/GetPaymentChannelById`, {
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -134,6 +144,7 @@ export async function POST(request) {
         return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
       }
       return NextResponse.json(data);
+
     case "getInstallmentTypeById":
       body = await request.json();
       response = await axios.post(
@@ -148,6 +159,7 @@ export async function POST(request) {
         return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
       }
       return NextResponse.json(data);
+
     case "getProductApplicationTemplateById":
       body = await request.json();
       response = await axios.post(
@@ -162,6 +174,7 @@ export async function POST(request) {
         return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
       }
       return NextResponse.json(data);
+
     case "getApplicationTemplateById":
       response = await axios.post(
         `${baseUrl}Products/GetApplicationTemplateById`,
@@ -184,6 +197,7 @@ export async function POST(request) {
         return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
       }
       return NextResponse.json(data);
+
     case "AddOrUpdateDirect":
       body = await request.json();
       response = await axios.post(
@@ -200,12 +214,12 @@ export async function POST(request) {
         return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
       }
       return NextResponse.json(data);
+
     case "getSaleConditionByProductId":
       productId = url.searchParams.get("productId");
       body = {
         product_sale_channel_id: productId,
       };
-      console.log(body);
       response = await axios.post(
         `${baseUrl}BackOffice/GetConditionProductSale`,
         body,
@@ -217,6 +231,7 @@ export async function POST(request) {
         data = response.data?.data;
       }
       return NextResponse.json(data);
+
     case "AddOrUpdateProductPlanByChannel":
       body = await request.json();
 
@@ -229,6 +244,7 @@ export async function POST(request) {
         data = response.data?.data;
       }
       return NextResponse.json(data);
+
     case "AddOrUpdateProductSalePeriod":
       body = await request.json();
       console.log("AddOrUpdateProductSalePeriod", body);
@@ -239,6 +255,7 @@ export async function POST(request) {
       );
       data = response.data?.data;
       return NextResponse.json(data);
+
     case "AddOrUpdateProductPaymentMode":
       body = await request.json();
       response = await axios.post(
@@ -248,6 +265,7 @@ export async function POST(request) {
       );
       data = response.data?.data;
       return NextResponse.json(data);
+
     case "AddOrUpdateProductPaymentMethods":
       body = await request.json();
       response = await axios.post(
@@ -257,6 +275,7 @@ export async function POST(request) {
       );
       data = response.data?.data;
       return NextResponse.json(data);
+
     case "AddOrUpdateInstallmentType":
       body = await request.json();
       response = await axios.post(
@@ -266,6 +285,7 @@ export async function POST(request) {
       );
       data = response.data?.data;
       return NextResponse.json(data);
+
     case "AddOrUpdateProductApplicationTemplate":
       body = await request.json();
       response = await axios.post(
@@ -275,23 +295,7 @@ export async function POST(request) {
       );
       data = response.data?.data;
       return NextResponse.json(data);
-    case "GetAllProductSaleGroupRider":
-      body = await request.json();
-      response = await axios.post(
-        `${baseUrl}BackOffice/GetAllProductSaleGroupRider`,
-        body,
-        {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }
-      );
-      if (response.status === 200) {
-        data = response.data?.data;
-      }
 
-      if (response.status === 204) {
-        return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
-      }
-      return NextResponse.json(data);
     case "GetAllProductSaleGroupRider":
       body = await request.json();
       response = await axios.post(
@@ -308,6 +312,7 @@ export async function POST(request) {
         return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
       }
       return NextResponse.json(data);
+
     case "GetAllProductSaleRiderDirect": //ไม่มีกลุ่ม
       body = await request.json();
       response = await axios.post(
@@ -324,6 +329,24 @@ export async function POST(request) {
         return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
       }
       return NextResponse.json(data);
+
+    case "GetListProductSaleRider":
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}BackOffice/GetListProductSaleRider`,
+        body,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      if (response.status === 200) {
+        data = response.data?.data;
+      }
+      if (response.status === 204) {
+        return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
+      }
+      return NextResponse.json(data);
+
     case "getProductFromDirectWithMultiParam":
       //productId = url.searchParams.get("productId");
       /* response = await axios.post(
@@ -1059,5 +1082,72 @@ export async function POST(request) {
       return NextResponse.json(
         data.sort((a, b) => a.updateDate - b.updateDate)
       );
+
+    case "ProductRecordApprove":
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}BackOffice/ProductRecordApprove`,
+        body,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      if (response.status === 200) {
+        data = response.data?.data;
+      }
+      if (response.status === 204) {
+        return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
+      }
+      return NextResponse.json(data);
+
+    case "GenerateReportByApplicationCode":
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}BackOffice/GenerateReportByApplicationCode`,
+        body,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          responseType: "arraybuffer",
+        }
+      );
+
+      if (response.headers["content-type"]?.includes("application/pdf")) {
+        const headers = new Headers();
+        headers.set("Content-Type", "application/pdf");
+        return new NextResponse(response.data, {
+          status: 200,
+          headers: headers,
+        });
+      } else {
+        return NextResponse.json({ error: "ไม่พบไฟล์ PDF" }, { status: 400 });
+      }
+
+    case "GetProductSaleCardListById":
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}BackOffice/GetProductSaleCardListById`,
+        body,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      if (response.status === 200) data = response.data?.data;
+      if (response.status === 204) data = [];
+      return NextResponse.json(data);
+
+    case "PreviewPolicy":
+      body = await request.json();
+      const fileName = body?.fileName;
+      const pdfUrl = body?.pdfUrl;
+      const res = await fetch(pdfUrl);
+      const blob = await res.blob();
+      return new NextResponse(blob, {
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `inline; filename*=UTF-8''${encodeURIComponent(
+            fileName
+          )}`,
+        },
+      });
   }
 }

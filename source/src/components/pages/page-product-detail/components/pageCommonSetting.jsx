@@ -1,184 +1,120 @@
 "use client";
-import { useState, useEffect } from "react";
-import { useAppSnackbar, useAppRouter, useAppForm } from "@hooks";
-import { Yup } from "@/utilities";
+
+import { useState, useRef, Fragment } from "react";
+import { useAppSnackbar, useAppDialog, useAppSelector } from "@hooks";
 import {
   Grid,
+  Switch,
+  Button,
   TextField,
   Typography,
   FormHelperText,
-  Switch,
-  FormControlLabel,
-  Button,
-  Card,
-  useTheme,
   InputAdornment,
+  FormControlLabel,
+  CircularProgress,
 } from "@mui/material";
-import { yupResolver } from "@hookform/resolvers/yup";
-import {
-  AppAutocomplete,
-  AppCard,
-  AppCardWithTab,
-  AppNumericFormat,
-} from "@/components";
+import { AppCard, AppAutocomplete } from "@/components";
 import { Controller, useFieldArray } from "react-hook-form";
-import { setDialog } from "@stores/slices";
-import { useAppDispatch, useAppSelector } from "@hooks";
-const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
-  const [loading, setLoading] = useState(true);
-  const { handleSnackAlert } = useAppSnackbar();
-  const [checkedCal, setcheckedCal] = useState(true);
-  const [benefitFile, setBenefitFile] = useState(null);
-  const [benefitFileName, setBenefitFileName] = useState("");
-  const [occupationFile, setOccupationFile] = useState(null);
-  const [occupationFileName, setOccupationFileName] = useState("");
-  const [templateOptions, setTemplateOptions] = useState([]);
+import { APPLICATION_CONFIGURATION } from "@constants";
 
-  const validationSchema = Yup.object().shape();
+const PageCommonSetting = ({
+  mode,
+  type,
+  formMethods,
+  handleFetchTemplate,
+}) => {
+  const policyDocRef = useRef();
+  const { handleSnackAlert } = useAppSnackbar();
+  const { handleNotification } = useAppDialog();
+  const [occupationFile, setOccupationFile] = useState(null);
+  const [loadTemplate, setIsLoadTemplate] = useState(false);
+  const [loadPolicy, setLoadPolicy] = useState(false);
+  const { sasToken, activator } = useAppSelector((state) => state.global);
+
+  const { documentFileAccept, documentFileExtension } =
+    APPLICATION_CONFIGURATION;
+
   const {
     watch,
-    reset,
     control,
     register,
-    handleSubmit,
     setValue,
     formState: { errors },
   } = formMethods;
 
-  useEffect(() => {
-    handleFetchTemplate();
-  }, []);
-
-  const handleCalChange = () => {
-    setcheckedCal((prev) => !prev);
-  };
-
-  const handleFetchTemplate = async () => {
-    try {
-      const response = await fetch(`/api/products?action=getProductDocument`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-
-      const dataDocument = await response.json();
-
-      const dataSelect = Array.from(dataDocument).find(
-        (item) => item.id === watch("commonSetting.document_id")
-      );
-      const _form = watch();
-      setTemplateOptions(dataDocument);
-      reset({
-        ..._form,
-        _document: dataSelect,
-      });
-
-      return dataDocument;
-    } catch (error) {
-      handleSnackAlert({
-        open: true,
-        message: `ขออภัย เกิดข้อผิดพลาด กรุณาติดต่อเจ้าหน้าที่ที่เกี่ยวข้อง ${error}`,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const baseName = "document";
-  const baseErrors = errors?.[baseName];
   const {
-    fields: fieldsDocument,
-    append: appendDocument,
-    remove: removeDocument,
-    insert: insertDocument,
+    fields: _fieldsDocument1,
+    insert: insertDocument1,
+    update: updateDocument1,
   } = useFieldArray({
     control,
-    name: baseName,
+    name: "document_1",
   });
 
   const {
-    fields: fieldsPolicyDocument,
-    append: appendPolicyDocument,
-    remove: removePolicyDocument,
-    insert: insertPolicyDocument,
+    fields: _fieldsDocument2,
+    insert: insertDocument2,
+    update: updateDocument2,
   } = useFieldArray({
     control,
-    name: "policy_document",
+    name: "document_2",
   });
 
-  const AddField_Note = (length) => {
-    if (fieldsDocument.length === 0) {
-      register(`document.detail_id`);
-      register(`document.document_id`);
-      register(`document.quo_document_id`);
-      register(`document.product_plan_id`);
-      register(`document.create_by`);
-      register(`document.create_date`);
-      register(`document.update_by`);
-      register(`document.update_date`);
-      register(`document.is_active`);
-      register(`document.description`);
-      register(`document.seq`);
-      register(`document.detail_type`);
-    }
+  const fieldsDocument1 = _fieldsDocument1.filter((item) => item.is_active);
+  const fieldsDocument2 = _fieldsDocument2.filter((item) => item.is_active);
 
-    let data = {
-      document_id: watch(`_document.id`),
-      title: watch(`title`),
-      create_by: "admin",
+  const AddCoument1 = () => {
+    const _index = _fieldsDocument1.length;
+
+    const newObj = {
+      isNew: true,
+      title: "",
+      document_id: watch(`selectDoc.id`),
+      product_plan_id: watch("commonSetting")?.product_plan_id,
+      create_by: activator,
       create_date: new Date(),
-      update_by: "admin",
+      update_by: activator,
       update_date: new Date(),
       is_active: true,
       description: "",
-      seq: length + 1,
+      seq: _fieldsDocument1.length + 1,
       detail_type: 1,
     };
 
-    insertDocument(fieldsDocument.length, data);
+    debugger;
+
+    insertDocument1(_index, newObj);
   };
 
-  const DeleteField = (row) => {
-    removeDocument(row);
+  const RemoveAllDocument1 = () => {
+    debugger;
+    const currentDocs = [..._fieldsDocument1].map((item) => {
+      return {
+        ...item,
+        is_active: false,
+      };
+    });
+    setValue(`document_1`, currentDocs);
   };
 
-  const BeneficiaryDocumentExample = async () => {
+  const DocumentExample = async (doc) => {
+    setIsLoadTemplate(true);
+    const currentValue = watch();
+
     try {
-      /* const response = await fetch(
-        `/api/products?action=PreviewReportByDocumentCode&DocumentCode=${docCode}`,
-      ); */
-      const w = watch();
-    } catch (error) {
-      handleSnackAlert({
-        open: true,
-        message: `ขออภัย เกิดข้อผิดพลาด กรุณาติดต่อเจ้าหน้าที่ที่เกี่ยวข้อง ${error.message}`,
-      });
-    }
-  };
-
-  const OccupationDocumentExample = async () => {
-    try {
-      /* const response = await fetch(
-        `/api/products?action=PreviewReportByDocumentCode&DocumentCode=${docCode}`,
-      ); */
-      const w = watch();
-    } catch (error) {
-      handleSnackAlert({
-        open: true,
-        message: `ขออภัย เกิดข้อผิดพลาด กรุณาติดต่อเจ้าหน้าที่ที่เกี่ยวข้อง ${error.message}`,
-      });
-    }
-  };
-
-  const DocumentExample = async (docCode) => {
-    try {
+      const payload = {
+        quo_document_id: currentValue?.commonSetting?.quo_document_id,
+        document_code: doc?.document_code,
+      };
       const response = await fetch(
-        `/api/products?action=PreviewReportByDocumentCode&DocumentCode=${docCode}`,
+        `/api/products?action=PreviewReportByDocumentCode`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Accept: "application/octet-stream",
           },
+          body: JSON.stringify(payload),
         }
       );
 
@@ -186,26 +122,12 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const blob = await response.blob();
-
-      // ตรวจสอบว่าเป็น PDF หรือไม่
-      /*       if (!blob.type.includes("pdf")) {
-        throw new Error("ไม่พบไฟล์ PDF");
-      } */
-
       const previewUrl = URL.createObjectURL(blob);
-
-      // เปิด preview ในแท็บใหม่
       const newWindow = window.open(previewUrl, "_blank");
       if (newWindow) {
         newWindow.focus();
       }
-
-      // ลบ URL เมื่อปิดหน้าต่าง
-      setTimeout(() => {
-        URL.revokeObjectURL(previewUrl);
-      }, 1000);
-
-      return previewUrl;
+      URL.revokeObjectURL(previewUrl);
     } catch (error) {
       handleSnackAlert({
         open: true,
@@ -213,12 +135,12 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
       });
       return null;
     } finally {
-      setLoading(false);
+      setIsLoadTemplate(false);
     }
   };
 
-  const AddField_Disease = (length) => {
-    if (fieldsDocument.length === 0) {
+  const AddField_Disease = () => {
+    if (_fieldsDocument2.length === 0) {
       register(`document.detail_id`);
       register(`document.document_id`);
       register(`document.quo_document_id`);
@@ -234,54 +156,29 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
     }
 
     let data = {
-      document_id: watch(`_document.id`),
+      document_id: watch(`selectDoc.id`),
       title: watch(`title`),
-      create_by: "admin",
+      create_by: activator,
       create_date: new Date(),
-      update_by: "admin",
+      update_by: activator,
       update_date: new Date(),
       is_active: true,
       description: "",
-      seq: length + 1,
+      seq: _fieldsDocument2.length + 1,
       detail_type: 2,
     };
 
-    insertDocument(fieldsDocument.length, data);
-  };
-
-  const DeleteAll = (detail_type) => {
-    let DataForRemove = fieldsDocument
-      .map((item, index) => (item.detail_type === detail_type ? index : -1))
-      .filter((index) => index !== -1);
-    DataForRemove.sort((a, b) => b - a).forEach((index) =>
-      removeDocument(index)
-    );
+    insertDocument2(_fieldsDocument2.length, data);
   };
 
   const handleBenefitFileUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
-      // ตรวจสอบขนาดไฟล์ (max 10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        handleSnackAlert({
-          open: true,
-          message: "ไฟล์มีขนาดใหญ่เกินไป กรุณาอัพโหลดไฟล์ขนาดไม่เกิน 10MB",
-          severity: "error",
-        });
-        return;
-      }
-
       // ตรวจสอบประเภทไฟล์
-      const allowedTypes = [
-        "application/pdf",
-        "image/jpeg",
-        "image/png",
-        "image/gif",
-      ];
-      if (!allowedTypes.includes(file.type)) {
+      if (!documentFileExtension.includes(file.type)) {
         handleSnackAlert({
           open: true,
-          message: "กรุณาอัพโหลดไฟล์ PDF หรือรูปภาพเท่านั้น",
+          message: "กรุณาอัปโหลดไฟล์ PDF เท่านั้น",
           severity: "error",
         });
         return;
@@ -290,42 +187,61 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
       const reader = new FileReader();
       reader.onload = (e) => {
         const base64String = e.target.result.split(",")[1];
-        setBenefitFile(base64String);
-        setBenefitFileName(file.name);
         setValue("beneficiary_document.policy_document_file", base64String);
         setValue("beneficiary_document.policy_document_name", file.name);
         setValue("beneficiary_document.policy_document_type", 1);
-        alert("อัพโหลดไฟล์สำเร็จ");
       };
-      console.log(file);
       reader.readAsDataURL(file);
+
+      setValue("beneficiary_document.policy_document_file_blob", file);
+    }
+  };
+
+  const BeneficiaryDocumentExample = async () => {
+    setLoadPolicy(true);
+    try {
+      let fileUrl = "";
+      if (watch("beneficiary_document.policy_document_file_blob")) {
+        fileUrl = URL.createObjectURL(
+          watch("beneficiary_document.policy_document_file_blob")
+        );
+      } else {
+        const payload = {
+          fileName: watch("beneficiary_document.policy_document_name"),
+          pdfUrl:
+            watch("beneficiary_document.policy_document_file") +
+            sasToken?.sas_files,
+        };
+        const response = await fetch(`/api/direct?action=PreviewPolicy`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) throw new Error();
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        fileUrl = blobUrl;
+      }
+
+      window.open(fileUrl, "_blank");
+    } catch (error) {
+      handleSnackAlert({
+        open: true,
+        message: "ทำรายการไม่สำเร็จ",
+      });
+    } finally {
+      setLoadPolicy(false);
     }
   };
 
   const handleOccupationFileUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
-      // ตรวจสอบขนาดไฟล์ (max 10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        handleSnackAlert({
-          open: true,
-          message: "ไฟล์มีขนาดใหญ่เกินไป กรุณาอัพโหลดไฟล์ขนาดไม่เกิน 10MB",
-          severity: "error",
-        });
-        return;
-      }
-
       // ตรวจสอบประเภทไฟล์
-      const allowedTypes = [
-        "application/pdf",
-        "image/jpeg",
-        "image/png",
-        "image/gif",
-      ];
-      if (!allowedTypes.includes(file.type)) {
+      if (!documentFileExtension.includes(file.type)) {
         handleSnackAlert({
           open: true,
-          message: "กรุณาอัพโหลดไฟล์ PDF หรือรูปภาพเท่านั้น",
+          message: "กรุณาอัปโหลดไฟล์ PDF หรือรูปภาพเท่านั้น",
           severity: "error",
         });
         return;
@@ -334,15 +250,87 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
       const reader = new FileReader();
       reader.onload = (e) => {
         const base64String = e.target.result.split(",")[1];
-        setOccupationFile(base64String);
-        setOccupationFileName(file.name);
         setValue("occupation_document.policy_document_file", base64String);
         setValue("occupation_document.policy_document_name", file.name);
         setValue("occupation_document.policy_document_type", 2);
-        alert("อัพโหลดไฟล์สำเร็จ");
       };
       reader.readAsDataURL(file);
+      setOccupationFile(file);
     }
+  };
+
+  const OccupationDocumentExample = async () => {
+    const fileURL = URL.createObjectURL(occupationFile);
+    window.open(fileURL, "_blank");
+    URL.revokeObjectURL(fileURL);
+  };
+
+  const renderDocument1 = () => {
+    return (
+      <>
+        {_fieldsDocument1.map((item, index) => {
+          if (item.is_active) {
+            return (
+              <Fragment key={item.id}>
+                <Grid container spacing={2}>
+                  <Grid item xs={11}>
+                    <Controller
+                      control={control}
+                      name={`document_1.${index}.description`}
+                      defaultValue={item.description}
+                      render={({ field }) => (
+                        <TextField
+                          fullWidth
+                          label={`ระบุข้อความ (สูงสุด 140 ตัวอักษร)`}
+                          margin="dense"
+                          size="small"
+                          disabled={mode === "VIEW"}
+                          inputProps={{ maxLength: 140 }} // ให้ตรงกับรายงาน RDLC
+                          InputLabelProps={item.description && { shrink: true }}
+                          {...field}
+                          error={Boolean(errors?.document_1?.[index])}
+                        />
+                      )}
+                    />
+                    <FormHelperText
+                      error={Boolean(errors?.document_1?.[index]?.description)}
+                    >
+                      {errors?.document_1?.[index]?.description?.message}
+                    </FormHelperText>
+                  </Grid>
+                  {mode !== "VIEW" && (
+                    <Grid item xs={1}>
+                      <Grid container spacing={2} justifyContent={"end"}>
+                        <Grid item xs="auto" mt={1}>
+                          <Button
+                            variant="contained"
+                            onClick={() => {
+                              handleNotification(
+                                "คุณต้องการลบรายการนี้หรือไม่ ?",
+                                () => {
+                                  updateDocument1(index, {
+                                    ...item,
+                                    is_active: false,
+                                  });
+                                },
+                                null,
+                                "question"
+                              );
+                            }}
+                          >
+                            ลบออก
+                          </Button>
+                        </Grid>
+                      </Grid>
+                    </Grid>
+                  )}
+                </Grid>
+              </Fragment>
+            );
+          }
+        })}
+      </>
+    );
   };
 
   return (
@@ -364,8 +352,14 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                       const { name, onChange, value, ...otherProps } = field;
                       return (
                         <FormControlLabel
+                          id={name}
+                          name={name}
                           control={
-                            <Switch checked={value} onChange={onChange} />
+                            <Switch
+                              checked={value ?? false}
+                              onChange={onChange}
+                              {...otherProps}
+                            />
                           }
                           label="กรอง FATCA / CRS"
                         />
@@ -374,6 +368,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                   />
                 </Grid>
               </Grid>
+
               <Grid container>
                 <Grid item xs={12} md={6}>
                   <Controller
@@ -384,8 +379,14 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                       const { name, onChange, value, ...otherProps } = field;
                       return (
                         <FormControlLabel
+                          id={name}
+                          name={name}
                           control={
-                            <Switch checked={value} onChange={onChange} />
+                            <Switch
+                              checked={value ?? false}
+                              onChange={onChange}
+                              {...otherProps}
+                            />
                           }
                           label="ถามคำถาม Fatca"
                         />
@@ -393,6 +394,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                     }}
                   />
                 </Grid>
+
                 <Grid item xs={12} md={6}>
                   <Controller
                     name={`commonSetting.is_sale_fatca`}
@@ -402,8 +404,14 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                       const { name, onChange, value, ...otherProps } = field;
                       return (
                         <FormControlLabel
+                          id={name}
+                          name={name}
                           control={
-                            <Switch checked={value} onChange={onChange} />
+                            <Switch
+                              checked={value ?? false}
+                              onChange={onChange}
+                              {...otherProps}
+                            />
                           }
                           label="ขายผู้ติดเงื่อนไข Fatca"
                         />
@@ -412,6 +420,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                   />
                 </Grid>
               </Grid>
+
               <Grid container>
                 <Grid item xs={12} md={6}>
                   <Controller
@@ -422,8 +431,14 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                       const { name, onChange, value, ...otherProps } = field;
                       return (
                         <FormControlLabel
+                          id={name}
+                          name={name}
                           control={
-                            <Switch checked={value} onChange={onChange} />
+                            <Switch
+                              checked={value ?? false}
+                              onChange={onChange}
+                              {...otherProps}
+                            />
                           }
                           label="ถามคำถาม Crs"
                         />
@@ -441,8 +456,14 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                       const { name, onChange, value, ...otherProps } = field;
                       return (
                         <FormControlLabel
+                          id={name}
+                          name={name}
                           control={
-                            <Switch checked={value} onChange={onChange} />
+                            <Switch
+                              checked={value ?? false}
+                              onChange={onChange}
+                              {...otherProps}
+                            />
                           }
                           label="ขายผู้ติดเงื่อนไข Crs"
                         />
@@ -462,8 +483,14 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                       const { name, onChange, value, ...otherProps } = field;
                       return (
                         <FormControlLabel
+                          id={name}
+                          name={name}
                           control={
-                            <Switch checked={value} onChange={onChange} />
+                            <Switch
+                              checked={value ?? false}
+                              onChange={onChange}
+                              {...otherProps}
+                            />
                           }
                           label="ถามคำถามสุขภาพ"
                         />
@@ -471,6 +498,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                     }}
                   />
                 </Grid>
+
                 <Grid item xs={12}>
                   <Controller
                     name={`commonSetting.is_refund`}
@@ -480,8 +508,14 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                       const { name, onChange, value, ...otherProps } = field;
                       return (
                         <FormControlLabel
+                          id={name}
+                          name={name}
                           control={
-                            <Switch checked={value} onChange={onChange} />
+                            <Switch
+                              checked={value ?? false}
+                              onChange={onChange}
+                              {...otherProps}
+                            />
                           }
                           label="เงินคืน"
                         />
@@ -489,6 +523,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                     }}
                   />
                 </Grid>
+
                 <Grid item xs={12}>
                   <Controller
                     name={`commonSetting.is_recurring`}
@@ -498,8 +533,14 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                       const { name, onChange, value, ...otherProps } = field;
                       return (
                         <FormControlLabel
+                          id={name}
+                          name={name}
                           control={
-                            <Switch checked={value} onChange={onChange} />
+                            <Switch
+                              checked={value ?? false}
+                              onChange={onChange}
+                              {...otherProps}
+                            />
                           }
                           label="จ่ายงวดต่อ"
                         />
@@ -510,15 +551,21 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
 
                 <Grid item xs={12}>
                   <Controller
-                    name={`commonSetting.is_tex`}
+                    name={`commonSetting.is_tax`}
                     control={control}
                     disabled={mode === "VIEW"}
                     render={({ field }) => {
                       const { name, onChange, value, ...otherProps } = field;
                       return (
                         <FormControlLabel
+                          id={name}
+                          name={name}
                           control={
-                            <Switch checked={value} onChange={onChange} />
+                            <Switch
+                              checked={value ?? false}
+                              onChange={onChange}
+                              {...otherProps}
+                            />
                           }
                           label="ลดหย่อนภาษี"
                         />
@@ -541,23 +588,31 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
               <Grid container>
                 <Grid item xs={12}>
                   <Controller
-                    name={`is_CalculateFromCoverageToPremium`}
+                    name={`is_CalculateFromPremiumToCoverage`}
                     control={control}
                     disabled={mode === "VIEW"}
                     render={({ field }) => {
                       const { name, onChange, value, ...otherProps } = field;
                       return (
-                        <FormControlLabel
-                          control={
-                            <Switch
-                              checked={checkedCal}
-                              onChange={(val) => {
-                                handleCalChange();
-                              }}
-                            />
-                          }
-                          label="คำนวณจากเบี้ยไปทุน"
-                        />
+                        <>
+                          <FormControlLabel
+                            control={
+                              <Switch
+                                checked={value}
+                                onChange={onChange}
+                                {...otherProps}
+                              />
+                            }
+                            label="คำนวณจากเบี้ยไปทุน"
+                          />
+                          <FormHelperText
+                            error={Boolean(
+                              errors?.is_CalculateFromPremiumToCoverage
+                            )}
+                          >
+                            {errors?.is_CalculateFromPremiumToCoverage?.message}
+                          </FormHelperText>
+                        </>
                       );
                     }}
                   />
@@ -570,17 +625,25 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                     render={({ field }) => {
                       const { name, onChange, value, ...otherProps } = field;
                       return (
-                        <FormControlLabel
-                          control={
-                            <Switch
-                              checked={!checkedCal}
-                              onChange={(val) => {
-                                handleCalChange();
-                              }}
-                            />
-                          }
-                          label="คำนวณจากทุนไปเบี้ย"
-                        />
+                        <>
+                          <FormControlLabel
+                            control={
+                              <Switch
+                                checked={value}
+                                onChange={onChange}
+                                {...otherProps}
+                              />
+                            }
+                            label="คำนวณจากทุนไปเบี้ย"
+                          />
+                          <FormHelperText
+                            error={Boolean(
+                              errors?.is_CalculateFromCoverageToPremium
+                            )}
+                          >
+                            {errors?.is_CalculateFromCoverageToPremium?.message}
+                          </FormHelperText>
+                        </>
                       );
                     }}
                   />
@@ -595,7 +658,11 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                       return (
                         <FormControlLabel
                           control={
-                            <Switch checked={value} onChange={onChange} />
+                            <Switch
+                              checked={value}
+                              onChange={onChange}
+                              {...otherProps}
+                            />
                           }
                           label="คิด Factor"
                         />
@@ -691,7 +758,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
         <Grid container spacing={1} mt={0.2}>
           <Grid item xs={7}>
             <AppCard
-              title={`อัพโหลดเอกสาร`}
+              title={`อัปโหลดเอกสาร`}
               cardstyle={{
                 border: "1px solid",
                 borderColor: "#e7e7e7",
@@ -699,41 +766,60 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
               }}
             >
               <Grid container spacing={2}>
-                <Grid item xs={10}>
+                <Grid item xs={9}>
                   <TextField
                     label="เอกสารสิทธิประโยชน์ตามกรมธรรม์"
                     fullWidth
                     size="small"
-                    value={benefitFileName}
+                    disabled={mode === "VIEW"}
+                    {...register("beneficiary_document.policy_document_name")}
                     InputProps={{
+                      readOnly: true,
+                      disabled: mode === "VIEW",
                       endAdornment: (
                         <InputAdornment position="end">
                           <input
+                            ref={policyDocRef}
                             type="file"
-                            accept=".pdf,.jpg,.jpeg,.png,.gif"
-                            style={{ display: "none" }}
                             id="benefit-file-upload"
+                            style={{ display: "none" }}
+                            accept={documentFileAccept.join(",")}
                             onChange={handleBenefitFileUpload}
                           />
                           <label htmlFor="benefit-file-upload">
-                            <Button component="span" sx={{ color: "GrayText" }}>
-                              อัพโหลด
+                            <Button
+                              disabled={mode === "VIEW"}
+                              component="span"
+                              sx={{ color: "GrayText" }}
+                            >
+                              อัปโหลด
                             </Button>
                           </label>
                         </InputAdornment>
                       ),
                     }}
+                    InputLabelProps={{
+                      shrink: !!watch(
+                        `beneficiary_document.policy_document_name`
+                      ),
+                    }}
                   />
                 </Grid>
-                <Grid item xs={2}>
-                  {/* todo แสดงเอกสาร */}
+                <Grid item xs={"auto"}>
                   <Button
+                    disabled={
+                      loadPolicy ||
+                      !watch(`beneficiary_document.policy_document_name`)
+                    }
                     onClick={() => {
                       BeneficiaryDocumentExample();
                     }}
                     variant="contained"
                   >
                     ดูเอกสาร
+                    {loadPolicy ? (
+                      <CircularProgress sx={{ marginLeft: 2 }} size={20} />
+                    ) : null}
                   </Button>
                 </Grid>
               </Grid>
@@ -744,8 +830,9 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                       label="เอกสารขั้นอาชีพ"
                       fullWidth
                       size="small"
-                      value={occupationFileName}
+                      {...register("occupation_document.policy_document_name")}
                       InputProps={{
+                        readOnly: true,
                         endAdornment: (
                           <InputAdornment position="end">
                             <input
@@ -760,16 +847,24 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                                 component="span"
                                 sx={{ color: "GrayText" }}
                               >
-                                อัพโหลด
+                                อัปโหลด
                               </Button>
                             </label>
                           </InputAdornment>
+                        ),
+                      }}
+                      InputLabelProps={{
+                        shrink: !!watch(
+                          `occupation_document.policy_document_name`
                         ),
                       }}
                     />
                   </Grid>
                   <Grid item xs={2}>
                     <Button
+                      disabled={
+                        !watch(`occupation_document.policy_document_name`)
+                      }
                       onClick={() => {
                         OccupationDocumentExample();
                       }}
@@ -802,7 +897,11 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                       return (
                         <FormControlLabel
                           control={
-                            <Switch checked={value} onChange={onChange} />
+                            <Switch
+                              checked={value}
+                              onChange={onChange}
+                              {...otherProps}
+                            />
                           }
                           label="ส่ง Sms"
                         />
@@ -821,7 +920,11 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                       return (
                         <FormControlLabel
                           control={
-                            <Switch checked={value} onChange={onChange} />
+                            <Switch
+                              checked={value}
+                              onChange={onChange}
+                              {...otherProps}
+                            />
                           }
                           label="ส่ง Email"
                         />
@@ -833,6 +936,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
             </AppCard>
           </Grid>
         </Grid>
+
         <Grid container mt={1}>
           <Grid item xs={12}>
             <AppCard
@@ -845,10 +949,11 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
               <Grid container spacing={2}>
                 <Grid item xs={7}>
                   <Controller
-                    name={`_document`}
+                    name={`selectDoc`}
                     control={control}
                     render={({ field }) => {
                       const { name, onChange, ...otherProps } = field;
+
                       return (
                         <>
                           <AppAutocomplete
@@ -856,16 +961,26 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                             name={name}
                             disablePortal
                             fullWidth
+                            disabled={mode === "VIEW"}
                             label="เทมเพลตใบเสนอราคา"
                             onChange={(event, newValue) => {
+                              debugger;
+                              const currentDoc1 = watch("document_1") || [];
+                              const tempValue = [...currentDoc1].map((item) => {
+                                return {
+                                  ...item,
+                                  document_id: newValue?.document_id,
+                                };
+                              });
                               onChange(newValue);
+                              setValue("document_1", tempValue);
                             }}
-                            options={templateOptions}
                             {...otherProps}
-                            error={Boolean(errors?.status)}
+                            error={Boolean(errors?.selectDoc)}
+                            onBeforeOpen={handleFetchTemplate}
                           />
-                          <FormHelperText error={errors?.status}>
-                            {errors?.status?.message}
+                          <FormHelperText error={errors?.selectDoc}>
+                            {errors?.selectDoc?.message}
                           </FormHelperText>
                         </>
                       );
@@ -874,12 +989,16 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                 </Grid>
                 <Grid item xs={2} mt={0.7}>
                   <Button
+                    disabled={!watch("selectDoc") || loadTemplate}
                     variant="contained"
                     onClick={() => {
-                      DocumentExample(watch(`_document.document_code`));
+                      DocumentExample(watch(`selectDoc`));
                     }}
                   >
                     ดูเอกสาร
+                    {loadTemplate ? (
+                      <CircularProgress sx={{ marginLeft: 2 }} size={20} />
+                    ) : null}
                   </Button>
                 </Grid>
               </Grid>
@@ -914,32 +1033,49 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                           </Typography>
                         </Grid>
                         <Grid item xs={4}>
-                          <Grid container spacing={2} justifyContent={"end"}>
-                            <Grid item xs="auto">
-                              <Button
-                                variant="contained"
-                                onClick={() => {
-                                  AddField_Note(
-                                    fieldsDocument.filter(
-                                      (item) => item.detail_type === 1
-                                    ).length
-                                  );
-                                }}
-                              >
-                                เพิ่มบรรทัด
-                              </Button>
+                          {mode !== "VIEW" && (
+                            <Grid container spacing={2} justifyContent={"end"}>
+                              <Grid item xs="auto">
+                                <Button
+                                  disabled={
+                                    !watch("selectDoc") ||
+                                    fieldsDocument1?.length ===
+                                      (watch("selectDoc")
+                                        ?.document_detail_size ?? 0)
+                                  }
+                                  variant="contained"
+                                  onClick={() => {
+                                    AddCoument1();
+                                  }}
+                                >
+                                  เพิ่มบรรทัด{" "}
+                                  {watch("selectDoc")
+                                    ? `(${
+                                        (watch("selectDoc")
+                                          ?.document_detail_size ?? 0) -
+                                        fieldsDocument1?.length
+                                      })`
+                                    : null}
+                                </Button>
+                              </Grid>
+                              <Grid item xs="auto">
+                                <Button
+                                  disabled={fieldsDocument1.length === 0}
+                                  variant="contained"
+                                  onClick={() => {
+                                    handleNotification(
+                                      "คุณต้องการลบรายการทั้งหมดหรือไม่ ?",
+                                      () => RemoveAllDocument1(),
+                                      null,
+                                      "question"
+                                    );
+                                  }}
+                                >
+                                  ลบทั้งหมด
+                                </Button>
+                              </Grid>
                             </Grid>
-                            <Grid item xs="auto">
-                              <Button
-                                variant="contained"
-                                onClick={() => {
-                                  DeleteAll(1);
-                                }}
-                              >
-                                ลบทั้งหมด
-                              </Button>
-                            </Grid>
-                          </Grid>
+                          )}
                         </Grid>
                       </Grid>
                     }
@@ -948,50 +1084,7 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                       borderColor: "#e7e7e7",
                     }}
                   >
-                    {fieldsDocument.map(
-                      (doc, docindex) =>
-                        doc.detail_type === 1 && (
-                          <Grid container spacing={2} key={docindex}>
-                            <Grid item xs={11}>
-                              <TextField
-                                fullWidth
-                                label={`บรรทัดที่ ${doc.seq}`}
-                                margin="dense"
-                                size="small"
-                                inputProps={{ maxLength: 100 }}
-                                InputLabelProps={
-                                  doc.description && { shrink: true }
-                                }
-                                {...register(
-                                  `${baseName}.${docindex}.description`
-                                )}
-                                error={Boolean(errors?.name)}
-                              />
-                              <FormHelperText error={errors?.name}>
-                                {errors?.name?.message}
-                              </FormHelperText>
-                            </Grid>
-                            <Grid item xs={1}>
-                              <Grid
-                                container
-                                spacing={2}
-                                justifyContent={"end"}
-                              >
-                                <Grid item xs="auto" mt={1}>
-                                  <Button
-                                    variant="contained"
-                                    onClick={() => {
-                                      DeleteField(docindex);
-                                    }}
-                                  >
-                                    ลบออก
-                                  </Button>
-                                </Grid>
-                              </Grid>
-                            </Grid>
-                          </Grid>
-                        )
-                    )}
+                    {renderDocument1()}
                   </AppCard>
                 </Grid>
               </Grid>
@@ -1006,34 +1099,52 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                               ข้อความรายละเอียดโรค
                             </Typography>
                           </Grid>
-                          <Grid item xs={4}>
-                            <Grid container spacing={2} justifyContent={"end"}>
-                              <Grid item xs="auto">
-                                <Button
-                                  variant="contained"
-                                  onClick={() => {
-                                    AddField_Disease(
-                                      fieldsDocument.filter(
-                                        (item) => item.detail_type === 2
-                                      ).length
-                                    );
-                                  }}
-                                >
-                                  เพิ่มบรรทัด
-                                </Button>
-                              </Grid>
-                              <Grid item xs="auto">
-                                <Button
-                                  variant="contained"
-                                  onClick={() => {
-                                    DeleteAll(2);
-                                  }}
-                                >
-                                  ลบทั้งหมด
-                                </Button>
+                          {mode !== "VIEW" && (
+                            <Grid item xs={4}>
+                              <Grid
+                                container
+                                spacing={2}
+                                justifyContent={"end"}
+                              >
+                                <Grid item xs="auto">
+                                  <Button
+                                    variant="contained"
+                                    onClick={() => {
+                                      AddField_Disease(fieldsDocument2.length);
+                                    }}
+                                  >
+                                    เพิ่มบรรทัด
+                                  </Button>
+                                </Grid>
+                                <Grid item xs="auto">
+                                  <Button
+                                    disabled={fieldsDocument2.length === 0}
+                                    variant="contained"
+                                    onClick={() => {
+                                      handleNotification(
+                                        "คุณต้องการลบรายการทั้งหมดหรือไม่ ?",
+                                        () => {
+                                          const currentDocs = [
+                                            ..._fieldsDocument2,
+                                          ].map((item) => {
+                                            return {
+                                              ...item,
+                                              is_active: false,
+                                            };
+                                          });
+                                          setValue(`document_2`, currentDocs);
+                                        },
+                                        null,
+                                        "question"
+                                      );
+                                    }}
+                                  >
+                                    ลบทั้งหมด
+                                  </Button>
+                                </Grid>
                               </Grid>
                             </Grid>
-                          </Grid>
+                          )}
                         </Grid>
                       }
                       cardstyle={{
@@ -1041,47 +1152,77 @@ const PageCommonSetting = ({ formMethods, productId, mode, type }) => {
                         borderColor: "#e7e7e7",
                       }}
                     >
-                      {fieldsDocument.map(
+                      {fieldsDocument2.map(
                         (doc, docindex) =>
                           doc.detail_type === 2 && (
-                            <Grid container spacing={2} key={docindex}>
+                            <Grid container spacing={2} key={doc.id}>
                               <Grid item xs={11}>
-                                <TextField
-                                  fullWidth
-                                  label={`บรรทัดที่ ${doc.seq}`}
-                                  margin="dense"
-                                  size="small"
-                                  inputProps={{ maxLength: 100 }}
-                                  InputLabelProps={
-                                    doc.description && { shrink: true }
-                                  }
-                                  {...register(
-                                    `${baseName}.${docindex}.description`
+                                <Controller
+                                  control={control}
+                                  name={`document_2.${docindex}.description`}
+                                  defaultValue={doc.description}
+                                  render={({ field }) => (
+                                    <TextField
+                                      fullWidth
+                                      label={`บรรทัดที่ ${
+                                        docindex + 1
+                                      } (100 ตัวอักษร)`}
+                                      margin="dense"
+                                      size="small"
+                                      disabled={mode === "VIEW"}
+                                      inputProps={{ maxLength: 100 }}
+                                      InputLabelProps={
+                                        doc.description && { shrink: true }
+                                      }
+                                      {...field}
+                                      error={Boolean(
+                                        errors?.document_2?.[docindex]
+                                          ?.description
+                                      )}
+                                    />
                                   )}
-                                  error={Boolean(errors?.name)}
                                 />
-                                <FormHelperText error={errors?.name}>
-                                  {errors?.name?.message}
+                                <FormHelperText
+                                  error={Boolean(
+                                    errors?.document_2?.[docindex]?.description
+                                  )}
+                                >
+                                  {
+                                    errors?.document_2?.[docindex]?.description
+                                      ?.message
+                                  }
                                 </FormHelperText>
                               </Grid>
-                              <Grid item xs={1}>
-                                <Grid
-                                  container
-                                  spacing={2}
-                                  justifyContent={"end"}
-                                >
-                                  <Grid item xs="auto" mt={1}>
-                                    <Button
-                                      variant="contained"
-                                      onClick={() => {
-                                        DeleteField(docindex);
-                                      }}
-                                    >
-                                      ลบออก
-                                    </Button>
+                              {mode !== "VIEW" && (
+                                <Grid item xs={1}>
+                                  <Grid
+                                    container
+                                    spacing={2}
+                                    justifyContent={"end"}
+                                  >
+                                    <Grid item xs="auto" mt={1}>
+                                      <Button
+                                        variant="contained"
+                                        onClick={() => {
+                                          handleNotification(
+                                            "คุณต้องการลบรายการนี้หรือไม่ ?",
+                                            () => {
+                                              updateDocument2(docindex, {
+                                                ...doc,
+                                                is_active: false,
+                                              });
+                                            },
+                                            null,
+                                            "question"
+                                          );
+                                        }}
+                                      >
+                                        ลบออก
+                                      </Button>
+                                    </Grid>
                                   </Grid>
                                 </Grid>
-                              </Grid>
+                              )}
                             </Grid>
                           )
                       )}

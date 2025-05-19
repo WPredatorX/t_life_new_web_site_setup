@@ -18,19 +18,33 @@ import {
   AppAutocomplete,
   AppDatePicker,
 } from "@components";
-import { useAppSnackbar, useAppRouter, useAppForm } from "@hooks";
-import { format, addYears, addDays } from "date-fns";
-import { APPLICATION_DEFAULT } from "@constants";
+import {
+  useAppSnackbar,
+  useAppRouter,
+  useAppForm,
+  useAppFeatureCheck,
+  useAppSelector,
+} from "@hooks";
+import { format, addHours } from "date-fns";
+import { APPLICATION_DEFAULT, APPLICATION_RECORD_STATUS } from "@constants";
 import { Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { Yup } from "@utilities";
+import { Yup, Transform } from "@utilities";
 import { AppStatusProduct } from "./components";
 
 const PageProductsList = () => {
   const router = useAppRouter();
+  const { activator } = useAppSelector((state) => state.global);
+  const { validFeature: grantRead } = useAppFeatureCheck([
+    "product.general.read",
+    "product.setting.read",
+  ]);
+  const { validFeature: grantEdit } = useAppFeatureCheck([
+    "product.general.write",
+    "product.setting.write",
+  ]);
   const { handleSnackAlert } = useAppSnackbar();
   const [loading, setLoading] = useState(true);
-  const [firstLoad, setFirstLoad] = useState(true);
   const [data, setData] = useState({
     rows: [],
     totalRows: 0,
@@ -46,17 +60,13 @@ const PageProductsList = () => {
   const [sortField, setSortField] = useState(defaultSortField);
   const [sortDirection, setSortDirection] = useState(defaultSortDirection);
 
-  const sortString = (a, b) => {
-    return a.localeCompare(b);
-  };
-
   const columns = [
     {
       field: "id",
     },
     {
       flex: 1,
-      field: "planCode",
+      field: "plan_code",
       type: "string",
       headerAlign: "center",
       headerName: "รหัสแบบประกัน",
@@ -66,7 +76,7 @@ const PageProductsList = () => {
     },
     {
       flex: 1,
-      field: "planName",
+      field: "product_name",
       type: "string",
       headerAlign: "center",
       headerName: "ชื่อแบบประกัน",
@@ -76,29 +86,34 @@ const PageProductsList = () => {
     },
     {
       flex: 1,
-      field: "promise_type_Code",
+      field: "i_package",
       type: "string",
       headerAlign: "center",
-      headerName: "สถานะ",
+      headerName: "ประเภท",
       headerClassName: "header-main",
       align: "center",
       minWidth: 200,
-      renderCell: (params) => (
-        <AppStatus status={params.value} statusText={params.row.promise_type} />
-      ),
+      renderCell: (params) => {
+        return (
+          <AppStatus
+            status={params.value === "NP-00" ? "2" : "1"}
+            statusText={params.row.promise_type}
+          />
+        );
+      },
     },
     {
       flex: 1,
-      field: "status",
+      field: "active_status",
       type: "string",
       headerAlign: "center",
       headerName: "สถานะ",
       headerClassName: "header-main",
       align: "center",
       minWidth: 200,
-      renderCell: (params) => (
-        <AppStatusProduct status={params.row.is_active} />
-      ),
+      renderCell: (params) => {
+        return <AppStatusProduct status={params.value} />;
+      },
     },
     {
       flex: 1,
@@ -122,7 +137,7 @@ const PageProductsList = () => {
       sort: "desc",
       valueGetter: (value) => {
         if (value) {
-          let formattedValue = format(new Date(value), "dd/MM/yyyy");
+          let formattedValue = format(new Date(value), "dd/MM/yyyy HH:mm:ss");
           return formattedValue;
         } else return "";
       },
@@ -148,7 +163,7 @@ const PageProductsList = () => {
       minWidth: 100,
       valueGetter: (value) => {
         if (value) {
-          let formattedValue = format(new Date(value), "dd/MM/yyyy");
+          let formattedValue = format(new Date(value), "dd/MM/yyyy HH:mm:ss");
           return formattedValue;
         } else return "";
       },
@@ -164,8 +179,8 @@ const PageProductsList = () => {
       getActions: (params) => {
         let id = params?.row?.plan_code;
         let i_package = params?.row?.i_package;
-        let disabledView = true; // TODO: เช็คตามสิทธิ์
-        let disabledEdit = false; // TODO: เช็คตามสิทธิ์
+        let disabledView = true;
+        let disabledEdit = false;
         if (params?.row?.product_plan_id) {
           disabledView = false;
         }
@@ -173,7 +188,7 @@ const PageProductsList = () => {
           ? null
           : () =>
               router.push(
-                `/products/detail?mode=VIEW&type=${params?.row?.promise_type_Code}&i_package=${i_package}&plan_code=${id}&product_plan_id=${params?.row?.product_plan_id}`
+                `/products/detail?mode=VIEW&type=${params?.row?.promise_type_code}&i_package=${i_package}&plan_code=${id}&product_plan_id=${params?.row?.product_plan_id}`
               );
 
         const editFunction = disabledEdit
@@ -181,7 +196,7 @@ const PageProductsList = () => {
           : () => {
               if (params?.row?.product_plan_id) {
                 router.push(
-                  `/products/detail?mode=EDIT&type=${params?.row?.promise_type_Code}&i_package=${i_package}&plan_code=${id}&product_plan_id=${params?.row?.product_plan_id}`
+                  `/products/detail?mode=EDIT&type=${params?.row?.promise_type_code}&i_package=${i_package}&plan_code=${id}&product_plan_id=${params?.row?.product_plan_id}`
                 );
               } else {
                 handleCreateProductOnShelf(params?.row);
@@ -197,25 +212,34 @@ const PageProductsList = () => {
           },
         };
 
-        return [
-          <GridActionsCellItem
-            disabled={disabledView}
-            key={`view_${id}`}
-            icon={<RemoveRedEye />}
-            {...defaultProps}
-            label="ดูรายละเอียด"
-            onClick={viewFunction}
-          />,
+        let actions = [];
+        if (grantRead) {
+          actions.push(
+            <GridActionsCellItem
+              disabled={disabledView}
+              key={`view_${id}`}
+              icon={<RemoveRedEye />}
+              {...defaultProps}
+              label="ดูรายละเอียด"
+              onClick={viewFunction}
+            />
+          );
+        }
 
-          <GridActionsCellItem
-            key={`edit_${id}`}
-            icon={<Edit />}
-            {...defaultProps}
-            label="แก้ไข"
-            disabled={disabledEdit}
-            onClick={editFunction}
-          />,
-        ];
+        if (grantEdit) {
+          actions.push(
+            <GridActionsCellItem
+              key={`edit_${id}`}
+              icon={<Edit />}
+              {...defaultProps}
+              label="แก้ไขรายละเอียด"
+              disabled={disabledEdit}
+              onClick={editFunction}
+            />
+          );
+        }
+
+        return actions;
       },
     },
   ];
@@ -229,9 +253,23 @@ const PageProductsList = () => {
     status: Yup.mixed().nullable(),
     name: Yup.string().nullable(),
     create_date_start: Yup.date().nullable(),
-    create_date_end: Yup.date().nullable(),
+    create_date_end: Yup.date()
+      .nullable()
+      .when("create_date_start", {
+        is: (value) => {
+          return Boolean(value);
+        },
+        then: (schema) => schema.required(),
+      }),
     update_date_start: Yup.date().nullable(),
-    update_date_end: Yup.date().nullable(),
+    update_date_end: Yup.date()
+      .nullable()
+      .when("update_date_start", {
+        is: (value) => {
+          return Boolean(value);
+        },
+        then: (schema) => schema.required(),
+      }),
   });
 
   const {
@@ -239,6 +277,7 @@ const PageProductsList = () => {
     control,
     register,
     handleSubmit,
+    clearErrors,
     formState: { errors },
     watch,
   } = useAppForm({
@@ -264,23 +303,23 @@ const PageProductsList = () => {
     setLoading(true);
 
     try {
-      let dataBody = JSON.stringify({
-        field: sortField,
+      let payload = {
+        field: Transform.snakeToPascalCase(sortField),
         direction: sortDirection,
         page_number: pageNumber,
         page_size: pageSize,
-        is_active: watch(`status`) ? watch(`status.id`) : "0",
-        product_name: watch(`name`) ? watch(`name`) : null,
-        create_date_start: watch(`create_date_start`),
-        create_date_end: watch(`create_date_end`),
-        update_date_start: watch(`update_date_start`),
-        update_date_end: watch(`update_date_end`),
-      });
+        is_active: watch(`status`) ? watch(`status`)?.value : "0",
+        product_name: watch(`name`) || null,
+        create_date_start: addHours(watch(`create_date_start`), 7),
+        create_date_end: addHours(watch(`create_date_end`), 7),
+        update_date_start: addHours(watch(`update_date_start`), 7),
+        update_date_end: addHours(watch(`update_date_end`), 7),
+      };
 
       const response = await fetch(`/api/products?action=getProducts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: dataBody,
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
@@ -288,11 +327,7 @@ const PageProductsList = () => {
         return {
           ...item,
           id: index,
-          planCode: item.plan_code,
-          i_package: item.i_package,
-          planName: item.product_name,
-          promise_type_Code: item.i_package !== "NP-00" ? 0 : 5,
-          status: item.active_status,
+          promise_type_code: item.i_package === "NP-00" ? 5 : 0,
         };
       });
       setPageNumber(data.current_page);
@@ -312,16 +347,18 @@ const PageProductsList = () => {
   };
 
   const handleCreateProductOnShelf = async (params) => {
+    setLoading(true);
+
     try {
-      let dataBody = JSON.stringify({
+      let payload = {
         is_active: true,
-        create_date: new Date(),
-        create_by: "system",
-        update_date: new Date(),
-        update_by: "system",
+        create_date: addHours(new Date(), 7),
+        create_by: activator,
+        update_date: addHours(new Date(), 7),
+        update_by: activator,
         product_plan_id: null,
         i_package: params.i_package,
-        title: "",
+        title: params.product_name,
         description: "",
         content_url: "",
         beneficiary_content_url: "",
@@ -336,23 +373,24 @@ const PageProductsList = () => {
         is_factor: false,
         is_sale_fatca: false,
         is_sale_crs: false,
-        i_plan: params.planCode,
+        i_plan: params.plan_code,
         is_check_fatca: false,
         remark_marketing_name: "",
-        item_name: "",
+        item_name: params.product_name,
         is_download: null,
-      });
+      };
+
       const response = await fetch(
         `/api/products?action=AddOrUpdateProductOnShelf`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: dataBody,
+          body: JSON.stringify(payload),
         }
       );
       const data = await response.json();
       router.push(
-        `/products/detail?&mode=EDIT&type=${params.promise_type_Code}&i_package=${params.i_package}&plan_code=${params.plan_code}&product_plan_id=${data.product_plan_id}`
+        `/products/detail?&mode=EDIT&type=${params.promise_type_code}&i_package=${params.i_package}&plan_code=${params.plan_code}&product_plan_id=${data.product_plan_id}`
       );
     } catch (error) {
       handleSnackAlert({
@@ -360,10 +398,9 @@ const PageProductsList = () => {
         message: `ล้มเหลวเกิดข้อผิดพลาด : ${error}`,
       });
     } finally {
+      setLoading(false);
     }
   };
-
-  const checkStatus = () => {};
 
   const handlePageModelChange = (model, detail) => {
     setPageNumber(model.page);
@@ -383,6 +420,11 @@ const PageProductsList = () => {
     setSortDirection(_sortDirection);
   };
 
+  const handleResetForm = async () => {
+    reset();
+    await handleFetchProduct();
+  };
+
   const onSubmit = async (data) => {
     setLoading(true);
     try {
@@ -392,11 +434,6 @@ const PageProductsList = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleResetForm = async () => {
-    reset();
-    await handleFetchProduct();
   };
 
   return (
@@ -420,15 +457,7 @@ const PageProductsList = () => {
                           disablePortal
                           fullWidth
                           label="สถานะ"
-                          options={[
-                            {
-                              id: "0",
-                              label: "ทั้งหมด",
-                            },
-                            { id: "1", label: "แบบร่าง" },
-                            { id: "2", label: "เปิดใช้งาน" },
-                            { id: "3", label: "ยกเลิกใช้งาน" },
-                          ]}
+                          options={APPLICATION_RECORD_STATUS}
                           onChange={(event, value) => {
                             onChange(value);
                           }}
@@ -478,6 +507,10 @@ const PageProductsList = () => {
                           size="small"
                           disableFuture
                           onChange={(date) => {
+                            clearErrors([
+                              "create_date_start",
+                              "create_date_end",
+                            ]);
                             onChange(date);
                           }}
                           error={Boolean(errors?.fromCreateDate)}
@@ -508,14 +541,17 @@ const PageProductsList = () => {
                           margin="dense"
                           size="small"
                           disableFuture
+                          minDate={new Date(watch("create_date_start"))}
+                          disabled={!watch("create_date_start")}
+                          readOnly={!watch("create_date_start")}
                           onChange={(date) => {
                             onChange(date);
                           }}
-                          error={Boolean(errors?.toCreateDate)}
+                          error={Boolean(errors?.create_date_end)}
                           {...otherProps}
                         />
-                        <FormHelperText error={errors?.toCreateDate}>
-                          {errors?.toCreateDate?.message}
+                        <FormHelperText error={errors?.create_date_end}>
+                          {errors?.create_date_end?.message}
                         </FormHelperText>
                       </>
                     );
@@ -540,6 +576,10 @@ const PageProductsList = () => {
                           size="small"
                           disableFuture
                           onChange={(date) => {
+                            clearErrors([
+                              "update_date_start",
+                              "update_date_end",
+                            ]);
                             onChange(date);
                           }}
                           error={Boolean(errors?.fromUpdateDate)}
@@ -555,7 +595,7 @@ const PageProductsList = () => {
               </Grid>
               <Grid item xs={12} md={3}>
                 <Controller
-                  name={`update_date_start`}
+                  name={`update_date_end`}
                   control={control}
                   render={({ field }) => {
                     const { name, onChange, ...otherProps } = field;
@@ -570,14 +610,17 @@ const PageProductsList = () => {
                           margin="dense"
                           size="small"
                           disableFuture
+                          minDate={new Date(watch("update_date_start"))}
+                          disabled={!watch("update_date_start")}
+                          readOnly={!watch("update_date_start")}
                           onChange={(date) => {
                             onChange(date);
                           }}
-                          error={Boolean(errors?.toUpdateDate)}
+                          error={Boolean(errors?.update_date_end)}
                           {...otherProps}
                         />
-                        <FormHelperText error={errors?.toUpdateDate}>
-                          {errors?.toUpdateDate?.message}
+                        <FormHelperText error={errors?.update_date_end}>
+                          {errors?.update_date_end?.message}
                         </FormHelperText>
                       </>
                     );

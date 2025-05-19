@@ -100,6 +100,7 @@ import BulletList from "@tiptap/extension-bullet-list";
 import OrderedList from "@tiptap/extension-ordered-list";
 import ListKeymap from "@tiptap/extension-list-keymap";
 import ListItem from "@tiptap/extension-list-item";
+
 const FontSize = Extension.create({
   name: "fontSize",
 
@@ -137,22 +138,22 @@ const FontSize = Extension.create({
     return {
       setFontSize:
         (fontSize) =>
-          ({ chain }) => {
-            return chain().setMark("textStyle", { fontSize }).run();
-          },
+        ({ chain }) => {
+          return chain().setMark("textStyle", { fontSize }).run();
+        },
       unsetFontSize:
         () =>
-          ({ chain }) => {
-            return chain()
-              .setMark("textStyle", { fontSize: null })
-              .removeEmptyTextStyle()
-              .run();
-          },
+        ({ chain }) => {
+          return chain()
+            .setMark("textStyle", { fontSize: null })
+            .removeEmptyTextStyle()
+            .run();
+        },
     };
   },
 });
 
-function rgbToHex(rgb) {
+const rgbToHex = (rgb) => {
   const match = rgb.match(/\d+/g); // ดึงตัวเลขจาก rgb เช่น "rgb(255, 153, 0)" -> [255, 153, 0]
   if (match) {
     return `#${match
@@ -160,7 +161,7 @@ function rgbToHex(rgb) {
       .join("")}`;
   }
   return rgb; // ถ้าไม่ใช่รูปแบบ rgb ให้คืนค่าตามเดิม
-}
+};
 
 const HtmlParser = (htmlString) => {
   // แปลง HTML string เป็น DOM
@@ -185,8 +186,6 @@ const HtmlParser = (htmlString) => {
       // เพิ่ม attribute style="color" ให้กับ <li>
       li.setAttribute("style", `color: ${color};`);
     }
-
-    console.log("li", li);
   });
 
   // แปลง DOM กลับเป็น HTML string
@@ -194,9 +193,7 @@ const HtmlParser = (htmlString) => {
   return updatedHtmlString;
 };
 
-const ClientComponent = ({ value, onChange }) => {
-  const rteRef = useRef(null);
-  const [submittedContent, setSubmittedContent] = useState("");
+const ClientComponent = ({ value, onChange, editable }) => {
   const extensions = [
     StarterKit,
     Color,
@@ -206,6 +203,7 @@ const ClientComponent = ({ value, onChange }) => {
     TextAlign.configure({
       types: ["heading", "paragraph"],
     }),
+    FontSize,
     BulletList.configure({
       HTMLAttributes: {
         class: "ml-6",
@@ -223,7 +221,9 @@ const ClientComponent = ({ value, onChange }) => {
       fontFamily: "PSLKandaModernPro",
     },
   });
+
   const themeMenu = createTheme({});
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -231,8 +231,9 @@ const ClientComponent = ({ value, onChange }) => {
         onUpdate={(props) => {
           let _html = props.editor.getHTML();
           let parsed = HtmlParser(_html);
-          setSubmittedContent(parsed);
+          onChange(parsed);
         }}
+        editable={editable}
         extensions={extensions}
         content={value}
         renderControls={() => (
@@ -247,6 +248,7 @@ const ClientComponent = ({ value, onChange }) => {
               <MenuButtonStrikethrough />
               <MenuButtonTextColor
                 swatchColors={[
+                  { value: "#F37021", label: "Thanachart" },
                   { value: "#000000", label: "Black" },
                   { value: "#ffffff", label: "White" },
                   { value: "#888888", label: "Grey" },
@@ -270,6 +272,7 @@ const ClientComponent = ({ value, onChange }) => {
                 ]}
               />
               <MenuDivider />
+              <MenuSelectFontSize />
               <MenuSelectHeading />
               <MenuButtonBulletedList />
               <MenuButtonOrderedList />
@@ -280,8 +283,6 @@ const ClientComponent = ({ value, onChange }) => {
           </ThemeProvider>
         )}
       />
-
-      {/* <RichTextReadOnly content={submittedContent} extensions={extensions} /> */}
     </ThemeProvider>
   );
 };

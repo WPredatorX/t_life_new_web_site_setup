@@ -1,565 +1,162 @@
-import { AppCard, AppCardDataGrid, AppNumericFormat } from "@/components";
+"use client";
 
+import { useState } from "react";
+import { AppCard, AppLoadData, AppCardDataGrid } from "@components";
 import {
-  Button,
-  Card,
-  CircularProgress,
-  FormControlLabel,
-  FormHelperText,
   Grid,
-  InputAdornment,
-  Switch,
+  Card,
+  Button,
+  useTheme,
   TextField,
   Typography,
-  useTheme,
+  FormHelperText,
+  InputAdornment,
 } from "@mui/material";
-import { useAppDispatch, useAppSelector } from "@hooks";
-import { useState, useEffect } from "react";
-import { useAppSnackbar, useAppRouter, useAppForm } from "@hooks";
+import {
+  useAppForm,
+  useAppRouter,
+  useAppDialog,
+  useAppScroll,
+  useAppSelector,
+  useAppFeatureCheck,
+  useAppSnackbar,
+} from "@hooks";
+import { PageRejectComponent } from ".";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { Controller } from "react-hook-form";
-import { setDialog } from "@stores/slices";
+import { NumericFormat } from "react-number-format";
+import { addHours } from "date-fns";
 import { Yup } from "@utilities";
-import { APPLICATION_DEFAULT } from "@constants";
-import { format, addYears, addDays, parseISO } from "date-fns";
 
 const PageCommonDataProductSale = ({
-  productId,
+  mode,
   type,
+  channel,
+  productId,
   saleChannelId,
   productCondition,
 }) => {
-  const router = useAppRouter();
   const theme = useTheme();
-  const [loading, setLoading] = useState(true);
-  const dispatch = useAppDispatch();
-  const { dialog } = useAppSelector((state) => state.global);
-  const [ConditionData, setConditionData] = useState({});
-  const brokerId = useAppSelector((state) => state.global.brokerId);
-  const ValidationSchema = Yup.object().shape({
-    saleRange: Yup.object().shape({
-      searchParams: Yup.object().shape({}),
-      rows: Yup.array()
-        .of(
-          Yup.object().shape({
-            id: Yup.mixed().nullable(),
-            status: Yup.mixed().nullable(),
-            statusText: Yup.string().nullable(),
-            StartDate: Yup.date().required("กรุณาระบุวันที่เริ่มต้น"),
-            EndDate: Yup.date()
-              .nullable()
-              .transform((value) => {
-                if (
-                  !value ||
-                  value === "undefined" ||
-                  value === undefined ||
-                  value === ""
-                )
-                  return null;
-                try {
-                  return new Date(value);
-                } catch (error) {
-                  return null;
-                }
-              })
-              .when("StartDate", (StartDate, schema) => {
-                if (
-                  !StartDate ||
-                  StartDate === "undefined" ||
-                  StartDate === undefined
-                )
-                  return schema;
-                try {
-                  const startDate = new Date(StartDate);
-                  if (isNaN(startDate.getTime())) return schema;
-                  return schema.min(
-                    startDate,
-                    "วันที่สิ้นสุดต้องไม่น้อยกว่าวันที่เริ่มต้น"
-                  );
-                } catch (error) {
-                  return schema;
-                }
-              }),
-            createBy: Yup.string().nullable(),
-            createDate: Yup.string().nullable(),
-            updateBy: Yup.string().nullable(),
-            updateDate: Yup.string().nullable(),
-          })
-        )
-        .atLeastOneObject("ต้องระบุอย่างน้อย 1 รายการ"),
-      baseRows: Yup.object().shape({
-        id: Yup.mixed().nullable(),
-        status: Yup.mixed().nullable(),
-        statusText: Yup.string().nullable(),
-        StartDate: Yup.date().required("กรุณาระบุวันที่เริ่มต้น"),
-        EndDate: Yup.date()
-          .nullable()
-          .transform((value) => {
-            if (
-              !value ||
-              value === "undefined" ||
-              value === undefined ||
-              value === ""
-            )
-              return null;
-            try {
-              return new Date(value);
-            } catch (error) {
-              return null;
+  const router = useAppRouter();
+  const { handleScrollTo } = useAppScroll();
+  const { handleNotification } = useAppDialog();
+  const { handleSnackAlert } = useAppSnackbar();
+  const [loading, setLoading] = useState(false);
+  const [openRejectModal, setOpenRejectModal] = useState(false);
+  const { brokerId, activator } = useAppSelector((state) => state.global);
+  const { validFeature: grantEdit } = useAppFeatureCheck([
+    "direct.product.general.write",
+    "broker.product.general.write",
+  ]);
+  const { validFeature: grantRequest } = useAppFeatureCheck([
+    "direct.product.general.request",
+    "broker.product.general.request",
+  ]);
+  const { validFeature: grantApprove } = useAppFeatureCheck([
+    "direct.product.general.approve",
+    "broker.product.general.approve",
+  ]);
+
+  const drop = mode === "DROP";
+  const preventInput =
+    mode === "VIEW" || mode === "DROP" || mode === "GENERAL_APPROVE";
+  const productReject = productCondition?.product_status === "5";
+  const productEnable = productCondition?.product_status === "3";
+  const displayEnable = productCondition?.marketting_status === "3";
+  const showProductApprove = productCondition?.product_status === "2";
+  const showPreview = productEnable && displayEnable;
+
+  const validationSchema = Yup.object().shape({
+    conditionData: Yup.object().shape({
+      min_age_years: Yup.number()
+        .nullable()
+        .typeError("จำเป็นต้องระบุข้อมูลนี้")
+        .min(0, "ต้องมีค่าไม่น้อยกว่า 0")
+        .max(150, "ต้องมีค่าไม่เกิน 150"),
+      min_age_months: Yup.number()
+        .nullable()
+        .typeError("จำเป็นต้องระบุข้อมูลนี้")
+        .min(0, "ต้องมีค่าไม่น้อยกว่า 0")
+        .max(12, "ต้องมีค่าไม่เกิน 12"),
+      min_age_days: Yup.number()
+        .nullable()
+        .typeError("จำเป็นต้องระบุข้อมูลนี้")
+        .min(0, "ต้องมีค่าไม่น้อยกว่า 0")
+        .max(31, "ต้องมีค่าไม่เกิน 31"),
+      max_age_years: Yup.number()
+        .nullable()
+        .typeError("จำเป็นต้องระบุข้อมูลนี้")
+        .min(0, "ต้องมีค่าไม่น้อยกว่า 0")
+        .max(150, "ต้องมีค่าไม่เกิน 150"),
+      max_age_months: Yup.number()
+        .nullable()
+        .typeError("จำเป็นต้องระบุข้อมูลนี้")
+        .min(0, "ต้องมีค่าไม่น้อยกว่า 0")
+        .max(12, "ต้องมีค่าไม่เกิน 12"),
+      max_age_days: Yup.number()
+        .nullable()
+        .typeError("จำเป็นต้องระบุข้อมูลนี้")
+        .min(0, "ต้องมีค่าไม่น้อยกว่า 0")
+        .max(31, "ต้องมีค่าไม่เกิน 31"),
+      min_coverage_amount: Yup.number()
+        .nullable()
+        .typeError("จำเป็นต้องระบุข้อมูลนี้")
+        .min(0, "ต้องมีค่าไม่น้อยกว่า 0")
+        .test(
+          "min-less-than-max",
+          "คุ้มครองต่ำสุดต้องไม่เกินคุ้มครองสูงสุด",
+          function (value) {
+            const { max_coverage_amount } = this.parent;
+            if (value === undefined || max_coverage_amount === undefined) {
+              return true;
             }
-          })
-          .when("StartDate", (StartDate, schema) => {
-            if (
-              !StartDate ||
-              StartDate === "undefined" ||
-              StartDate === undefined
-            )
-              return schema;
-            try {
-              const startDate = new Date(StartDate);
-              if (isNaN(startDate.getTime())) return schema;
-              return schema.min(
-                startDate,
-                "วันที่สิ้นสุดต้องไม่น้อยกว่าวันที่เริ่มต้น"
-              );
-            } catch (error) {
-              return schema;
+            return value <= max_coverage_amount;
+          }
+        ),
+      max_coverage_amount: Yup.number()
+        .nullable()
+        .typeError("จำเป็นต้องระบุข้อมูลนี้")
+        .min(0, "ต้องมีค่าไม่น้อยกว่า 0")
+        .test(
+          "max-greater-than-min",
+          "คุ้มครองสูงสุดต้องมากกว่าหรือเท่ากับคุ้มครองต่ำสุด",
+          function (value) {
+            const { min_coverage_amount } = this.parent;
+            if (value === undefined || min_coverage_amount === undefined) {
+              return true;
             }
-          }),
-        createBy: Yup.string().nullable(),
-        createDate: Yup.string().nullable(),
-        updateBy: Yup.string().nullable(),
-        updateDate: Yup.string().nullable(),
-      }),
+            return value >= min_coverage_amount;
+          }
+        ),
     }),
-    salePaidType: Yup.array()
-      .of(
-        Yup.object().shape({
-          id: Yup.mixed().nullable(),
-          paidType: Yup.string().nullable(),
-          paymentMode: Yup.string().nullable(),
-          status: Yup.mixed().nullable(),
-          statusText: Yup.string().nullable(),
-          StartDate: Yup.date().nullable(),
-          EndDate: Yup.date().nullable(),
-          createBy: Yup.string().nullable(),
-          createDate: Yup.string().nullable(),
-          updateBy: Yup.string().nullable(),
-          updateDate: Yup.string().nullable(),
-        })
-      )
-      .atLeastOneObject("ต้องระบุอย่างน้อย 1 รายการ"),
-    salePaidCategory: Yup.array()
-      .of(
-        Yup.object().shape({
-          id: Yup.mixed().nullable(),
-          paidCategory: Yup.string().nullable(),
-          status: Yup.mixed().nullable(),
-          statusText: Yup.string().nullable(),
-          min_coverage_amount: Yup.mixed().nullable(),
-          max_coverage_amount: Yup.mixed().nullable(),
-          min_age_years: Yup.number().nullable().min(0),
-          min_age_months: Yup.number().nullable().min(0).max(11),
-          min_age_days: Yup.number().nullable().min(0).max(31),
-          max_age_years: Yup.number().nullable().min(0),
-          max_age_months: Yup.number().nullable().min(0).max(11),
-          max_age_days: Yup.number().nullable().min(0).max(31),
-          StartDate: Yup.date().nullable(),
-          EndDate: Yup.date().nullable(),
-          createBy: Yup.string().nullable(),
-          createDate: Yup.string().nullable(),
-          updateBy: Yup.string().nullable(),
-          updateDate: Yup.string().nullable(),
-        })
-      )
-      .atLeastOneObject("ต้องระบุอย่างน้อย 1 รายการ"),
-    salePrepayment: Yup.array()
-      .of(
-        Yup.object().shape({
-          id: Yup.mixed().nullable(),
-          PrepaymentForm: Yup.string().nullable(),
-          NumberOfInstallments: Yup.mixed().nullable(),
-          status: Yup.mixed().nullable(),
-          statusText: Yup.string().nullable(),
-          StartDate: Yup.date().nullable(),
-          EndDate: Yup.date().nullable(),
-          createBy: Yup.string().nullable(),
-          createDate: Yup.string().nullable(),
-          updateBy: Yup.string().nullable(),
-          updateDate: Yup.string().nullable(),
-        })
-      )
-      .atLeastOneObject("ต้องระบุอย่างน้อย 1 รายการ"),
-    saleTemplate: Yup.array()
-      .of(
-        Yup.object().shape({
-          id: Yup.mixed().nullable(),
-          TemplateName: Yup.string().nullable(),
-          status: Yup.mixed().nullable(),
-          statusText: Yup.string().nullable(),
-          minimumCoverage: Yup.mixed().nullable,
-          maximumCoverage: Yup.mixed().nullable(),
-          StartDate: Yup.date().nullable(),
-          EndDate: Yup.date().nullable(),
-          createBy: Yup.string().nullable(),
-          createDate: Yup.string().nullable(),
-          updateBy: Yup.string().nullable(),
-          updateDate: Yup.string().nullable(),
-        })
-      )
-      .atLeastOneObject("ต้องระบุอย่างน้อย 1 รายการ"),
+    saleRange: Yup.array().of(Yup.mixed()),
+    saleRangeTemp: Yup.array().of(Yup.mixed()),
+    salePaidType: Yup.array().of(Yup.mixed()),
+    salePaidTypeTemp: Yup.array().of(Yup.mixed()),
+    salePaidCategory: Yup.array().of(Yup.mixed()),
+    salePaidCategoryTemp: Yup.array().of(Yup.mixed()),
+    salePrepayment: Yup.array().of(Yup.mixed()),
+    salePrepaymentTemp: Yup.array().of(Yup.mixed()),
+    saleTemplate: Yup.array().of(Yup.mixed()),
+    saleTemplateTemp: Yup.array().of(Yup.mixed()),
   });
-  const Groupmock = [
-    {
-      name: "Super Saving (Package) 5 ปี",
-      Insure: [
-        { Insure: 1, isSale: false, Insure: 500000 },
-        { Insure: 2, isSale: false, Insure: 1000000 },
-        { Insure: 3, isSale: false, Insure: 1500000 },
-        { Insure: 4, isSale: false, Insure: 2000000 },
-      ],
-    },
-    {
-      name: "Super Saving (Package) 10 ปี",
-      Insure: [
-        { Insure: 1, isSale: false, Insure: 500000 },
-        { Insure: 2, isSale: false, Insure: 1000000 },
-        { Insure: 3, isSale: false, Insure: 1500000 },
-        { Insure: 4, isSale: false, Insure: 2000000 },
-      ],
-    },
-  ];
-
-  const handleMinCoverage = (e) => {
-    let value = parseInt(e.target.value) || 0;
-    setValue(`ConditionData.min_coverage_amount`, value, {
-      shouldValidate: true,
-    });
-  };
-
-  const handleMaxCoverage = (e) => {
-    let value = parseInt(e.target.value) || 0;
-    setValue(`ConditionData.max_coverage_amount`, value, {
-      shouldValidate: true,
-    });
-  };
-
-  const handleMinYear = (e) => {
-    let value = parseInt(e.target.value) || 0;
-    setValue(`ConditionData.min_age_years`, value, {
-      shouldValidate: true,
-    });
-  };
-
-  const handleMinMonth = (e) => {
-    let value = parseInt(e.target.value) || 0;
-    setValue(`ConditionData.min_age_months`, value, {
-      shouldValidate: true,
-    });
-  };
-
-  const handleMinDay = (e) => {
-    let value = parseInt(e.target.value) || 0;
-    setValue(`ConditionData.min_age_days`, value, {
-      shouldValidate: true,
-    });
-  };
-
-  const handleMaxYear = (e) => {
-    let value = parseInt(e.target.value) || 0;
-    setValue(`ConditionData.max_age_years`, value, {
-      shouldValidate: true,
-    });
-  };
-
-  const handleMaxMonth = (e) => {
-    let value = parseInt(e.target.value) || 0;
-    setValue(`ConditionData.max_age_months`, value, {
-      shouldValidate: true,
-    });
-  };
-
-  const handleMaxDay = (e) => {
-    let value = parseInt(e.target.value) || 0;
-    setValue(`ConditionData.max_age_days`, value, {
-      shouldValidate: true,
-    });
-  };
 
   const formMethods = useAppForm({
     mode: "onBlur",
     reValidateMode: "onChange",
-    resolver: yupResolver(ValidationSchema),
+    resolver: yupResolver(validationSchema),
     defaultValues: {
-      ConditionData: {
-        i_plan: "20-01-02",
-        title: "SMART SAVING 10/2",
-        promotion: null,
-        min_age_years: 0,
-        min_age_months: 0,
-        min_age_days: 0,
-        max_age_years: 0,
-        max_age_months: 0,
-        max_age_days: 0,
-        min_coverage_amount: 0,
-        max_coverage_amount: 0,
-      },
-      saleRange: {
-        searchParams: {
-          status: null,
-          name: "",
-          fromStartDate: new Date(),
-          toStartDate: new Date(),
-          fromEndDate: new Date(),
-          toEndDate: new Date(),
-          fromCreateDate: new Date(),
-          toCreateDate: new Date(),
-          fromUpdateDate: new Date(),
-          toUpdateDate: new Date(),
-        },
-        pagination: {
-          totalRows: 100,
-          pageNo: APPLICATION_DEFAULT.dataGrid.pageNumber,
-          pageSize: APPLICATION_DEFAULT.dataGrid.pageSize,
-        },
-        rows: [
-          {
-            id: 1,
-            status: null,
-            statusText: null,
-            sale_start_date: format(new Date(), "yyyy-MM-dd"),
-            sale_end_date: format(new Date(), "yyyy-MM-dd"),
-            create_by: null,
-            create_date: format(new Date(), "yyyy-MM-dd"),
-            update_by: null,
-            update_date: format(new Date(), "yyyy-MM-dd"),
-          },
-        ],
-        baseRows: {
-          id: crypto.randomUUID(),
-          status: 2,
-          statusText: "รายการใหม่",
-          sale_start_date: format(new Date(), "yyyy-MM-dd"),
-          sale_end_date: format(new Date(), "yyyy-MM-dd"),
-          create_by: "admin",
-          create_date: format(new Date(), "yyyy-MM-dd"),
-          update_by: "admin",
-          update_date: format(new Date(), "yyyy-MM-dd"),
-        },
-      },
-      salePaidType: {
-        searchParams: {
-          status: null,
-          name: "",
-          fromCreateDate: format(new Date(), "yyyy-MM-dd"),
-          toCreateDate: format(new Date(), "yyyy-MM-dd"),
-          fromUpdateDate: format(new Date(), "yyyy-MM-dd"),
-          toUpdateDate: format(new Date(), "yyyy-MM-dd"),
-        },
-        pagination: {
-          totalRows: 100,
-          pageNo: APPLICATION_DEFAULT.dataGrid.pageNumber,
-          pageSize: APPLICATION_DEFAULT.dataGrid.pageSize,
-        },
-        rows: [
-          {
-            id: 1,
-            paidType: null,
-            status: null,
-            statusText: null,
-            StartDate: format(new Date(), "yyyy-MM-dd"),
-            EndDate: format(new Date(), "yyyy-MM-dd"),
-            createBy: null,
-            createDate: format(new Date(), "yyyy-MM-dd"),
-            updateBy: null,
-            updateDate: format(new Date(), "yyyy-MM-dd"),
-          },
-        ],
-        baseRows: {
-          id: crypto.randomUUID(),
-          paidType: null,
-          payment_mode_id: null,
-          status: 2,
-          statusText: "รายการใหม่",
-          StartDate: format(new Date(), "yyyy-MM-dd"),
-          EndDate: format(new Date(), "yyyy-MM-dd"),
-          createBy: "admin",
-          createDate: format(new Date(), "yyyy-MM-dd"),
-          updateBy: "admin",
-          updateDate: format(new Date(), "yyyy-MM-dd"),
-        },
-      },
-      paymentMode: {},
-
-      salePaidCategory: {
-        searchParams: {
-          status: null,
-          name: "",
-          minimumCoverage: null,
-          MaximumCoverage: null,
-          fromCreateDate: format(new Date(), "yyyy-MM-dd"),
-          toCreateDate: format(new Date(), "yyyy-MM-dd"),
-          fromUpdateDate: format(new Date(), "yyyy-MM-dd"),
-          toUpdateDate: format(new Date(), "yyyy-MM-dd"),
-        },
-        pagination: {
-          totalRows: 100,
-          pageNo: APPLICATION_DEFAULT.dataGrid.pageNumber,
-          pageSize: APPLICATION_DEFAULT.dataGrid.pageSize,
-        },
-        rows: [
-          {
-            id: 1,
-            payment_id: null,
-            payment_code: null,
-            payment_name: null,
-            status: null,
-            statusText: null,
-            min_coverage_amount: null,
-            max_coverage_amount: null,
-            min_age_years: null,
-            min_age_months: null,
-            min_age_days: null,
-            max_age_years: null,
-            max_age_months: null,
-            max_age_days: null,
-            StartDate: format(new Date(), "yyyy-MM-dd"),
-            EndDate: format(new Date(), "yyyy-MM-dd"),
-            createBy: null,
-            createDate: format(new Date(), "yyyy-MM-dd"),
-            updateBy: null,
-            updateDate: format(new Date(), "yyyy-MM-dd"),
-          },
-        ],
-        baseRows: [
-          {
-            id: 1,
-            payment_id: null,
-            payment_code: null,
-            payment_name: null,
-            status: null,
-            statusText: null,
-            min_coverage_amount: null,
-            max_coverage_amount: null,
-            min_age_years: null,
-            min_age_months: null,
-            min_age_days: null,
-            max_age_years: null,
-            max_age_months: null,
-            max_age_days: null,
-            StartDate: format(new Date(), "yyyy-MM-dd"),
-            maximumAgeMonth: null,
-            maximumAgeDay: null,
-            StartDate: format(new Date(), "yyyy-MM-dd"),
-            EndDate: format(new Date(), "yyyy-MM-dd"),
-            createBy: null,
-            createDate: format(new Date(), "yyyy-MM-dd"),
-            updateBy: null,
-            updateDate: format(new Date(), "yyyy-MM-dd"),
-          },
-        ],
-      },
-      paymentChannel: {},
-      salePrepayment: {
-        searchParams: {
-          status: null,
-          name: "",
-          fromCreateDate: format(new Date(), "yyyy-MM-dd"),
-          toCreateDate: format(new Date(), "yyyy-MM-dd"),
-          fromUpdateDate: format(new Date(), "yyyy-MM-dd"),
-          toUpdateDate: format(new Date(), "yyyy-MM-dd"),
-        },
-        pagination: {
-          totalRows: 100,
-          pageNo: APPLICATION_DEFAULT.dataGrid.pageNumber,
-          pageSize: APPLICATION_DEFAULT.dataGrid.pageSize,
-        },
-        rows: [
-          {
-            id: 1,
-            PrepaymentForm: "",
-            NumberOfInstallments: "",
-            status: null,
-            statusText: null,
-            StartDate: format(new Date(), "yyyy-MM-dd"),
-            EndDate: format(new Date(), "yyyy-MM-dd"),
-            createBy: null,
-            createDate: format(new Date(), "yyyy-MM-dd"),
-            updateBy: null,
-            updateDate: format(new Date(), "yyyy-MM-dd"),
-          },
-        ],
-        baseRows: [
-          {
-            id: crypto.randomUUID(),
-            PrepaymentForm: "",
-            NumberOfInstallments: "",
-            status: 2,
-            statusText: "รายการใหม่",
-            StartDate: format(new Date(), "yyyy-MM-dd"),
-            EndDate: format(new Date(), "yyyy-MM-dd"),
-            createBy: "admin",
-            createDate: format(new Date(), "yyyy-MM-dd"),
-            updateBy: "admin",
-          },
-        ],
-      },
-      saleTemplate: {
-        searchParams: {
-          minimumCoverage: null,
-          MaximumCoverage: null,
-          fromCreateDate: format(new Date(), "yyyy-MM-dd"),
-          toCreateDate: format(new Date(), "yyyy-MM-dd"),
-          fromUpdateDate: format(new Date(), "yyyy-MM-dd"),
-          toUpdateDate: format(new Date(), "yyyy-MM-dd"),
-        },
-        pagination: {
-          totalRows: 100,
-          pageNo: 0,
-          pageSize: 10,
-        },
-        rows: [
-          {
-            id: 1,
-            app_temp_id: "",
-            TemplateName: "",
-            status: 1,
-            statusText: "รายการใหม่",
-            min_coverage_amount: 200,
-            max_coverage_amount: 2000,
-            StartDate: format(new Date(), "yyyy-MM-dd"),
-            EndDate: format(new Date(), "yyyy-MM-dd"),
-            createBy: "admin",
-            createDate: format(new Date(), "yyyy-MM-dd"),
-            updateBy: "admin",
-            updateDate: format(new Date(), "yyyy-MM-dd"),
-          },
-        ],
-        baseRows: [
-          {
-            id: crypto.randomUUID(),
-            app_temp_id: "",
-            TemplateName: "",
-            status: 1,
-            statusText: "รายการใหม่",
-            min_coverage_amount: 200,
-            max_coverage_amount: 2000,
-            StartDate: format(new Date(), "yyyy-MM-dd"),
-            EndDate: format(new Date(), "yyyy-MM-dd"),
-            min_age_years: null,
-            min_age_months: null,
-            min_age_days: null,
-            max_age_years: null,
-            max_age_months: null,
-            max_age_days: null,
-            createBy: "admin",
-            createDate: format(new Date(), "yyyy-MM-dd"),
-            updateBy: "admin",
-            updateDate: format(new Date(), "yyyy-MM-dd"),
-          },
-        ],
-      },
-      template: {},
+      conditionData: { ...productCondition },
+      saleRange: [],
+      saleRangeTemp: [],
+      salePaidType: [],
+      salePaidTypeTemp: [],
+      salePaidCategory: [],
+      salePaidCategoryTemp: [],
+      salePrepayment: [],
+      salePrepaymentTemp: [],
+      saleTemplate: [],
+      saleTemplateTemp: [],
     },
   });
 
@@ -567,543 +164,1206 @@ const PageCommonDataProductSale = ({
     watch,
     reset,
     control,
-    register,
-    handleSubmit,
-    setValue,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = formMethods;
 
   const handleResetForm = () => {
-    reset();
+    handleNotification(
+      "คุณต้องการล้างค่าการเปลี่ยนแปลงหรือไม่ ?",
+      () => {
+        reset();
+      },
+      null,
+      "question"
+    );
   };
 
-  const handleSave = async () => {
+  const handleSave = async (silent = false) => {
     setLoading(true);
+
     try {
-      let ConditionPayload = {
+      const currentValue = watch();
+
+      // #region เงื่อนไขการขาย
+      let conditionPayload = {
         is_active: true,
-        product_status: "1",
+        product_status: silent ? "2" : "1",
         update_date: new Date(),
-        update_by: "admin",
-        product_sale_channel_id: saleChannelId,
+        update_by: activator,
         product_plan_id: productId,
         channel_id: null,
         broker_id: brokerId,
-        min_coverage_amount: watch("ConditionData.min_coverage_amount"),
-        max_coverage_amount: watch("ConditionData.max_coverage_amount"),
-        min_age_years: watch("ConditionData.min_age_years"),
-        min_age_months: watch("ConditionData.min_age_months"),
-        min_age_days: watch("ConditionData.min_age_days"),
-        max_age_years: watch("ConditionData.max_age_years"),
-        max_age_months: watch("ConditionData.max_age_months"),
-        max_age_days: watch("ConditionData.max_age_days"),
+        product_sale_channel_id: saleChannelId,
+        min_coverage_amount: watch("conditionData.min_coverage_amount"),
+        max_coverage_amount: watch("conditionData.max_coverage_amount"),
+        min_age_years: watch("conditionData.min_age_years"),
+        min_age_months: watch("conditionData.min_age_months"),
+        min_age_days: watch("conditionData.min_age_days"),
+        max_age_years: watch("conditionData.max_age_years"),
+        max_age_months: watch("conditionData.max_age_months"),
+        max_age_days: watch("conditionData.max_age_days"),
         product_sale_group_type: type,
       };
-      console.log(ConditionPayload);
-      const responseCondition = await fetch(
+      await fetch(`/api/direct?action=AddOrUpdateProductPlanByChannel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(conditionPayload),
+      });
+      // #endregion
+
+      // #region ระยะเวลาในการขาย
+      const runSalePeriods = async () => {
+        const promises = currentValue?.saleRangeTemp.map(async (item) => {
+          const payload = {
+            ...item,
+            product_sale_channel_id: saleChannelId,
+            sale_period_id: item?.is_new ? null : item?.sale_period_id,
+            is_active: item?.active_status === 3 ? false : null,
+            // : !item?.is_new && item?.sale_period_id
+            // ? item?.is_active
+            // : null,
+            sale_start_date: addHours(item?.sale_start_date, 7),
+            sale_end_date: addHours(item?.sale_end_date, 7),
+          };
+
+          await fetch(`/api/direct?action=AddOrUpdateProductSalePeriod`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+        });
+        await Promise.all(promises);
+      };
+      runSalePeriods();
+      // #endregion
+
+      // #region รูปแบบการชำระเงิน
+      const runSalePaidType = async () => {
+        const promises = currentValue?.salePaidTypeTemp.map(async (item) => {
+          const payload = {
+            ...item,
+            product_sale_channel_id: saleChannelId,
+            product_payment_mode_id: item?.is_new
+              ? null
+              : item?.product_payment_mode_id,
+            is_active: item?.active_status === 3 ? false : null,
+            // : !item?.is_new && item?.product_payment_mode_id
+            // ? item?.is_active
+            // : null,
+          };
+          await fetch(`/api/direct?action=AddOrUpdateProductPaymentMode`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+        });
+        await Promise.all(promises);
+      };
+      runSalePaidType();
+      // #endregion
+
+      // #region ประเภทการชำระเงิน
+      const runSalePaymentCategory = async () => {
+        const promises = currentValue?.salePaidCategoryTemp.map(
+          async (item) => {
+            const payload = {
+              ...item,
+              product_sale_channel_id: saleChannelId,
+              product_payment_id: item?.is_new
+                ? null
+                : item?.product_payment_id,
+              is_active: item?.active_status === 3 ? false : null,
+              // : !item?.is_new && item?.product_payment_id
+              // ? item?.is_active
+              // : null,
+            };
+            await fetch(`/api/direct?action=AddOrUpdateProductPaymentMethods`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+          }
+        );
+        await Promise.all(promises);
+      };
+      runSalePaymentCategory();
+      // #endregion
+
+      // #region รูปแบบการชำระล่วงหน้า
+      const runSalePrepayment = async () => {
+        const promises = currentValue?.salePrepaymentTemp.map(async (item) => {
+          const payload = {
+            ...item,
+            product_sale_channel_id: saleChannelId,
+            installment_id: item?.is_new ? null : item?.installment_id,
+            is_active: item?.active_status === 3 ? false : null,
+            // : !item?.is_new && item?.installment_id
+            // ? item?.is_active
+            // : null,
+          };
+
+          await fetch(`/api/direct?action=AddOrUpdateInstallmentType`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+        });
+        await Promise.all(promises);
+      };
+      runSalePrepayment();
+      // #endregion
+
+      // #region เทมเพลตใบคำขอ
+      const runSaleTemplate = async () => {
+        const promises = currentValue?.saleTemplateTemp.map(async (item) => {
+          const payload = {
+            ...item,
+            product_sale_channel_id: saleChannelId,
+            product_app_temp_id: item?.is_new
+              ? null
+              : item?.product_app_temp_id,
+            is_active: item?.active_status === 3 ? false : null,
+            // : !item?.is_new && item?.product_app_temp_id
+            // ? item?.is_active
+            // : null,
+          };
+          await fetch(
+            `/api/direct?action=AddOrUpdateProductApplicationTemplate`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            }
+          );
+        });
+        await Promise.all(promises);
+      };
+      runSaleTemplate();
+      // #endregion
+
+      if (!silent) {
+        handleNotification(
+          "บันทึกข้อมูลสำเร็จ",
+          () => {
+            window.location.reload();
+            setTimeout(() => {
+              handleScrollTo();
+            }, 1000);
+          },
+          null,
+          "info",
+          "ตกลง"
+        );
+      } else {
+        return true;
+      }
+    } catch (error) {
+      handleSnackAlert({
+        open: true,
+        message: "ล้มเหลวเกิดข้อผิดพลาด " + error,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBack = () => {
+    let pageUrl = channel === "606" ? "direct" : `brokers/${channel}`;
+    router.push(`/${pageUrl}`);
+    setTimeout(() => {
+      handleScrollTo();
+    }, 1000);
+  };
+
+  const handleRequestApprove = async () => {
+    setLoading(true);
+
+    try {
+      // อัพเดตข้อมูลพร้อมสถานะให้เป็นรออนุมัติ
+      const silentSave = await handleSave(true);
+      if (!silentSave) {
+        throw new Error();
+      }
+
+      // ยิงเพื่อแจ้งขออนุมัติประเถทข้อมูลทั้วไป
+      const payload = {
+        type: 1,
+        product_sale_channel_id: saleChannelId,
+        product_plan_id: productId,
+        mode: "GENERAL_APPROVE",
+        template_code: "01",
+        channel: channel,
+        broker_id: brokerId,
+      };
+      const requestForApproveResponse = await fetch(
+        `/api/direct?action=ProductRecordApprove`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+      if (requestForApproveResponse.status !== 200) {
+        throw new Error();
+      }
+
+      handleNotification(
+        "ทำการบันทึกและขออนุมัติสำเร็จ",
+        () => handleBack(),
+        null,
+        "info",
+        "ตกลง"
+      );
+    } catch (error) {
+      console.error(error);
+      handleSnackAlert({
+        open: true,
+        message: "ล้มเหลวเกิดข้อผิดพลาดบางประการ",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApprove = async () => {
+    setLoading(true);
+
+    try {
+      const currentValue = watch();
+
+      // #region อัพเดตสถานะ
+      let conditionPayload = {
+        is_active: true,
+        product_status: "3",
+        update_date: new Date(),
+        update_by: activator,
+        broker_id: brokerId,
+        product_plan_id: productId,
+        product_sale_channel_id: saleChannelId,
+        product_sale_group_type: type,
+      };
+      const responseApprove = await fetch(
         `/api/direct?action=AddOrUpdateProductPlanByChannel`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(ConditionPayload),
+          body: JSON.stringify(conditionPayload),
         }
       );
+      if (responseApprove.status !== 200) {
+        throw new Error();
+      }
+      // #endregion
 
-      let SalePeriodArray = watch("saleRange.rows");
+      // #region ระยะเวลาในการขาย
+      const runSalePeriods = async () => {
+        const promises = currentValue?.saleRange.map(async (item) => {
+          const payload = {
+            ...item,
+            is_active: item?.active_status === "1" ? true : item?.is_active,
+          };
 
-      SalePeriodArray.forEach(async (element) => {
-        let SalePeriodPayload = JSON.stringify({
-          is_active: true,
-          create_by: element.create_by,
-          update_by: element.update_by, //to do User authorize
-          sale_period_id: element.id,
-          product_sale_channel_id: saleChannelId,
-          sale_start_date: element.sale_start_date,
-          sale_end_date: element.sale_end_date,
+          await fetch(`/api/direct?action=AddOrUpdateProductSalePeriod`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
         });
+        await Promise.all(promises);
+      };
+      runSalePeriods();
+      // #endregion
 
-        const responseSalePeriod = await fetch(
-          `/api/direct?action=AddOrUpdateProductSalePeriod`,
-          {
+      // #region รูปแบบการชำระเงิน
+      const runSalePaidType = async () => {
+        const promises = currentValue?.salePaidType.map(async (item) => {
+          const payload = {
+            ...item,
+            is_active: item?.active_status === "1" ? true : item?.is_active,
+          };
+          await fetch(`/api/direct?action=AddOrUpdateProductPaymentMode`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: SalePeriodPayload,
-          }
-        );
-        if (!responseSalePeriod.ok) {
-          throw new Error(`HTTP error! status: ${responseSalePeriod.status}`);
-        }
-      });
+            body: JSON.stringify(payload),
+          });
+        });
+        await Promise.all(promises);
+      };
+      runSalePaidType();
+      // #endregion
 
-      let PaymentModeArray = watch("salePaidType.rows");
-
-      PaymentModeArray.forEach(async (element) => {
-        let PaymentModePayload = {
-          is_active: true,
-          update_by: element.updateBy,
-          product_payment_mode_id: element.id,
-          product_sale_channel_id: saleChannelId,
-          payment_mode_id: element.payment_mode_id,
-        };
-
-        const responsePaymentMode = await fetch(
-          `/api/direct?action=AddOrUpdateProductPaymentMode`,
-          {
+      // #region ประเภทการชำระเงิน
+      const runSalePaymentCategory = async () => {
+        const promises = currentValue?.salePaidCategory.map(async (item) => {
+          const payload = {
+            ...item,
+            is_active: item?.active_status === "1" ? true : item?.is_active,
+          };
+          await fetch(`/api/direct?action=AddOrUpdateProductPaymentMethods`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(PaymentModePayload),
-          }
-        );
-        if (!responsePaymentMode.ok) {
-          throw new Error(`HTTP error! status: ${responsePaymentMode.status}`);
-        }
-      });
+            body: JSON.stringify(payload),
+          });
+        });
+        await Promise.all(promises);
+      };
+      runSalePaymentCategory();
+      // #endregion
 
-      let PaymentMethodsArray = watch("salePaidCategory.rows");
-      PaymentMethodsArray.forEach(async (element) => {
-        let PaymentMethodsPayload = {
-          is_active: true,
-          update_by: element.updateBy,
-          product_payment_id: element.id,
-          product_sale_channel_id: saleChannelId,
-          payment_id: element.payment_id,
-          min_coverage_amount: element.min_coverage_amount,
-          max_coverage_amount: element.max_coverage_amount,
-          min_age_years: element.min_age_years,
-          min_age_months: element.min_age_months,
-          min_age_days: element.min_age_days,
-          max_age_years: element.max_age_years,
-          max_age_months: element.max_age_months,
-          max_age_days: element.max_age_days,
-        };
+      // #region รูปแบบการชำระล่วงหน้า
+      const runSalePrepayment = async () => {
+        const promises = currentValue?.salePrepayment.map(async (item) => {
+          const payload = {
+            ...item,
+            is_active: item?.active_status === "1" ? true : item?.is_active,
+          };
 
-        const responsePaymentMethods = await fetch(
-          `/api/direct?action=AddOrUpdateProductPaymentMethods`,
-          {
+          await fetch(`/api/direct?action=AddOrUpdateInstallmentType`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(PaymentMethodsPayload),
-          }
-        );
-        if (!responsePaymentMethods.ok) {
-          throw new Error(
-            `HTTP error! status: ${responsePaymentMethods.status}`
+            body: JSON.stringify(payload),
+          });
+        });
+        await Promise.all(promises);
+      };
+      runSalePrepayment();
+      // #endregion
+
+      // #region เทมเพลตใบคำขอ
+      const runSaleTemplate = async () => {
+        const promises = currentValue?.saleTemplate.map(async (item) => {
+          const payload = {
+            ...item,
+            is_active: item?.active_status === "1" ? true : item?.is_active,
+          };
+          await fetch(
+            `/api/direct?action=AddOrUpdateProductApplicationTemplate`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            }
           );
-        }
-      });
+        });
+        await Promise.all(promises);
+      };
+      runSaleTemplate();
+      // #endregion
 
-      let InstallmentTypeArray = watch("salePrepayment.rows");
-      InstallmentTypeArray.forEach(async (element) => {
-        let InstallmentTypePayload = {
-          installment_id: element.id,
-          is_active: true,
-          create_by: element.createBy,
-          update_by: element.updateBy,
-          product_sale_channel_id: saleChannelId,
-          installment_description: element.PrepaymentForm,
-          num_installments: element.NumberOfInstallments,
-        };
+      // #region ส่งอีเมลอนุมัติ
+      const payloadEmail = {
+        type: 1,
+        request_to: productCondition.update_by,
+        product_sale_channel_id: saleChannelId,
+        product_plan_id: productId,
+        mode: "GENERAL_APPROVE",
+        template_code: "02",
+        channel: channel,
+        broker_id: brokerId,
+      };
+      const responseEmail = await fetch(
+        `/api/direct?action=ProductRecordApprove`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payloadEmail),
+        }
+      );
+      if (responseEmail.status !== 200) {
+        throw new Error();
+      }
+      // #endregion
 
-        const responseInstallmentType = await fetch(
-          `/api/direct?action=AddOrUpdateInstallmentType`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(InstallmentTypePayload),
-          }
-        );
-        if (!responseInstallmentType.ok) {
-          throw new Error(
-            `HTTP error! status: ${responseInstallmentType.status}`
-          );
-        }
-      });
-      let ApplicationTemplateArray = watch("saleTemplate.rows");
-      ApplicationTemplateArray.forEach(async (element) => {
-        let ApplicationTemplatePayload = {
-          is_active: true,
-          create_by: element.createBy,
-          update_by: element.updateBy,
-          product_app_temp_id: element.id,
-          product_sale_channel_id: saleChannelId,
-          app_temp_id: element.app_temp_id,
-          app_temp_name: element.TemplateName,
-          min_coverage_amount: element.min_coverage_amount,
-          max_coverage_amount: element.max_coverage_amount,
-          min_age_years: element.min_age_years,
-          min_age_months: element.min_age_months,
-          min_age_days: element.min_age_days,
-          max_age_years: element.max_age_years,
-          max_age_months: element.max_age_months,
-          max_age_days: element.max_age_days,
-        };
-        const responseInstallmentType = await fetch(
-          `/api/direct?action=AddOrUpdateProductApplicationTemplate`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(ApplicationTemplatePayload),
-          }
-        );
-        if (!responseInstallmentType.ok) {
-          throw new Error(
-            `HTTP error! status: ${responseInstallmentType.status}`
-          );
-        }
-      });
+      handleNotification(
+        "ทำการบันทึกและขออนุมัติสำเร็จ",
+        () => handleBack(),
+        null,
+        "info",
+        "ตกลง"
+      );
     } catch (error) {
+      console.error(error);
       handleSnackAlert({
         open: true,
-        message: "ล้มเหลวเกิดข้อผิดพลาด " + error,
+        message: "ล้มเหลวเกิดข้อผิดพลาดบางประการ",
       });
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    handleFetchProductCondition();
-  }, []);
-  const handleFetchProductCondition = async () => {
+  const handleReject = async (reason) => {
     setLoading(true);
+
     try {
-      const resetData = watch();
-      reset({ ...resetData, ConditionData: { ...productCondition } });
+      // #region อัพเดตสถานะ
+      let conditionPayload = {
+        is_active: true,
+        product_status: "5",
+        update_date: new Date(),
+        update_by: activator,
+        broker_id: brokerId,
+        product_plan_id: productId,
+        product_sale_channel_id: saleChannelId,
+        product_sale_group_type: type,
+        product_status_message: reason,
+      };
+      const responseApprove = await fetch(
+        `/api/direct?action=AddOrUpdateProductPlanByChannel`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(conditionPayload),
+        }
+      );
+      if (responseApprove.status !== 200) {
+        throw new Error();
+      }
+      // #endregion
+
+      // #region ส่งอีเมลอนุมัติ
+      const payloadEmail = {
+        type: 1,
+        request_to: productCondition.update_by,
+        product_sale_channel_id: saleChannelId,
+        product_plan_id: productId,
+        mode: "GENERAL_APPROVE",
+        template_code: "03",
+        channel: channel,
+        broker_id: brokerId,
+      };
+      const responseEmail = await fetch(
+        `/api/direct?action=ProductRecordApprove`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payloadEmail),
+        }
+      );
+      if (responseEmail.status !== 200) {
+        throw new Error();
+      }
+      // #endregion
+
+      handleNotification(
+        "ทำการบันทึกสำเร็จ",
+        () => handleBack(),
+        null,
+        "info",
+        "ตกลง"
+      );
     } catch (error) {
+      console.error(error);
       handleSnackAlert({
         open: true,
-        message: "ล้มเหลวเกิดข้อผิดพลาด " + error,
+        message: "ล้มเหลวเกิดข้อผิดพลาดบางประการ",
       });
     } finally {
       setLoading(false);
     }
   };
+
+  const handleDropProduct = async (reason) => {
+    setLoading(true);
+
+    try {
+      // #region อัพเดตสถานะ
+      let conditionPayload = {
+        is_active: false,
+        product_status: "4",
+        update_date: new Date(),
+        update_by: activator,
+        broker_id: brokerId,
+        product_plan_id: productId,
+        product_sale_channel_id: saleChannelId,
+        product_sale_group_type: type,
+      };
+      const responseApprove = await fetch(
+        `/api/direct?action=AddOrUpdateProductPlanByChannel`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(conditionPayload),
+        }
+      );
+      if (responseApprove.status !== 200) {
+        throw new Error();
+      }
+      // #endregion
+
+      // #region ส่งอีเมลอนุมัติ
+      const payloadEmail = {
+        type: 1,
+        request_to: productCondition.update_by,
+        product_sale_channel_id: saleChannelId,
+        product_plan_id: productId,
+        mode: "GENERAL_APPROVE",
+        template_code: "04",
+        channel: channel,
+        broker_id: brokerId,
+      };
+      const responseEmail = await fetch(
+        `/api/direct?action=ProductRecordApprove`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payloadEmail),
+        }
+      );
+      if (responseEmail.status !== 200) {
+        throw new Error();
+      }
+      // #endregion
+
+      handleNotification(
+        "ทำการยกเลิกใช้งานสำเร็จ",
+        () => handleBack(),
+        null,
+        "info",
+        "ตกลง"
+      );
+    } catch (error) {
+      console.error(error);
+      handleSnackAlert({
+        open: true,
+        message: "ล้มเหลวเกิดข้อผิดพลาดบางประการ",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
-    return <CircularProgress />;
+    return <AppLoadData loadingState={0} />;
   }
+
   return (
     <Grid container>
+      {productReject && (
+        <Grid item xs={12}>
+          <AppCard
+            cardstyle={{ border: "1px solid", borderColor: "#e7e7e7" }}
+            title={"เหตุผลการไม่อนุมัติ"}
+          >
+            <TextField
+              type="number"
+              size="small"
+              fullWidth
+              multiline
+              rows={5}
+              disabled
+              inputProps={{ min: 0 }}
+              InputProps={{
+                readOnly: true,
+              }}
+              value={watch("conditionData.product_status_message")}
+            />
+          </AppCard>
+        </Grid>
+      )}
+      {/* เงื่อนไขการขาย */}
       <Grid item xs={12} mt={2}>
         <AppCard
           cardstyle={{ border: "1px solid", borderColor: "#e7e7e7" }}
           title={"เงื่อนไขการขาย (default ค่าจาก core แต่จะไม่ได้ Sync)"}
         >
           <Grid container spacing={2}>
-            <Grid item xs={2}>
+            <Grid
+              item
+              xs={2}
+              sx={{
+                border: "0px solid red",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
               <Typography sx={{ fontWeight: "600" }}>อายุต่ำสุด</Typography>
             </Grid>
-            <Grid item xs={2}>
-              <TextField
-                value={watch("ConditionData.min_age_years")}
-                fullWidth
-                size="small"
-                type="number"
-                onChange={handleMinYear}
-                error={Boolean(errors?.name)}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">ปี</InputAdornment>
-                  ),
-                }}
-              />
-              <FormHelperText error={errors?.name}>
-                {errors?.name?.message}
-              </FormHelperText>
+            <Grid
+              item
+              xs={2}
+              sx={{
+                border: "0px solid red",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              <Grid container>
+                <Grid item xs={12}>
+                  <Controller
+                    control={control}
+                    name="conditionData.min_age_years"
+                    rules={{ min: 0 }}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        type="number"
+                        size="small"
+                        fullWidth
+                        disabled={preventInput}
+                        inputProps={{ min: 0 }}
+                        InputProps={{
+                          endAdornment: (
+                            <InputAdornment position="end">ปี</InputAdornment>
+                          ),
+                        }}
+                        error={Boolean(errors?.conditionData?.min_age_years)}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <FormHelperText
+                    error={Boolean(errors?.conditionData?.min_age_years)}
+                  >
+                    {errors?.conditionData?.min_age_years?.message}
+                  </FormHelperText>
+                </Grid>
+              </Grid>
             </Grid>
-            <Grid item xs={2}>
-              <TextField
-                value={watch("ConditionData.min_age_months")}
-                fullWidth
-                size="small"
-                type="number"
-                onChange={handleMinMonth}
-                error={Boolean(errors?.name)}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">เดือน</InputAdornment>
-                  ),
-                }}
-              />
-              <FormHelperText error={errors?.name}>
-                {errors?.name?.message}
-              </FormHelperText>
+            <Grid
+              item
+              xs={2}
+              sx={{
+                border: "0px solid red",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              <Grid container>
+                <Grid item xs={12}>
+                  <Controller
+                    control={control}
+                    name="conditionData.min_age_months"
+                    rules={{ min: 0 }}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        type="number"
+                        size="small"
+                        fullWidth
+                        disabled={preventInput}
+                        inputProps={{ min: 0 }}
+                        InputProps={{
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              เดือน
+                            </InputAdornment>
+                          ),
+                        }}
+                        error={Boolean(errors?.conditionData?.min_age_months)}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <FormHelperText
+                    error={Boolean(errors?.conditionData?.min_age_months)}
+                  >
+                    {errors?.conditionData?.min_age_months?.message}
+                  </FormHelperText>
+                </Grid>
+              </Grid>
             </Grid>
-            <Grid item xs={2}>
-              <TextField
-                value={watch("ConditionData.min_age_days")}
-                fullWidth
-                size="small"
-                type="number"
-                onChange={handleMinDay}
-                error={Boolean(errors?.name)}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">วัน</InputAdornment>
-                  ),
-                }}
-              />
-              <FormHelperText error={errors?.name}>
-                {errors?.name?.message}
-              </FormHelperText>
+            <Grid
+              item
+              xs={2}
+              sx={{
+                border: "0px solid red",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              <Grid container>
+                <Grid item xs={12}>
+                  <Controller
+                    control={control}
+                    name="conditionData.min_age_days"
+                    rules={{ min: 0 }}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        type="number"
+                        size="small"
+                        fullWidth
+                        disabled={preventInput}
+                        inputProps={{ min: 0 }}
+                        InputProps={{
+                          endAdornment: (
+                            <InputAdornment position="end">วัน</InputAdornment>
+                          ),
+                        }}
+                        error={Boolean(errors?.conditionData?.min_age_days)}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <FormHelperText
+                    error={Boolean(errors?.conditionData?.min_age_days)}
+                  >
+                    {errors?.conditionData?.min_age_days?.message}
+                  </FormHelperText>
+                </Grid>
+              </Grid>
             </Grid>
           </Grid>
-          <Grid container spacing={2} mt={2}>
-            <Grid item xs={2}>
+          <Grid container mt={2} spacing={2}>
+            <Grid
+              item
+              xs={2}
+              sx={{
+                border: "0px solid red",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
               <Typography sx={{ fontWeight: "600" }}>อายุสูงสุด</Typography>
             </Grid>
-            <Grid item xs={2}>
-              <TextField
-                value={watch("ConditionData.max_age_years")}
-                fullWidth
-                size="small"
-                type="number"
-                onChange={handleMaxYear}
-                error={Boolean(errors?.name)}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">ปี</InputAdornment>
-                  ),
-                }}
-              />
-              <FormHelperText error={errors?.name}>
-                {errors?.name?.message}
-              </FormHelperText>
+            <Grid
+              item
+              xs={2}
+              sx={{
+                border: "0px solid red",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              <Grid container>
+                <Grid item xs={12}>
+                  <Controller
+                    control={control}
+                    name="conditionData.max_age_years"
+                    rules={{ min: 0 }}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        type="number"
+                        size="small"
+                        fullWidth
+                        disabled={preventInput}
+                        inputProps={{ min: 0 }}
+                        InputProps={{
+                          endAdornment: (
+                            <InputAdornment position="end">ปี</InputAdornment>
+                          ),
+                        }}
+                        error={Boolean(errors?.conditionData?.max_age_years)}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <FormHelperText
+                    error={Boolean(errors?.conditionData?.max_age_years)}
+                  >
+                    {errors?.conditionData?.max_age_years?.message}
+                  </FormHelperText>
+                </Grid>
+              </Grid>
             </Grid>
-            <Grid item xs={2}>
-              <TextField
-                value={watch("ConditionData.max_age_months")}
-                fullWidth
-                size="small"
-                type="number"
-                onChange={handleMaxMonth}
-                error={Boolean(errors?.name)}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">เดือน</InputAdornment>
-                  ),
-                }}
-              />
-              <FormHelperText error={errors?.name}>
-                {errors?.name?.message}
-              </FormHelperText>
+            <Grid
+              item
+              xs={2}
+              sx={{
+                border: "0px solid red",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              <Grid container>
+                <Grid item xs={12}>
+                  <Controller
+                    control={control}
+                    name="conditionData.max_age_months"
+                    rules={{ min: 0 }}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        type="number"
+                        size="small"
+                        fullWidth
+                        disabled={preventInput}
+                        inputProps={{ min: 0 }}
+                        InputProps={{
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              เดือน
+                            </InputAdornment>
+                          ),
+                        }}
+                        error={Boolean(errors?.conditionData?.max_age_months)}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <FormHelperText
+                    error={Boolean(errors?.conditionData?.max_age_months)}
+                  >
+                    {errors?.conditionData?.max_age_months?.message}
+                  </FormHelperText>
+                </Grid>
+              </Grid>
             </Grid>
-            <Grid item xs={2}>
-              <TextField
-                value={watch("ConditionData.max_age_days")}
-                fullWidth
-                size="small"
-                type="number"
-                onChange={handleMaxDay}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">วัน</InputAdornment>
-                  ),
-                }}
-              />
-              <FormHelperText error={errors?.name}>
-                {errors?.name?.message}
-              </FormHelperText>
+            <Grid
+              item
+              xs={2}
+              sx={{
+                border: "0px solid red",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              <Grid container>
+                <Grid item xs={12}>
+                  <Controller
+                    control={control}
+                    name="conditionData.max_age_days"
+                    rules={{ min: 0 }}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        type="number"
+                        size="small"
+                        fullWidth
+                        disabled={preventInput}
+                        inputProps={{ min: 0 }}
+                        InputProps={{
+                          endAdornment: (
+                            <InputAdornment position="end">วัน</InputAdornment>
+                          ),
+                        }}
+                        error={Boolean(errors?.conditionData?.max_age_days)}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <FormHelperText
+                    error={Boolean(errors?.conditionData?.max_age_days)}
+                  >
+                    {errors?.conditionData?.max_age_days?.message}
+                  </FormHelperText>
+                </Grid>
+              </Grid>
             </Grid>
           </Grid>
-          <Grid container spacing={2} mt={2}>
-            <Grid item xs={2}>
+          <Grid container mt={2}>
+            <Grid
+              item
+              xs={2}
+              sx={{
+                border: "0px solid red",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
               <Typography sx={{ fontWeight: "600" }}>คุ้มครองต่ำสุด</Typography>
             </Grid>
-            <Grid item xs={4}>
-              <TextField
-                value={watch("ConditionData.min_coverage_amount")}
-                fullWidth
-                size="small"
-                inputProps={{
-                  allowNegative: false,
-                  fixedDecimalScale: true,
-                }}
-                InputProps={{
-                  inputComponent: AppNumericFormat,
-                  endAdornment: (
-                    <InputAdornment position="end">บาท</InputAdornment>
-                  ),
-                }}
-                onChange={handleMinCoverage}
-              />
-              <FormHelperText error={errors?.name}>
-                {errors?.name?.message}
-              </FormHelperText>
+            <Grid
+              item
+              xs={4}
+              sx={{
+                border: "0px solid red",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              <Grid container>
+                <Grid item xs={12}>
+                  <Controller
+                    control={control}
+                    name="conditionData.min_coverage_amount"
+                    render={({
+                      field: { onChange, onBlur, value, name, ref },
+                    }) => (
+                      <NumericFormat
+                        value={value ?? ""}
+                        onValueChange={(values) => {
+                          onChange(values.floatValue ?? null);
+                        }}
+                        thousandSeparator
+                        customInput={TextField}
+                        fullWidth
+                        margin="dense"
+                        size="small"
+                        name={name}
+                        inputRef={ref}
+                        onBlur={onBlur}
+                        disabled={preventInput}
+                        error={errors?.conditionData?.min_coverage_amount}
+                        InputLabelProps={value ? { shrink: true } : undefined}
+                        InputProps={{
+                          endAdornment: (
+                            <InputAdornment position="end">บาท</InputAdornment>
+                          ),
+                        }}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <FormHelperText
+                    error={errors?.conditionData?.min_coverage_amount}
+                  >
+                    {errors?.conditionData?.min_coverage_amount?.message}
+                  </FormHelperText>
+                </Grid>
+              </Grid>
             </Grid>
           </Grid>
-          <Grid container spacing={2} mt={2}>
-            <Grid item xs={2}>
+          <Grid container mt={2}>
+            <Grid
+              item
+              xs={2}
+              sx={{
+                border: "0px solid red",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
               <Typography sx={{ fontWeight: "600" }}>คุ้มครองสูงสุด</Typography>
             </Grid>
-            <Grid item xs={4}>
-              <TextField
-                value={watch("ConditionData.max_coverage_amount")}
-                fullWidth
-                size="small"
-                inputProps={{
-                  allowNegative: false,
-                  fixedDecimalScale: true,
-                }}
-                InputProps={{
-                  inputComponent: AppNumericFormat,
-                  endAdornment: (
-                    <InputAdornment position="end">บาท</InputAdornment>
-                  ),
-                }}
-                onChange={handleMaxCoverage}
-              />
-              <FormHelperText error={errors?.name}>
-                {errors?.name?.message}
-              </FormHelperText>
+            <Grid
+              item
+              xs={4}
+              sx={{
+                border: "0px solid red",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              <Grid container>
+                <Grid item xs={12}>
+                  <Controller
+                    control={control}
+                    name="conditionData.max_coverage_amount"
+                    render={({
+                      field: { onChange, onBlur, value, name, ref },
+                    }) => (
+                      <NumericFormat
+                        value={value ?? ""}
+                        onValueChange={(values) => {
+                          onChange(values.floatValue ?? null);
+                        }}
+                        thousandSeparator
+                        customInput={TextField}
+                        fullWidth
+                        margin="dense"
+                        size="small"
+                        name={name}
+                        inputRef={ref}
+                        onBlur={onBlur}
+                        disabled={preventInput}
+                        error={errors?.conditionData?.max_coverage_amount}
+                        InputLabelProps={value ? { shrink: true } : undefined}
+                        InputProps={{
+                          endAdornment: (
+                            <InputAdornment position="end">บาท</InputAdornment>
+                          ),
+                        }}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <FormHelperText
+                    error={errors?.conditionData?.max_coverage_amount}
+                  >
+                    {errors?.conditionData?.max_coverage_amount?.message}
+                  </FormHelperText>
+                </Grid>
+              </Grid>
             </Grid>
           </Grid>
         </AppCard>
       </Grid>
+
+      {/* ระยะเวลาในการขาย */}
       <Grid item xs={12} mt={2}>
         <AppCardDataGrid
           mode={1}
-          formMethods={{ ...formMethods }}
+          preventInput={preventInput}
           productId={saleChannelId}
+          formMethods={{ ...formMethods }}
         />
       </Grid>
+
+      {/* รูปแบบการชำระเงิน */}
       <Grid item xs={12} mt={2}>
         <AppCardDataGrid
           mode={2}
-          formMethods={{ ...formMethods }}
+          preventInput={preventInput}
           productId={saleChannelId}
+          formMethods={{ ...formMethods }}
         />
       </Grid>
+
+      {/* ประเภทการชำระเงิน */}
       <Grid item xs={12} mt={2}>
         <AppCardDataGrid
           mode={3}
-          formMethods={{ ...formMethods }}
+          preventInput={preventInput}
           productId={saleChannelId}
+          formMethods={{ ...formMethods }}
         />
       </Grid>
+
+      {/* รูปแบบการชำระล่วงหน้า */}
       <Grid item xs={12} mt={2}>
         <AppCardDataGrid
           mode={4}
-          formMethods={{ ...formMethods }}
+          preventInput={preventInput}
           productId={saleChannelId}
+          formMethods={{ ...formMethods }}
         />
       </Grid>
+
+      {/* เทมเพลตใบคำขอ */}
       <Grid item xs={12} mt={2}>
         <AppCardDataGrid
           mode={5}
-          formMethods={{ ...formMethods }}
+          preventInput={preventInput}
           productId={saleChannelId}
+          formMethods={{ ...formMethods }}
         />
       </Grid>
-      {type === "2" && (
-        <Grid item xs={12} mt={2}>
-          <AppCard
-            title={`การตั้งค่ารายผลิตภัณฑ์`}
-            cardstyle={{ border: "1px solid", borderColor: "#e7e7e7" }}
-          >
-            {Groupmock.map((value, index, array) => (
-              <AppCard
-                title={`${value.name}`}
-                cardstyle={{
-                  border: "1px solid",
-                  borderColor: "#e7e7e7",
-                  marginBottom: index !== array.length - 1 ? 2 : 0,
-                }}
-                key={index}
-              >
-                <AppCard
-                  title={`ทุนประกันที่ขาย`}
-                  cardstyle={{
-                    border: "1px solid",
-                    borderColor: "#e7e7e7",
-                  }}
-                >
-                  {value.Insure.map((Ins, InsIndex, arr) => (
-                    <Grid
-                      container
-                      key={InsIndex}
-                      mt={InsIndex !== arr.length ? 2 : 0}
-                    >
-                      <Grid item xs={2}>
-                        <FormControlLabel
-                          control={<Switch checked={Ins.isSale} />}
-                          label="เปิดขาย"
-                        />
-                      </Grid>
-                      <Grid item xs={4}>
-                        <TextField
-                          value={Ins.Insure}
-                          fullWidth
-                          size="small"
-                          inputProps={{
-                            allowNegative: false,
-                            fixedDecimalScale: true,
-                          }}
-                          InputProps={{
-                            inputComponent: AppNumericFormat,
-                            endAdornment: (
-                              <InputAdornment position="end">
-                                บาท
-                              </InputAdornment>
-                            ),
-                          }}
-                        ></TextField>
-                      </Grid>
-                    </Grid>
-                  ))}
-                </AppCard>
-              </AppCard>
-            ))}
-          </AppCard>
-        </Grid>
-      )}
+
       <Grid item xs={12}>
         <Card>
+          <PageRejectComponent
+            open={openRejectModal}
+            setOpen={setOpenRejectModal}
+            handleReject={handleReject}
+          />
           <Grid container spacing={2} justifyContent={"end"}>
             <Grid item xs={11.3}>
               <Grid container justifyContent={"end"} spacing={2}>
                 <Grid item xs={12} md="auto">
                   <Button
-                    variant="contained"
-                    sx={{
-                      color: theme.palette.common.white,
-                      backgroundColor: theme.palette.primary.main,
+                    variant="outlined"
+                    color="inherit"
+                    onClick={() => {
+                      handleNotification(
+                        "คุณต้องการยกเลิกการเปลี่ยนแปลงหรือไม่ ?",
+                        () => handleBack(),
+                        null,
+                        "question"
+                      );
                     }}
                   >
-                    ขออนุมัติ
+                    ยกเลิก / ออก
                   </Button>
                 </Grid>
-                <Grid item xs={12} md="auto">
-                  <Button variant="outlined">ยกเลิก</Button>
-                </Grid>
-                <Grid item xs={12} md="auto">
-                  <Button variant="outlined" onClick={handleResetForm}>
-                    ล้างค่า
-                  </Button>
-                </Grid>
-
-                <Grid item xs={12} md="auto">
-                  <Button
-                    variant="contained"
-                    sx={{
-                      color: theme.palette.common.white,
-                      backgroundColor: theme.palette.primary.main,
-                    }}
-                    onClick={handleSave}
-                  >
-                    บันทึกแบบร่าง
-                  </Button>
-                </Grid>
-                <Grid item xs={12} md="auto">
-                  <Button
-                    variant="contained"
-                    sx={{
-                      color: theme.palette.common.white,
-                      backgroundColor: theme.palette.primary.main,
-                    }}
-                  >
-                    ดูตัวอย่าง
-                  </Button>
-                </Grid>
+                {drop && (
+                  <Grid item xs={12} md="auto">
+                    <Button
+                      variant="contained"
+                      color="error"
+                      onClick={() => {
+                        handleNotification(
+                          "คุณต้องการยกเลิกการใช้งานหรือไม่ ?",
+                          () => handleDropProduct(),
+                          null,
+                          "question"
+                        );
+                      }}
+                    >
+                      ยกเลิกการใช้งาน
+                    </Button>
+                  </Grid>
+                )}
+                {grantRequest &&
+                  !showProductApprove &&
+                  !productEnable &&
+                  !drop && (
+                    <Grid item xs={12} md="auto">
+                      <Button
+                        color="info"
+                        variant="contained"
+                        sx={{
+                          color: theme.palette.common.white,
+                        }}
+                        onClick={() =>
+                          handleNotification(
+                            "ท่านต้องการบันทึกข้อมูลและส่งคำร้องขออนุมัติหรือไม่ ?",
+                            () => handleRequestApprove(),
+                            null,
+                            "question"
+                          )
+                        }
+                      >
+                        ขออนุมัติ
+                      </Button>
+                    </Grid>
+                  )}
+                {grantApprove && showProductApprove && (
+                  <>
+                    <Grid item xs={12} md="auto">
+                      <Button
+                        color="error"
+                        variant="contained"
+                        onClick={() => {
+                          handleNotification(
+                            "ท่านต้องการยืนยันการไม่อนุมัติข้อมูลผลิตภัณฑ์นี้หรือไม่ ?",
+                            () => setOpenRejectModal(true),
+                            null,
+                            "question"
+                          );
+                        }}
+                      >
+                        ไม่อนุมัติ
+                      </Button>
+                    </Grid>
+                    <Grid item xs={12} md="auto">
+                      <Button
+                        color="success"
+                        variant="contained"
+                        onClick={() => {
+                          handleNotification(
+                            "ท่านต้องการยืนยันการอนุมัติข้อมูลผลิตภัณฑ์นี้หรือไม่ ?",
+                            () => handleApprove(),
+                            null,
+                            "question"
+                          );
+                        }}
+                      >
+                        อนุมัติ
+                      </Button>
+                    </Grid>
+                  </>
+                )}
+                {grantEdit && !showProductApprove && !preventInput && (
+                  <>
+                    <Grid item xs={12} md="auto">
+                      <Button
+                        disabled={!isDirty}
+                        variant="outlined"
+                        onClick={handleResetForm}
+                      >
+                        ล้างค่า
+                      </Button>
+                    </Grid>
+                    <Grid item xs={12} md="auto">
+                      <Button
+                        disabled={!isDirty}
+                        color="primary"
+                        variant="contained"
+                        onClick={() => handleSave(false)}
+                      >
+                        บันทึกแบบร่าง
+                      </Button>
+                    </Grid>
+                  </>
+                )}
+                {showPreview && (
+                  <Grid item xs={12} md="auto">
+                    <Button color="primary" variant="contained">
+                      ดูตัวอย่าง
+                    </Button>
+                  </Grid>
+                )}
               </Grid>
             </Grid>
           </Grid>

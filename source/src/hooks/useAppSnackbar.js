@@ -7,6 +7,7 @@ const useAppSnackbar = () => {
 
   const handleSnackAlert = ({
     open = false,
+    severity = "error",
     autoHideDuration = 5000,
     onClose = null,
     message = "Message",
@@ -20,6 +21,7 @@ const useAppSnackbar = () => {
       setSnackBar({
         ...snackBar,
         ...{
+          severity: severity,
           open: open,
           autoHideDuration: autoHideDuration,
           onClose: onClose,

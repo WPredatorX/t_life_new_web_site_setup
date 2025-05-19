@@ -27,43 +27,20 @@ export async function POST(request) {
       data = response.data;
       return NextResponse.json(data);
     case "getBroker":
-      /* response = await axios.post(
-        `${baseUrl}Products/GetProductById?SaleChannelId=${productId}`,
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}BackOffice/GetBrokerGeneralInfoList`,
+        body,
         {
           headers: { Authorization: `Bearer ${accessToken}` },
         }
       );
-      data = response.data?.data; */
-      data = [
-        {
-          id: 1,
-          name: "ศรีกรุงประกันชีวิตโบรคเกอร์",
-          email: "broker2@email.com",
-          registerId: "12345",
-          url: "https://broker_1.com",
-          status: 3,
-          statusText: "เปิดใช้งาน",
-          createBy: "admin",
-          createDate: new Date(),
-          updateBy: "admin",
-          updateDate: new Date(),
-        },
-        {
-          id: 2,
-          name: "ทีโบรกเกอร์",
-          email: "broker1@email.com",
-          registerId: "67890",
-          url: "https://broker_1.com",
-          status: 3,
-          statusText: "เปิดใช้งาน",
-          createBy: "admin",
-          createDate: new Date(),
-          updateBy: "admin",
-          updateDate: new Date(),
-        },
-      ];
-      return NextResponse.json(
-        data.sort((a, b) => a.updateDate - b.updateDate)
-      );
+      if (response.status === 200) {
+        data = response.data?.data;
+        return NextResponse.json(data);
+      }
+      if (response.status === 204) {
+        return NextResponse.json([]);
+      }
   }
 }

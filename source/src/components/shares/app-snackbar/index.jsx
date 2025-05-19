@@ -42,9 +42,7 @@ const AppSnackBar = () => {
         }}
         icon={false}
       >
-        <Typography variant="subtitle1" color={"inherit"}>
-          {alertProps.message}
-        </Typography>
+        <Typography variant="subtitle1">{alertProps.message}</Typography>
       </Alert>
     </Snackbar>
   );

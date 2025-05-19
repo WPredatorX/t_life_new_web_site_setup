@@ -27,6 +27,8 @@ const AppDatePicker = forwardRef(
       views = ["year", "month", "day"],
       margin = "none",
       placement = "auto",
+      minDate = null,
+      maxDate = null,
       ...otherProps
     },
     ref
@@ -47,6 +49,8 @@ const AppDatePicker = forwardRef(
         label={label}
         value={value}
         closeOnSelect
+        minDate={minDate}
+        maxDate={maxDate}
         inputFormat={inputFormat}
         views={views}
         onChange={onChange || defaultOnChange}

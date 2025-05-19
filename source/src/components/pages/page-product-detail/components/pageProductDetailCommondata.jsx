@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { AppCard, AppNumericFormat } from "@/components";
 import { useAppForm } from "@/hooks";
 import { Yup } from "@/utilities";
@@ -9,8 +10,7 @@ import {
   InputAdornment,
   TextField,
 } from "@mui/material";
-import { useEffect, useState } from "react";
-import { useFieldArray } from "react-hook-form";
+import { useFieldArray, Controller } from "react-hook-form";
 
 const PageProductDetailCommonData = ({
   formMethods,
@@ -22,10 +22,8 @@ const PageProductDetailCommonData = ({
   const [loading, setLoading] = useState(false);
 
   const {
-    reset,
     control,
     register,
-    handleSubmit,
     watch,
     formState: { errors },
   } = formMethods;
@@ -47,8 +45,7 @@ const PageProductDetailCommonData = ({
     control,
     name: "ICapital",
   });
-  const w = watch();
-  console.log(w);
+
   if (type === "0") {
     return (
       <Grid container justifyContent={"center"}>
@@ -64,16 +61,11 @@ const PageProductDetailCommonData = ({
                 id={`commonSetting.i_package`}
                 defaultValue={watch(`commonSetting.i_package`)}
                 {...register(`commonSetting.i_package`)}
-                //value={i_package}
                 inputProps={{ maxLength: 100 }}
                 InputLabelProps={
                   watch(`commonSetting.i_package`) && { shrink: true }
                 }
-                error={Boolean(errors?.name)}
               />
-              <FormHelperText error={errors?.name}>
-                {errors?.name?.message}
-              </FormHelperText>
             </Grid>
           </Grid>
           <Grid container>
@@ -95,60 +87,48 @@ const PageProductDetailCommonData = ({
                 InputLabelProps={
                   watch(`commonSetting.c_package`) && { shrink: true }
                 }
-                error={Boolean(errors?.name)}
               />
-              <FormHelperText error={errors?.name}>
-                {errors?.name?.message}
-              </FormHelperText>
             </Grid>
           </Grid>
           <Grid container>
             <Grid item xs={4}>
               <TextField
+                required
                 fullWidth
                 label="ชื่อสำหรับแสดงหน้าคำนวณเพื่อเลือกระยะเวลาเอาประกัน"
                 margin="dense"
                 size="small"
                 id={`commonSetting.item_name`}
-                defaultValue={
-                  watch(`commonSetting.item_name`)
-                    ? watch(`commonSetting.item_name`)
-                    : ""
-                }
                 {...register(`commonSetting.item_name`)}
                 inputProps={{ maxLength: 100 }}
                 InputLabelProps={
                   watch(`commonSetting.item_name`) && { shrink: true }
                 }
-                error={Boolean(errors?.name)}
+                error={Boolean(errors?.commonSetting?.item_name)}
               />
-              <FormHelperText error={errors?.name}>
-                {errors?.name?.message}
+              <FormHelperText error={errors?.commonSetting?.item_name}>
+                {errors?.commonSetting?.item_name?.message}
               </FormHelperText>
             </Grid>
           </Grid>
           <Grid container>
             <Grid item xs={4}>
               <TextField
+                required
                 fullWidth
                 label="ชื่อทางการตลาด"
                 margin="dense"
                 size="small"
                 id={`commonSetting.title`}
-                defaultValue={
-                  watch(`commonSetting.title`)
-                    ? watch(`commonSetting.title`)
-                    : ""
-                }
                 {...register(`commonSetting.title`)}
                 inputProps={{ maxLength: 100 }}
                 InputLabelProps={
                   watch(`commonSetting.title`) && { shrink: true }
                 }
-                error={Boolean(errors?.name)}
+                error={Boolean(errors?.commonSetting?.title)}
               />
-              <FormHelperText error={errors?.name}>
-                {errors?.name?.message}
+              <FormHelperText error={Boolean(errors?.commonSetting?.title)}>
+                {errors?.commonSetting?.title?.message}
               </FormHelperText>
             </Grid>
           </Grid>
@@ -160,11 +140,6 @@ const PageProductDetailCommonData = ({
                 margin="dense"
                 size="small"
                 id={`commonSetting.remark_marketing_name`}
-                defaultValue={
-                  watch(`commonSetting.remark_marketing_name`)
-                    ? watch(`commonSetting.remark_marketing_name`)
-                    : ""
-                }
                 {...register(`commonSetting.remark_marketing_name`)}
                 inputProps={{ maxLength: 100 }}
                 InputLabelProps={
@@ -172,10 +147,12 @@ const PageProductDetailCommonData = ({
                     shrink: true,
                   }
                 }
-                error={Boolean(errors?.name)}
+                error={Boolean(errors?.commonSetting?.remark_marketing_name)}
               />
-              <FormHelperText error={errors?.name}>
-                {errors?.name?.message}
+              <FormHelperText
+                error={Boolean(errors?.commonSetting?.remark_marketing_name)}
+              >
+                {errors?.commonSetting?.remark_marketing_name?.message}
               </FormHelperText>
             </Grid>
           </Grid>
@@ -234,23 +211,17 @@ const PageProductDetailCommonData = ({
                                 <Grid item xs>
                                   <TextField
                                     disabled
-                                    value={IPlan.product_name}
+                                    value={IPlan.c_plan}
                                     fullWidth
                                     label="ชื่อแบบประกัน"
                                     margin="dense"
                                     size="small"
                                     inputProps={{ maxLength: 100 }}
                                     InputLabelProps={
-                                      IPlan.product_name && { shrink: true }
+                                      IPlan.c_plan && { shrink: true }
                                     }
-                                    {...register(
-                                      `IPlan.${IPlanIndex}.product_name`
-                                    )}
-                                    error={Boolean(errors?.name)}
+                                    {...register(`IPlan.${IPlanIndex}.c_plan`)}
                                   />
-                                  <FormHelperText error={errors?.name}>
-                                    {errors?.name?.message}
-                                  </FormHelperText>
                                 </Grid>
                               </Grid>
                             </Grid>
@@ -276,7 +247,7 @@ const PageProductDetailCommonData = ({
                       CapitalFields.map((Capital, CapitalIndex) => (
                         <Card
                           sx={{ border: "1px solid", borderColor: "#e7e7e7" }}
-                          key={CapitalIndex}
+                          key={Capital.id}
                         >
                           <Grid container justifyContent={"center"}>
                             <Grid item xs={11}>
@@ -288,7 +259,34 @@ const PageProductDetailCommonData = ({
                                 mb={2}
                               >
                                 <Grid item xs={12}>
-                                  <TextField
+                                  <Controller
+                                    control={control}
+                                    name={`Capital.${CapitalIndex}.m_sa`}
+                                    defaultValue={Capital.m_sa}
+                                    render={({ field }) => (
+                                      <TextField
+                                        fullWidth
+                                        label={`ทุนประกัน`}
+                                        margin="dense"
+                                        size="small"
+                                        disabled
+                                        InputLabelProps={
+                                          Capital.m_sa && { shrink: true }
+                                        }
+                                        {...field}
+                                        InputProps={{
+                                          inputComponent: AppNumericFormat,
+                                          endAdornment: (
+                                            <InputAdornment position="end">
+                                              บาท
+                                            </InputAdornment>
+                                          ),
+                                        }}
+                                      />
+                                    )}
+                                  />
+
+                                  {/* <TextField
                                     disabled
                                     label="ทุนประกัน"
                                     fullWidth
@@ -305,7 +303,7 @@ const PageProductDetailCommonData = ({
                                         </InputAdornment>
                                       ),
                                     }}
-                                  ></TextField>
+                                  ></TextField> */}
                                 </Grid>
                               </Grid>
                             </Grid>
@@ -344,22 +342,12 @@ const PageProductDetailCommonData = ({
                 label="ชื่อแบบประกัน"
                 margin="dense"
                 size="small"
-                id={`commonSetting.c_package`}
-                defaultValue={
-                  watch(`commonSetting.c_package`)
-                    ? watch(`commonSetting.c_package`)
-                    : ""
-                }
-                {...register(`commonSetting.c_package`)}
+                {...register(`commonSetting.c_plan`)}
                 inputProps={{ maxLength: 100 }}
                 InputLabelProps={
-                  watch(`commonSetting.c_package`) && { shrink: true }
+                  watch(`commonSetting.c_plan`) && { shrink: true }
                 }
-                error={Boolean(errors?.name)}
               />
-              <FormHelperText error={errors?.name}>
-                {errors?.name?.message}
-              </FormHelperText>
             </Grid>
             <Grid item xs={4}>
               <TextField
@@ -368,20 +356,16 @@ const PageProductDetailCommonData = ({
                 margin="dense"
                 size="small"
                 id={`commonSetting.title`}
-                defaultValue={
-                  watch(`commonSetting.title`)
-                    ? watch(`commonSetting.title`)
-                    : ""
-                }
+                required
                 {...register(`commonSetting.title`)}
                 inputProps={{ maxLength: 100 }}
                 InputLabelProps={
                   watch(`commonSetting.title`) && { shrink: true }
                 }
-                error={Boolean(errors?.name)}
+                error={Boolean(errors?.commonSetting?.title)}
               />
-              <FormHelperText error={errors?.name}>
-                {errors?.name?.message}
+              <FormHelperText error={Boolean(errors?.commonSetting?.title)}>
+                {errors?.commonSetting?.title?.message}
               </FormHelperText>
             </Grid>
           </Grid>
@@ -393,22 +377,19 @@ const PageProductDetailCommonData = ({
                 margin="dense"
                 size="small"
                 id={`commonSetting.remark_marketing_name`}
-                defaultValue={
-                  watch(`commonSetting.remark_marketing_name`)
-                    ? watch(`commonSetting.remark_marketing_name`)
-                    : ""
-                }
                 {...register(`commonSetting.remark_marketing_name`)}
-                inputProps={{ maxLength: 100 }}
+                inputProps={{ maxLength: 200 }}
                 InputLabelProps={
                   watch(`commonSetting.remark_marketing_name`) && {
                     shrink: true,
                   }
                 }
-                error={Boolean(errors?.name)}
+                error={Boolean(errors?.commonSetting?.remark_marketing_name)}
               />
-              <FormHelperText error={errors?.name}>
-                {errors?.name?.message}
+              <FormHelperText
+                error={Boolean(errors?.commonSetting?.remark_marketing_name)}
+              >
+                {errors?.commonSetting?.remark_marketing_name?.message}
               </FormHelperText>
             </Grid>
           </Grid>

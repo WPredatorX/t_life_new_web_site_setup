@@ -47,6 +47,7 @@ export async function POST(request) {
         data = response.data?.data;
       }
       return NextResponse.json(data);
+
     case "getProductDocument":
       response = await axios.post(`${baseUrl}BackOffice/GetProductDocument`, {
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -70,6 +71,7 @@ export async function POST(request) {
         data = response.data?.data;
       }
       return NextResponse.json(data);
+
     case "GetProductOnShelfById":
       body = await request.json();
       response = await axios.post(
@@ -83,6 +85,7 @@ export async function POST(request) {
         data = response.data?.data;
       }
       return NextResponse.json(data);
+
     case "getAllInsuredCapital":
       productId = url.searchParams.get("IPackage");
       response = await axios.post(
@@ -95,6 +98,7 @@ export async function POST(request) {
         data = response.data?.data;
       }
       return NextResponse.json(data);
+
     case "getDocumentAppDetailById":
       body = await request.json();
       response = await axios.post(
@@ -108,11 +112,12 @@ export async function POST(request) {
         data = response.data?.data;
       }
       return NextResponse.json(data);
+
     case "PreviewReportByDocumentCode":
-      let docCode = url.searchParams.get("DocumentCode");
+      body = await request.json();
       response = await axios.post(
-        `${baseUrl}BackOffice/PreviewReportByDocumentCode?DocumentCode=${docCode}`,
-        {},
+        `${baseUrl}BackOffice/PreviewReportByDocumentCode`,
+        body,
         {
           headers: { Authorization: `Bearer ${accessToken}` },
           responseType: "arraybuffer",
@@ -122,9 +127,6 @@ export async function POST(request) {
       if (response.headers["content-type"]?.includes("application/pdf")) {
         const headers = new Headers();
         headers.set("Content-Type", "application/pdf");
-        //headers.set("Content-Disposition", "inline; filename=document.pdf");
-        //headers.set("Cache-Control", "no-cache");
-
         return new NextResponse(response.data, {
           status: 200,
           headers: headers,
@@ -132,6 +134,7 @@ export async function POST(request) {
       } else {
         return NextResponse.json({ error: "ไม่พบไฟล์ PDF" }, { status: 400 });
       }
+
     case "AddOrUpdatePolicyholderDocuments":
       body = await request.json();
       response = await axios.post(
@@ -143,6 +146,7 @@ export async function POST(request) {
         data = response.data?.data;
       }
       return NextResponse.json(data);
+
     case "addOrUpdateProductDocument":
       body = await request.json();
       response = await axios.post(
@@ -154,8 +158,6 @@ export async function POST(request) {
         data = response.data?.data;
       }
       return NextResponse.json(data);
-
-
 
     case "getSalePaidCategoryByProductId":
       productId = url.searchParams.get("productId");
@@ -218,6 +220,7 @@ export async function POST(request) {
         },
       ];
       return NextResponse.json(data);
+
     case "getPrepaymentByProductId":
       productId = url.searchParams.get("productId");
       data = [
@@ -249,6 +252,7 @@ export async function POST(request) {
         },
       ];
       return NextResponse.json(data);
+
     case "getTemplateByProductId":
       productId = url.searchParams.get("productId");
       data = [
@@ -295,6 +299,18 @@ export async function POST(request) {
           updateDate: new Date(),
         },
       ];
+      return NextResponse.json(data);
+
+    case "เetPolicyholderDocumentsById":
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}BackOffice/GetPolicyholderDocumentsById`,
+        body,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      if (response.status === 200) {
+        data = response.data?.data;
+      }
       return NextResponse.json(data);
   }
 }

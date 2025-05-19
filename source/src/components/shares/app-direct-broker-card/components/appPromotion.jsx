@@ -1,488 +1,370 @@
-import { useState, useEffect } from "react";
+"use client";
+
+import { useState, useEffect, useMemo } from "react";
 import {
-  Button,
   Grid,
-  TextField,
-  Typography,
+  Button,
   useTheme,
+  TextField,
   FormHelperText,
   CircularProgress,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Card,
-  InputAdornment,
 } from "@mui/material";
 import {
   AppCard,
-  AppDataGrid,
   AppStatus,
-  AppAutocomplete,
+  AppDataGrid,
   AppDatePicker,
-  AppCollapseCard,
-  AppWyswig,
+  AppAutocomplete,
 } from "@/components";
 import { Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { Transform, Yup } from "@utilities";
 import {
-  useAppSnackbar,
-  useAppRouter,
   useAppForm,
-  useAppDispatch,
+  useAppSnackbar,
   useAppSelector,
+  useAppFeatureCheck,
 } from "@hooks";
-import { APPLICATION_DEFAULT } from "@constants";
-import { format, addYears, addDays, parseISO } from "date-fns";
+import { APPLICATION_DEFAULT, APPLICATION_PROMOTION_STATUS } from "@constants";
+import { format, addYears, parseISO } from "date-fns";
 import {
-  RemoveRedEye,
   Edit,
+  Check,
+  Delete,
   Search,
   RestartAlt,
-  ExpandMore,
-  Delete,
-  Check,
+  RemoveRedEye,
 } from "@mui/icons-material";
-import { setDialog, closeDialog } from "@stores/slices";
 import { GridActionsCellItem } from "@mui/x-data-grid";
-import Image from "next/image";
-import { hi } from "date-fns/locale";
+import { AppManagePromotion } from ".";
+
 const AppPromotion = () => {
+  const defaultSortField = "create_date";
+  const defaultSortDirection = "desc";
   const { handleSnackAlert } = useAppSnackbar();
-  const theme = useTheme();
-  const promotionOption = [
-    {
-      id: "1",
-      label: "ส่วนลดเบี้ยเป็นเปอร์เซ็น",
-    },
-    {
-      id: "2",
-      label: "ส่วนลดเบี้ยเป็นจำนวน",
-    },
-    {
-      id: "3",
-      label: "ของขวัญของกำนัล",
-    },
-  ];
+  const { promotionCode: globalPromotionCode } = useAppSelector(
+    (state) => state.global
+  );
+  const [loading, setLoading] = useState(false);
+  const [promotion, setPromotion] = useState([]);
+  const [openManagePromotion, setOpenManagePromotion] = useState(false);
+  const [openManagePromotionMode, setOpenManagePromotionNode] = useState(false);
+  const [openManagePromotionInitialData, setOpenManagePromotionInitialData] =
+    useState(null);
+  const [sortField, setSortField] = useState(defaultSortField);
+  const [sortDirection, setSortDirection] = useState(defaultSortDirection);
   const [pageNumber, setPageNumber] = useState(
     APPLICATION_DEFAULT.dataGrid.pageNumber
   );
   const [pageSize, setPageSize] = useState(
     APPLICATION_DEFAULT.dataGrid.pageSize
   );
-  const [loading, setLoading] = useState(false);
-  const [data, setData] = useState({
-    rows: [],
-    totalRows: 0,
-  });
-  const [picture1600x200, setPicture1600x2000] = useState("");
-  const dispatch = useAppDispatch();
-  const { dialog } = useAppSelector((state) => state.global);
+  const { validFeature: grantRead } = useAppFeatureCheck([
+    "direct.promotion.read",
+  ]);
+  const { validFeature: grantEdit } = useAppFeatureCheck([
+    "direct.promotion.write",
+  ]);
+  const { validFeature: grantRequest } = useAppFeatureCheck([
+    "direct.promotion.request",
+  ]);
+  const { validFeature: grantApprove } = useAppFeatureCheck([
+    "direct.promotion.approve",
+  ]);
+  const { validFeature: grantDrop } = useAppFeatureCheck([
+    "direct.promotion.drop",
+  ]);
+
   const validationSchema = Yup.object().shape({
-    id: Yup.string().nullable(),
-    type: Yup.mixed().nullable(),
-    statusList: Yup.array().of(Yup.mixed()).nullable(),
     status: Yup.mixed().nullable(),
-    name: Yup.string().nullable(),
+    promotionCode: Yup.string().nullable(),
     fromCreateDate: Yup.date().nullable(),
-    toCreateDate: Yup.date().nullable(),
+    toCreateDate: Yup.date()
+      .nullable()
+      .when("fromCreateDate", {
+        is: (value) => {
+          return Boolean(value);
+        },
+        then: (schema) => schema.required(),
+      }),
     fromUpdateDate: Yup.date().nullable(),
-    toUpdateDate: Yup.date().nullable(),
-    fromInsuredSum: Yup.number().nullable(),
-    ToInsuredSum: Yup.number().nullable(),
-    promotion: Yup.array()
-      .of(
-        Yup.object().shape({
-          promotion_id: Yup.string().nullable(),
-          i_campaign: Yup.mixed().nullable(),
-          i_campaign_mkt: Yup.string().nullable(),
-          promotion_code: Yup.string().nullable(),
-          c_campaign: Yup.string().nullable(),
-          c_campaign_short: Yup.string().nullable(),
-          d_begin: Yup.date().nullable(),
-          d_end: Yup.date().nullable(),
-          discount_percent: Yup.number().nullable(),
-          discount_amount: Yup.number().nullable(),
-          discount_type: Yup.string().nullable(),
-          content_url: Yup.string().nullable(),
-          minimum_purchase: Yup.number().nullable(),
-          is_first_time_discount: Yup.boolean().nullable(),
-          promotion_status: Yup.number().nullable(),
-          promotion_status_message: Yup.string().nullable(),
-          min_premium_amount: Yup.number().nullable(),
-          max_premium_amount: Yup.number().nullable(),
-          min_coverage_amount: Yup.number().nullable(),
-          max_coverage_amount: Yup.number().nullable(),
-          condition_content: Yup.string().nullable(),
-          tag_promotion: Yup.string().nullable(),
-          remark_promotion_name: Yup.string().nullable(),
-          is_active: Yup.boolean().nullable(),
-          create_date: Yup.date().nullable(),
-          create_by: Yup.string().nullable(),
-          update_date: Yup.date().nullable(),
-          update_by: Yup.string().nullable(),
-          total_records: Yup.number().nullable(),
-          total_pages: Yup.number().nullable(),
-        })
-      )
-      .nullable(),
-    promotiontype: Yup.object().shape({
-      id: Yup.string().nullable(),
-      label: Yup.string().nullable(),
-    }),
-    promotionPayload: Yup.object().shape({
-      promotion_id: Yup.string().nullable(),
-      i_campaign: Yup.mixed().nullable(),
-      i_campaign_mkt: Yup.string().nullable(),
-      promotion_code: Yup.string().nullable(),
-      c_campaign: Yup.string().nullable(),
-      c_campaign_short: Yup.string().nullable(),
-      d_begin: Yup.date().nullable(),
-      d_end: Yup.date().nullable(),
-      discount_percent: Yup.number().nullable(),
-      discount_amount: Yup.number().nullable(),
-      discount_type: Yup.string().nullable(),
-      content_url: Yup.string().nullable(),
-      file_content_item: Yup.mixed().nullable(),
-      minimum_purchase: Yup.number().nullable(),
-      is_first_time_discount: Yup.boolean().nullable(),
-      promotion_status: Yup.number().nullable(),
-      promotion_status_message: Yup.string().nullable(),
-      min_premium_amount: Yup.number().nullable(),
-      max_premium_amount: Yup.number().nullable(),
-      min_coverage_amount: Yup.number().nullable(),
-      max_coverage_amount: Yup.number().nullable(),
-      condition_content: Yup.string().nullable(),
-      tag_promotion: Yup.string().nullable(),
-      remark_promotion_name: Yup.string().nullable(),
-      is_active: Yup.boolean().nullable(),
-      create_date: Yup.date().nullable(),
-      create_by: Yup.string().nullable(),
-      update_date: Yup.date().nullable(),
-      update_by: Yup.string().nullable(),
-    }),
+    toUpdateDate: Yup.date()
+      .nullable()
+      .when("fromUpdateDate", {
+        is: (value) => {
+          return Boolean(value);
+        },
+        then: (schema) => schema.required(),
+      }),
   });
-  const {
-    reset,
-    watch,
-    setValue,
-    control,
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useAppForm({
+
+  const formMethods = useAppForm({
     mode: "onBlur",
     reValidateMode: "onChange",
     resolver: yupResolver(validationSchema),
     defaultValues: {
-      id: "",
-      type: null,
       status: null,
-      name: "",
+      promotionCode: globalPromotionCode,
       fromCreateDate: null,
       toCreateDate: null,
       fromUpdateDate: null,
       toUpdateDate: null,
-      promotiontype: {},
-      promotion: [
-        {
-          id: "CAMPMKT01",
-          promotion_id: "",
-          i_campaign: null,
-          i_campaign_mkt: "CAMPMKT01",
-          promotion_code: "",
-          c_campaign: "",
-          c_campaign_short: "",
-          d_begin: new Date(),
-          d_end: new Date(),
-          discount_percent: 0,
-          discount_amount: 0,
-          discount_type: "",
-          content_url: "",
-          minimum_purchase: 0,
-          is_first_time_discount: false,
-          promotion_status: 1,
-          promotion_status_message: "",
-          min_premium_amount: 0,
-          max_premium_amount: 0,
-          min_coverage_amount: 0,
-          max_coverage_amount: 0,
-          condition_content: "",
-          tag_promotion: "",
-          remark_promotion_name: "",
-          is_active: true,
-          create_date: new Date(),
-          create_by: "admin",
-          update_date: new Date(),
-          update_by: "admin",
-          total_records: 2,
-          total_pages: 1,
-        },
-      ],
-      promotionPayload: {
-        id: "CAMPMKT01",
-        promotion_id: "",
-        i_campaign: null,
-        i_campaign_mkt: "CAMPMKT01",
-        promotion_code: "",
-        c_campaign: "",
-        c_campaign_short: "",
-        d_begin: new Date(),
-        d_end: new Date(),
-        discount_percent: 0,
-        discount_amount: 0,
-        discount_type: "",
-        content_url: "",
-        file_content_item: null,
-        minimum_purchase: 0,
-        is_first_time_discount: false,
-        promotion_status: 1,
-        promotion_status_message: "",
-        min_premium_amount: 0,
-        max_premium_amount: 0,
-        min_coverage_amount: 0,
-        max_coverage_amount: 0,
-        condition_content: "",
-        tag_promotion: "",
-        remark_promotion_name: "",
-        is_active: true,
-        create_date: new Date(),
-        create_by: "admin",
-        update_date: new Date(),
-        update_by: "admin",
-      },
     },
   });
+
+  const {
+    reset,
+    watch,
+    control,
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = formMethods;
+
   const hiddenColumn = {
     id: false,
   };
-  const columns = [
-    {
-      field: "id",
-    },
-    {
-      flex: 1,
-      field: "promotion_code",
-      type: "string",
-      headerAlign: "center",
-      headerName: "รหัส Promotion",
-      headerClassName: "header-main",
-      align: "left",
-      minWidth: 200,
-    },
 
-    {
-      flex: 1,
-      field: "promotion_status",
-      type: "string",
-      headerAlign: "center",
-      headerName: "สถานะ",
-      headerClassName: "header-main",
-      align: "center",
-      minWidth: 200,
-      renderCell: (params) => (
-        <AppStatus
-          status={params.value}
-          statusText={params.row.promotion_status_message}
-        />
-      ),
-    },
-    {
-      flex: 1,
-      field: "discount_percent",
-      type: "string",
-      headerAlign: "center",
-      headerName: "ส่วนลด(%)",
-      headerClassName: "header-main",
-      align: "right",
-      minWidth: 200,
-      renderCell: (params) => Transform.formatNumber(params.value),
-    },
-    {
-      flex: 1,
-      field: "discount_amount",
-      type: "string",
-      headerAlign: "center",
-      headerName: "ส่วนลด(บาท)",
-      headerClassName: "header-main",
-      align: "right",
-      minWidth: 200,
-      renderCell: (params) => Transform.formatNumber(params.value),
-    },
-    {
-      flex: 1,
-      field: "create_by",
-      type: "string",
-      headerAlign: "center",
-      headerName: "สร้างโดย",
-      headerClassName: "header-main",
-      align: "center",
-      minWidth: 100,
-    },
-    {
-      flex: 1,
-      field: "create_date",
-      type: "string",
-      headerAlign: "center",
-      headerName: "สร้างเมื่อ",
-      headerClassName: "header-main",
-      align: "center",
-      minWidth: 100,
-      valueGetter: (value) => {
-        if (!value) return "";
-        try {
-          let date;
-          date = typeof value === "string" ? parseISO(value) : new Date(value);
-          if (isNaN(date.getTime())) return value;
-          let formattedValue = format(addYears(date, 543), "dd/MM/yyyy");
-          return formattedValue;
-        } catch (error) {
-          return value;
-        }
+  const columns = useMemo(
+    () => [
+      {
+        field: "id",
       },
-    },
-    {
-      flex: 1,
-      field: "update_by",
-      type: "string",
-      headerAlign: "center",
-      headerName: "แก้ไขโดย",
-      headerClassName: "header-main",
-      align: "center",
-      minWidth: 100,
-    },
-    {
-      flex: 1,
-      field: "update_date",
-      type: "string",
-      headerAlign: "center",
-      headerName: "แก้ไขเมื่อ",
-      headerClassName: "header-main",
-      align: "center",
-      minWidth: 100,
-      valueGetter: (value) => {
-        if (!value) return "";
-        try {
-          let date;
-          date = typeof value === "string" ? parseISO(value) : new Date(value);
-          if (isNaN(date.getTime())) return value;
-          let formattedValue = format(addYears(date, 543), "dd/MM/yyyy");
-          return formattedValue;
-        } catch (error) {
-          return value;
-        }
+      {
+        flex: 1,
+        field: "promotion_code",
+        type: "string",
+        headerAlign: "center",
+        headerName: "รหัส Promotion",
+        headerClassName: "header-main",
+        align: "left",
+        minWidth: 200,
       },
-    },
-    {
-      flex: 1,
-      field: "actions",
-      type: "actions",
-      headerAlign: "center",
-      headerClassName: "header-main",
-      align: "center",
-      minWidth: 100,
-      getActions: (params) => {
-        const id = params?.row?.id;
-        const index = Array.from(watch(`promotion`)).findIndex(
-          (item) => item.id === id
-        );
-        const discountType = params.row.discount_type;
-        let disabledView = false; // TODO: เช็คตามสิทธิ์
-        let disabledEdit = false; // TODO: เช็คตามสิทธิ์
-        let disabledDelete = false; // TODO: เช็คตามสิทธิ์
-        let disabledApprove = false;
 
-        const viewFunction = disabledView
-          ? null
-          : () => handleView(index, discountType, params?.row);
-        const editFunction = disabledEdit
-          ? null
-          : () => handleEdit(index, discountType, params?.row);
-        const deleteFunction = disabledDelete
-          ? null
-          : () => handleDelete(index);
-        const ApproveFunction = disabledApprove
-          ? null
-          : () => handleApprove(index, discountType, params?.row);
-        const defaultProps = {
-          showInMenu: true,
-          sx: {
-            "&.Mui-disabled": {
-              pointerEvents: "all",
+      {
+        flex: 1,
+        field: "promotion_status",
+        type: "string",
+        headerAlign: "center",
+        headerName: "สถานะ",
+        headerClassName: "header-main",
+        align: "center",
+        minWidth: 200,
+        renderCell: (params) => {
+          return (
+            <AppStatus
+              type="1"
+              status={params.value}
+              statusText={params?.row?.promotion_status_name}
+            />
+          );
+        },
+      },
+      {
+        flex: 1,
+        field: "discount_percent",
+        type: "string",
+        headerAlign: "center",
+        headerName: "ส่วนลด(%)",
+        headerClassName: "header-main",
+        align: "right",
+        minWidth: 200,
+        renderCell: (params) => Transform.formatNumber(params.value),
+      },
+      {
+        flex: 1,
+        field: "discount_amount",
+        type: "string",
+        headerAlign: "center",
+        headerName: "ส่วนลด(บาท)",
+        headerClassName: "header-main",
+        align: "right",
+        minWidth: 200,
+        renderCell: (params) => Transform.formatNumber(params.value),
+      },
+      {
+        flex: 1,
+        field: "create_by",
+        type: "string",
+        headerAlign: "center",
+        headerName: "สร้างโดย",
+        headerClassName: "header-main",
+        align: "center",
+        minWidth: 100,
+      },
+      {
+        flex: 1,
+        field: "create_date",
+        type: "string",
+        headerAlign: "center",
+        headerName: "สร้างเมื่อ",
+        headerClassName: "header-main",
+        align: "center",
+        minWidth: 100,
+        valueGetter: (value) => {
+          if (!value) return "";
+          try {
+            let date;
+            date =
+              typeof value === "string" ? parseISO(value) : new Date(value);
+            if (isNaN(date.getTime())) return value;
+            let formattedValue = format(
+              addYears(date, 543),
+              "dd/MM/yyyy HH:mm:ss"
+            );
+            return formattedValue;
+          } catch (error) {
+            return value;
+          }
+        },
+      },
+      {
+        flex: 1,
+        field: "update_by",
+        type: "string",
+        headerAlign: "center",
+        headerName: "แก้ไขโดย",
+        headerClassName: "header-main",
+        align: "center",
+        minWidth: 100,
+      },
+      {
+        flex: 1,
+        field: "update_date",
+        type: "string",
+        headerAlign: "center",
+        headerName: "แก้ไขเมื่อ",
+        headerClassName: "header-main",
+        align: "center",
+        minWidth: 100,
+        valueGetter: (value) => {
+          if (!value) return "";
+          try {
+            let date;
+            date =
+              typeof value === "string" ? parseISO(value) : new Date(value);
+            if (isNaN(date.getTime())) return value;
+            let formattedValue = format(
+              addYears(date, 543),
+              "dd/MM/yyyy HH:mm:ss"
+            );
+            return formattedValue;
+          } catch (error) {
+            return value;
+          }
+        },
+      },
+      {
+        flex: 1,
+        field: "actions",
+        type: "actions",
+        headerAlign: "center",
+        headerClassName: "header-main",
+        align: "center",
+        minWidth: 100,
+        getActions: (params) => {
+          const id = params?.row?.id;
+          const allowView = true;
+          const allowEdit =
+            params?.row?.promotion_status === 1 || // แบบร่าง
+            params?.row?.promotion_status === 4 || // ยกเลิกใช้งาน
+            params?.row?.promotion_status === 5; // ไม่อนุมัติ
+          const allowApprove = params?.row?.promotion_status === 2; // ขออนุมัติ
+          const allowDrop = params?.row?.promotion_status === 3; // เปิดใช้งาน
+          let viewFunction = null;
+          let editFunction = null;
+          let approveFunction = null;
+          let deleteFunction = null;
+
+          if (allowView)
+            viewFunction = () => handleOpenManage(params?.row, "view");
+
+          if (allowEdit)
+            editFunction = () => handleOpenManage(params?.row, "edit");
+
+          if (allowApprove)
+            approveFunction = () => handleOpenManage(params?.row, "approve");
+
+          if (allowDrop)
+            deleteFunction = () => handleOpenManage(params?.row, "drop");
+
+          const defaultProps = {
+            showInMenu: true,
+            sx: {
+              "&.Mui-disabled": {
+                pointerEvents: "all",
+              },
             },
-          },
-        };
+          };
 
-        return [
-          <GridActionsCellItem
-            key={`view_${id}`}
-            icon={<RemoveRedEye />}
-            {...defaultProps}
-            label="ดูรายละเอียด"
-            disabled={disabledView}
-            onClick={viewFunction}
-          />,
-          <GridActionsCellItem
-            key={`Approve_${id}`}
-            icon={<Check />}
-            {...defaultProps}
-            label="พิจารณาอนุมัติ"
-            disabled={disabledView}
-            onClick={ApproveFunction}
-          />,
-          <GridActionsCellItem
-            key={`edit_${id}`}
-            icon={<Edit />}
-            {...defaultProps}
-            label="แก้ไข"
-            disabled={disabledEdit}
-            onClick={editFunction}
-          />,
-          <GridActionsCellItem
-            key={`delete_${id}`}
-            icon={<Delete />}
-            {...defaultProps}
-            label="ลบ"
-            disabled={disabledDelete}
-            onClick={deleteFunction}
-          />,
-        ];
+          let actions = [];
+          if (grantRead) {
+            actions.push(
+              <GridActionsCellItem
+                key={`view_${id}`}
+                icon={<RemoveRedEye />}
+                {...defaultProps}
+                label="ดูรายละเอียด"
+                disabled={!allowView}
+                onClick={viewFunction}
+              />
+            );
+          }
+
+          if (grantEdit && allowEdit) {
+            actions.push(
+              <GridActionsCellItem
+                key={`edit_${id}`}
+                icon={<Edit />}
+                {...defaultProps}
+                label="แก้ไขรายละเอียด"
+                onClick={editFunction}
+              />
+            );
+          }
+
+          if (grantApprove && allowApprove) {
+            actions.push(
+              <GridActionsCellItem
+                key={`Approve_${id}`}
+                icon={<Check />}
+                {...defaultProps}
+                label="พิจารณาอนุมัติ"
+                onClick={approveFunction}
+              />
+            );
+          }
+
+          if (grantDrop && allowDrop) {
+            actions.push(
+              <GridActionsCellItem
+                key={`delete_${id}`}
+                icon={<Delete />}
+                {...defaultProps}
+                label="ยกเลิกใช้งาน"
+                onClick={deleteFunction}
+              />
+            );
+          }
+
+          return actions;
+        },
       },
-    },
-  ];
-  const handleView = (index, discountType, params) => {
-    setValue("promotionPayload", params);
-    handlePromotionType(discountType);
-    handleNotification("จัดการโปรโมชั่น", "view", index, () => {
-      setTimeout(() => {}, 400);
-    });
+    ],
+    []
+  );
+
+  const handleOpenManage = (row, mode) => {
+    setOpenManagePromotionInitialData(row);
+    setOpenManagePromotionNode(mode);
+    setOpenManagePromotion(true);
   };
-  const handleAdd = () => {
-    handleNotification("จัดการโปรโมชั่น", () => {
-      setTimeout(() => {}, 400);
-    });
-  };
-  const handleApprove = (index, discountType, params) => {
-    setValue("promotionPayload", params);
-    handlePromotionType(discountType);
-    handleNotification("จัดการโปรโมชั่น", "Approve", index, () => {
-      setTimeout(() => {}, 400);
-    });
-  };
-  const handleEdit = (index, discountType, params) => {
-    setValue("promotionPayload", params);
-    handlePromotionType(discountType);
-    handleNotification("จัดการโปรโมชั่น", "edit", index, () => {
-      setTimeout(() => {}, 400);
-    });
-  };
-  useEffect(() => {
-    handleFetchProduct();
-  }, [pageNumber, pageSize]);
+
   const onSubmit = async (data) => {
     setLoading(true);
 
     try {
+      await handleFetchPromotion();
     } catch (error) {
       handleSnackAlert({ open: true, message: "ล้มเหลวเกิดข้อผิดพลาด" });
     } finally {
@@ -490,29 +372,21 @@ const AppPromotion = () => {
     }
   };
 
-  const handleResetForm = () => {
-    reset();
-  };
-  const handlePageModelChange = (model, detail) => {
-    setPageNumber(model.page);
-    setPageSize(model.pageSize);
-  };
-
-  const handleFetchProduct = async () => {
+  const handleFetchPromotion = async () => {
     setLoading(true);
+
     try {
       const body = {
-        promotion_id: null,
-        promotion_code: "",
+        promotion_code: watch("promotionCode"),
         create_date_start: watch("fromCreateDate"),
         create_date_end: watch("toCreateDate"),
         update_date_start: watch("fromUpdateDate"),
         update_date_end: watch("toUpdateDate"),
-        field: "CreateDate",
-        direction: "desc",
+        field: Transform.snakeToPascalCase(sortField),
+        direction: sortDirection,
         page_number: pageNumber,
         page_size: pageSize,
-        promotion_status: watch("status")?.id,
+        promotion_status: watch("status")?.value,
       };
 
       const response = await fetch(
@@ -523,6 +397,7 @@ const AppPromotion = () => {
           body: JSON.stringify(body),
         }
       );
+
       const data = await response.json();
       const resultData = Array.from(data).map((item) => {
         return {
@@ -531,8 +406,7 @@ const AppPromotion = () => {
         };
       });
 
-      const resetData = watch();
-      reset({ ...resetData, promotion: [...resultData] });
+      setPromotion(resultData);
     } catch (error) {
       handleSnackAlert({
         open: true,
@@ -543,732 +417,59 @@ const AppPromotion = () => {
     }
   };
 
-  const handlePromotionType = (id) => {
-    const dataSelect = Array.from(promotionOption).find(
-      (item) => item.id === id
-    );
-    const _form = watch();
-
-    reset({ ..._form, promotiontype: dataSelect });
+  const handleResetForm = async () => {
+    reset({
+      status: null,
+      promotionCode: "",
+      fromCreateDate: null,
+      toCreateDate: null,
+      fromUpdateDate: null,
+      toUpdateDate: null,
+    });
+    await handleFetchPromotion();
   };
 
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      // ตรวจสอบขนาดไฟล์ (max 10MB)
-      if (file.size > 10 * 1600 * 2000) {
-        handleSnackAlert({
-          open: true,
-          message: "ไฟล์มีขนาดใหญ่เกินไป กรุณาอัพโหลดไฟล์ขนาดไม่เกิน 10MB",
-          severity: "error",
-        });
-        return;
-      }
+  const handlePageModelChange = (model, detail) => {
+    setPageNumber(model.page);
+    setPageSize(model.pageSize);
+  };
 
-      // ตรวจสอบประเภทไฟล์
-      const allowedTypes = ["image/jpeg", "image/png", "image/gif"];
-      if (!allowedTypes.includes(file.type)) {
-        handleSnackAlert({
-          open: true,
-          message: "กรุณาอัพโหลดไฟล์ PDF หรือรูปภาพเท่านั้น",
-          severity: "error",
-        });
-        return;
-      }
+  const handleSortModelChange = (model, detail) => {
+    let _sortField = defaultSortField;
+    let _sortDirection = defaultSortDirection;
 
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const base64String = e.target.result.split(",")[1];
-        setValue("promotionPayload.file_content_item", base64String);
-        alert("อัพโหลดไฟล์สำเร็จ");
-      };
-      reader.readAsDataURL(file);
+    if (Array.from(model).length > 0) {
+      _sortField = model[0].field;
+      _sortDirection = model[0].sort;
     }
-  };
-  const handleSave = async (mode) => {
-    setLoading(true);
-    try {
-      let statusText = "";
-      if (mode === 1) {
-        statusText = "แบบร่าง";
-      } else if (mode === 2) {
-        statusText = "รออนุมัติ";
-      } else if (mode === 3) {
-        statusText = "เปิดใช้งาน";
-      } else if (mode === 4) {
-        statusText = "ยกเลิกการใช้งาน";
-      }
-      let payload = {
-        is_active: true,
-        create_by: watch("promotionPayload.create_by"),
-        update_by: "admin",
-        promotion_id: watch("promotionPayload.promotion_id"),
-        promotion_code: watch("promotionPayload.promotion_code"),
-        discount_percent: watch("promotionPayload.discount_percent"),
-        discount_amount: watch("promotionPayload.discount_amount"),
-        discount_type: watch("promotiontype.id"),
-        content_url: watch("promotionPayload.content_url") ?? "",
-        is_first_time_discount: watch(
-          "promotionPayload.is_first_time_discount"
-        ),
-        minimum_purchase: watch("promotionPayload.minimum_purchase"),
-        promotion_status: mode,
-        promotion_status_message: "แบบร่าง",
-        min_premium_amount: watch("promotionPayload.min_premium_amount"),
-        max_premium_amount: watch("promotionPayload.max_premium_amount"),
-        min_coverage_amount: watch("promotionPayload.min_coverage_amount"),
-        max_coverage_amount: watch("promotionPayload.max_coverage_amount"),
-        //ถ้า Upload file blob ต้องมี file_content_item = blob
-        file_content_item: watch("promotionPayload.file_content_item"),
-        condition_content: watch("promotionPayload.condition_content"),
-        remark_promotion_name: watch("promotionPayload.remark_promotion_name"),
-      };
-      console.log("payload", payload);
 
-      const response = await fetch(
-        "/api/direct/promotion?action=AddOrUpdatePromotion",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-    } catch (error) {
-      handleSnackAlert({
-        open: true,
-        message: "ล้มเหลวเกิดข้อผิดพลาด" + error,
-      });
-    } finally {
-      setLoading(false);
-    }
+    setSortField(_sortField);
+    setSortDirection(_sortDirection);
   };
 
-  //#region dialog
-  const handleNotification = (message, mode, index, callback) => {
-    dispatch(
-      setDialog({
-        ...dialog,
-        open: true,
-        title: message,
-        width: 60,
-        useDefaultBehavior: false,
-        renderAction: () => {
-          return (
-            <Grid container>
-              <Grid container justifyContent={"center"}>
-                <Grid item xs={11}>
-                  <Card sx={{ border: "1px solid", borderColor: "#e7e7e7" }}>
-                    <Grid container justifyContent={"center"}>
-                      <Grid item xs={11}>
-                        <Grid container spacing={2}>
-                          <Grid item xs={6}>
-                            <Controller
-                              name="promotionPayload.promotion_code"
-                              control={control}
-                              render={({ field }) => (
-                                <>
-                                  <TextField
-                                    {...field}
-                                    value={field.value ?? ""}
-                                    required
-                                    fullWidth
-                                    label="รหัสโปรโมชั่น"
-                                    margin="dense"
-                                    disabled={
-                                      mode === "view" || mode === "Approve"
-                                    }
-                                    size="small"
-                                  />
-                                  <FormHelperText error={errors?.name}>
-                                    {errors?.name?.message}
-                                  </FormHelperText>
-                                </>
-                              )}
-                            />
-                          </Grid>
-                          <Grid item xs={6}>
-                            <Controller
-                              name={`promotiontype`}
-                              control={control}
-                              render={({ field }) => {
-                                const { name, onChange, ...otherProps } = field;
+  useEffect(() => {
+    handleFetchPromotion();
+  }, [openManagePromotion]);
 
-                                return (
-                                  <>
-                                    <AppAutocomplete
-                                      id={name}
-                                      name={name}
-                                      disablePortal
-                                      fullWidth
-                                      required
-                                      label="ประเภทส่วนลด"
-                                      options={promotionOption}
-                                      onChange={(event, value) => {
-                                        onChange(value);
-                                        setValue("promotiontype", value);
-                                      }}
-                                      {...otherProps}
-                                      error={Boolean(errors?.status)}
-                                    />
-                                    <FormHelperText error={errors?.status}>
-                                      {errors?.status?.message}
-                                    </FormHelperText>
-                                  </>
-                                );
-                              }}
-                            />
-                          </Grid>
-                        </Grid>
-                      </Grid>
-                      <Grid item xs={11}>
-                        <Grid container spacing={2}>
-                          <Grid item xs={6}>
-                            <Controller
-                              name="promotionPayload.discount_percent"
-                              control={control}
-                              render={({ field }) => (
-                                <>
-                                  <TextField
-                                    {...field}
-                                    value={field.value ?? 0}
-                                    required
-                                    fullWidth
-                                    type="number"
-                                    label="ส่วนลด(%)"
-                                    margin="dense"
-                                    disabled={
-                                      mode === "view" || mode === "Approve"
-                                    }
-                                    size="small"
-                                    inputProps={{ maxLength: 100 }}
-                                  />
-                                  <FormHelperText error={errors?.name}>
-                                    {errors?.name?.message}
-                                  </FormHelperText>
-                                </>
-                              )}
-                            />
-                          </Grid>
-                          <Grid item xs={6}>
-                            <Controller
-                              name="promotionPayload.discount_amount"
-                              control={control}
-                              render={({ field }) => (
-                                <>
-                                  <TextField
-                                    {...field}
-                                    value={field.value ?? 0}
-                                    required
-                                    fullWidth
-                                    type="number"
-                                    label="ส่วนลดบาท"
-                                    margin="dense"
-                                    disabled={
-                                      mode === "view" || mode === "Approve"
-                                        ? true
-                                        : false
-                                    }
-                                    size="small"
-                                    error={Boolean(errors?.name)}
-                                    inputProps={{ maxLength: 100 }}
-                                  />
-                                  <FormHelperText error={errors?.name}>
-                                    {errors?.name?.message}
-                                  </FormHelperText>
-                                </>
-                              )}
-                            />
-                          </Grid>
-                        </Grid>
-                      </Grid>
-                      <Grid item xs={11}>
-                        <AppCard
-                          title={`เงื่อนไขการใช้งาน`}
-                          cardstyle={{
-                            border: "1px solid",
-                            borderColor: "#e7e7e7",
-                          }}
-                        >
-                          <Grid item xs={12}>
-                            <Grid container spacing={2}>
-                              <Grid item xs={6}>
-                                <Controller
-                                  name="promotionPayload.min_premium_amount"
-                                  control={control}
-                                  render={({ field }) => (
-                                    <>
-                                      <TextField
-                                        {...field}
-                                        value={field.value ?? 0}
-                                        required
-                                        fullWidth
-                                        type="number"
-                                        label="เบี้ยต่ำสุด (บาท)"
-                                        margin="dense"
-                                        disabled={
-                                          mode === "view" || mode === "Approve"
-                                            ? true
-                                            : false
-                                        }
-                                        size="small"
-                                        error={Boolean(errors?.name)}
-                                        inputProps={{ maxLength: 100 }}
-                                      />
-                                      <FormHelperText error={errors?.name}>
-                                        {errors?.name?.message}
-                                      </FormHelperText>
-                                    </>
-                                  )}
-                                />
-                              </Grid>
-                              <Grid item xs={6}>
-                                <Controller
-                                  name="promotionPayload.max_premium_amount"
-                                  control={control}
-                                  render={({ field }) => (
-                                    <>
-                                      <TextField
-                                        {...field}
-                                        value={field.value ?? 0}
-                                        required
-                                        fullWidth
-                                        type="number"
-                                        label="เบี้ยสูงสุด (บาท)"
-                                        margin="dense"
-                                        disabled={
-                                          mode === "view" || mode === "Approve"
-                                            ? true
-                                            : false
-                                        }
-                                        size="small"
-                                        error={Boolean(errors?.name)}
-                                        inputProps={{ maxLength: 100 }}
-                                      />
-                                      <FormHelperText error={errors?.name}>
-                                        {errors?.name?.message}
-                                      </FormHelperText>
-                                    </>
-                                  )}
-                                />
-                              </Grid>
-                            </Grid>
-                          </Grid>
-                          <Grid item xs={12}>
-                            <Grid container spacing={2}>
-                              <Grid item xs={6}>
-                                <Controller
-                                  name="promotionPayload.max_premium_amount"
-                                  control={control}
-                                  render={({ field }) => (
-                                    <>
-                                      <TextField
-                                        {...field}
-                                        value={field.value ?? 0}
-                                        required
-                                        fullWidth
-                                        type="number"
-                                        label="ทุนต่ำสุด (บาท)"
-                                        margin="dense"
-                                        disabled={
-                                          mode === "view" || mode === "Approve"
-                                            ? true
-                                            : false
-                                        }
-                                        size="small"
-                                        error={Boolean(errors?.name)}
-                                        inputProps={{ maxLength: 100 }}
-                                      />
-                                      <FormHelperText error={errors?.name}>
-                                        {errors?.name?.message}
-                                      </FormHelperText>
-                                    </>
-                                  )}
-                                />
-                              </Grid>
-                              <Grid item xs={6}>
-                                <Controller
-                                  name="promotionPayload.max_coverage_amount"
-                                  control={control}
-                                  render={({ field }) => (
-                                    <>
-                                      <TextField
-                                        {...field}
-                                        value={field.value ?? 0}
-                                        required
-                                        fullWidth
-                                        type="number"
-                                        label="ทุนสูงสด (บาท)"
-                                        margin="dense"
-                                        disabled={
-                                          mode === "view" || mode === "Approve"
-                                            ? true
-                                            : false
-                                        }
-                                        size="small"
-                                        error={Boolean(errors?.name)}
-                                        inputProps={{ maxLength: 100 }}
-                                      />
-                                      <FormHelperText error={errors?.name}>
-                                        {errors?.name?.message}
-                                      </FormHelperText>
-                                    </>
-                                  )}
-                                />
-                              </Grid>
-                            </Grid>
-                          </Grid>
-                        </AppCard>
-                        <AppCard
-                          title={`การแสดงผล`}
-                          cardstyle={{
-                            border: "1px solid",
-                            borderColor: "#e7e7e7",
-                            marginTop: 2,
-                            marginBottom: 4,
-                          }}
-                        >
-                          <Grid container spacing={2}>
-                            <Grid item xs={12}>
-                              <Grid container>
-                                <Grid item xs={12}>
-                                  <TextField
-                                    fullWidth
-                                    disabled
-                                    margin="dense"
-                                    size="small"
-                                    label="รูปภาพแท็ก (แสดงมุมมล่างขวาของแบนเนอร์) 600x200"
-                                    //id={`banner`}
-                                    //error={Boolean(errors?.name)}
-                                    inputProps={{ maxLength: 100 }}
-                                    InputProps={{
-                                      endAdornment: (
-                                        <InputAdornment position="end">
-                                          <Button sx={{ color: "GrayText" }}>
-                                            อัพโหลด
-                                          </Button>
-                                        </InputAdornment>
-                                      ),
-                                    }}
-                                    InputLabelProps={{ shrink: true }}
-                                  />
-                                </Grid>
-                                <Grid item xs={12}>
-                                  <Image
-                                    alt="banner"
-                                    src={"/images/600x200.png"}
-                                    width={600}
-                                    height={200}
-                                    style={{
-                                      aspectRatio: 600 / 200,
-                                      border: "2px dashed #e7e7e7",
-                                      objectFit: "contain",
-                                    }}
-                                  ></Image>
-                                </Grid>
-                              </Grid>
-                            </Grid>
-                            <Grid item xs={12}>
-                              <Grid container spacing={2}>
-                                <Grid item xs={6}>
-                                  <Controller
-                                    name="promotionPayload.c_campaign_short"
-                                    control={control}
-                                    render={({ field }) => (
-                                      <>
-                                        <TextField
-                                          {...field}
-                                          value={field.value ?? ""}
-                                          fullWidth
-                                          label="ข้อความ (แสดงมุมบนซ้ายของการ์ด)"
-                                          margin="dense"
-                                          disabled={
-                                            mode === "view" ||
-                                            mode === "Approve"
-                                              ? true
-                                              : false
-                                          }
-                                          size="small"
-                                          error={Boolean(errors?.name)}
-                                          inputProps={{ maxLength: 100 }}
-                                        />
-                                        <FormHelperText error={errors?.name}>
-                                          {errors?.name?.message}
-                                        </FormHelperText>
-                                      </>
-                                    )}
-                                  />
-                                </Grid>
-                                <Grid item xs={6}>
-                                  <Controller
-                                    name="promotionPayload.c_campaign"
-                                    control={control}
-                                    render={({ field }) => (
-                                      <>
-                                        <TextField
-                                          {...field}
-                                          value={field.value ?? ""}
-                                          fullWidth
-                                          label="ข้อความ (แสดงด้านล่างโปรโมชั่นหน้าคำนวณ)"
-                                          margin="dense"
-                                          disabled={
-                                            mode === "view" ||
-                                            mode === "Approve"
-                                              ? true
-                                              : false
-                                          }
-                                          size="small"
-                                          error={Boolean(errors?.name)}
-                                          inputProps={{ maxLength: 100 }}
-                                        />
-                                        <FormHelperText error={errors?.name}>
-                                          {errors?.name?.message}
-                                        </FormHelperText>
-                                      </>
-                                    )}
-                                  />
-                                </Grid>
-                              </Grid>
-                            </Grid>
-                          </Grid>
-                          <Grid container>
-                            <Grid item xs={12}>
-                              <TextField
-                                fullWidth
-                                disabled
-                                value={
-                                  watch("promotionPayload.content_url") ?? ""
-                                }
-                                margin="dense"
-                                size="small"
-                                label="รูปภาพแบนเนอร์ (1600 x 2000 px)"
-                                //id={`banner`}
-                                //error={Boolean(errors?.name)}
-                                inputProps={{ maxLength: 100 }}
-                                InputProps={{
-                                  endAdornment: (
-                                    <InputAdornment position="end">
-                                      <input
-                                        type="file"
-                                        accept=".jpg,.jpeg,.png,.gif"
-                                        style={{ display: "none" }}
-                                        id="file-upload"
-                                        onChange={handleFileUpload}
-                                      />
-                                      <label htmlFor="file-upload">
-                                        <Button
-                                          component="span"
-                                          sx={{ color: "GrayText" }}
-                                        >
-                                          อัพโหลด
-                                        </Button>
-                                      </label>
-                                    </InputAdornment>
-                                  ),
-                                }}
-                                InputLabelProps={{ shrink: true }}
-                              />
-                            </Grid>
-                            <Grid item xs={12}>
-                              <Image
-                                alt="banner"
-                                src={"/images/1600x2000.png"}
-                                width={1600}
-                                height={2000}
-                                style={{
-                                  aspectRatio: 1600 / 2000,
-                                  border: "2px dashed #e7e7e7",
-                                  objectFit: "contain",
-                                }}
-                              ></Image>
-                            </Grid>
-                            <Grid item xs={12}>
-                              <Typography mt={2}>คำอธิบาย</Typography>
-
-                              <AppWyswig
-                                value={
-                                  watch(`promotionPayload.condition_content`) ??
-                                  ""
-                                }
-                              />
-                            </Grid>
-                          </Grid>
-                        </AppCard>
-                      </Grid>
-                    </Grid>
-                  </Card>
-                </Grid>
-              </Grid>
-              <Grid container justifyContent={"space-around"} mt={2}>
-                <Grid item xs={11}>
-                  <Grid container justifyContent={"end"} spacing={2}>
-                    <Grid item xs={12} md="auto">
-                      <Button
-                        variant="contained"
-                        sx={{
-                          fontSize: "1.8rem",
-                          fontWeight: 700,
-                          color: theme.palette.common.white,
-                        }}
-                        onClick={() => {
-                          dispatch(
-                            setDialog({
-                              ...dialog,
-                              open: false,
-                              title: message,
-                            })
-                          );
-                        }}
-                      >
-                        ดูตัวอย่าง
-                      </Button>
-                    </Grid>
-                    {mode === "Approve" && (
-                      <Grid container justifyContent={"end"} spacing={2} mt={1}>
-                        <Grid item xs={12} md="auto">
-                          <Button
-                            variant="outlined"
-                            sx={{
-                              fontSize: "1.8rem",
-                              fontWeight: 700,
-                            }}
-                            onClick={() => {
-                              dispatch(closeDialog());
-                            }}
-                          >
-                            ยกเลิก
-                          </Button>
-                        </Grid>
-                        <Grid item xs={12} md="auto">
-                          <Button
-                            variant="contained"
-                            sx={{
-                              fontSize: "1.8rem",
-                              fontWeight: 700,
-                              backgroundColor: theme.palette.success.main,
-                            }}
-                            onClick={() => {
-                              handleSave(3);
-                              dispatch(
-                                setDialog({
-                                  ...dialog,
-                                  open: false,
-                                  title: message,
-                                })
-                              );
-                            }}
-                          >
-                            อนุมัติ
-                          </Button>
-                        </Grid>
-                        <Grid item xs={12} md="auto">
-                          <Button
-                            variant="contained"
-                            sx={{
-                              fontSize: "1.8rem",
-                              fontWeight: 700,
-                              backgroundColor: theme.palette.error.main,
-                            }}
-                            onClick={() => {
-                              handleSave(1);
-                              dispatch(
-                                setDialog({
-                                  ...dialog,
-                                  open: false,
-                                })
-                              );
-                            }}
-                          >
-                            ไม่อนุมัติ
-                          </Button>
-                        </Grid>
-                      </Grid>
-                    )}
-                    {mode === "edit" && (
-                      <Grid container justifyContent={"end"} spacing={2} mt={1}>
-                        <Grid item xs={12} md="auto">
-                          <Button
-                            variant="outlined"
-                            sx={{
-                              fontSize: "1.8rem",
-                              fontWeight: 700,
-                            }}
-                            onClick={() => {
-                              dispatch(closeDialog());
-                            }}
-                          >
-                            ยกเลิก
-                          </Button>
-                        </Grid>
-                        <Grid item xs={12} md="auto">
-                          <Button
-                            variant="contained"
-                            sx={{
-                              fontSize: "1.8rem",
-                              fontWeight: 700,
-                              color: theme.palette.common.white,
-                            }}
-                            onClick={() => {
-                              handleSave(2);
-                              dispatch(
-                                setDialog({
-                                  ...dialog,
-                                  open: false,
-                                  title: message,
-                                })
-                              );
-                            }}
-                          >
-                            ขออนุมัติ
-                          </Button>
-                        </Grid>
-                        <Grid item xs={12} md="auto">
-                          <Button
-                            variant="contained"
-                            sx={{
-                              fontSize: "1.8rem",
-                              fontWeight: 700,
-                              color: theme.palette.common.white,
-                            }}
-                            onClick={() => {
-                              handleSave(1);
-                              dispatch(
-                                setDialog({
-                                  ...dialog,
-                                  open: false,
-                                })
-                              );
-                            }}
-                          >
-                            บันทึก
-                          </Button>
-                        </Grid>
-                      </Grid>
-                    )}
-                  </Grid>
-                </Grid>
-              </Grid>
-            </Grid>
-          );
-        },
-      })
-    );
-  };
-  //#endregion
+  useEffect(() => {
+    handleFetchPromotion();
+  }, [pageNumber, pageSize, sortField, sortDirection]);
 
   return (
     <Grid container justifyContent={"center"} my={2}>
+      <AppManagePromotion
+        mode={openManagePromotionMode}
+        open={openManagePromotion}
+        setOpen={setOpenManagePromotion}
+        initialData={openManagePromotionInitialData}
+      />
+
       <Grid item xs={11.6}>
         <AppCard
-          title={`ผลิตภัณฑ์ที่ขายทั้งหมดของ`}
+          title={`โปรโมชั่นทั้งหมด`}
           cardstyle={{ border: "1px solid grey" }}
         >
           <form onSubmit={handleSubmit(onSubmit)}>
-            {
-              //#region first label
-            }
             <Grid container spacing={2}>
               <Grid item xs={12} md={3}>
                 <Controller
@@ -1285,29 +486,7 @@ const AppPromotion = () => {
                           disablePortal
                           fullWidth
                           label="สถานะ"
-                          options={[
-                            {
-                              id: null,
-                              label: "ทั้งหมด",
-                            },
-
-                            {
-                              id: "1",
-                              label: "แบบร่าง",
-                            },
-                            {
-                              id: "2",
-                              label: "รอการอนุมัติ",
-                            },
-                            {
-                              id: "3",
-                              label: "เปิดใช้งาน",
-                            },
-                            {
-                              id: "4",
-                              label: "ยกเลิกการใช้งาน",
-                            },
-                          ]}
+                          options={APPLICATION_PROMOTION_STATUS}
                           onChange={(event, value) => {
                             onChange(value);
                           }}
@@ -1328,22 +507,15 @@ const AppPromotion = () => {
                   label="รหัสโปรโมชั่น"
                   margin="dense"
                   size="small"
-                  id={`id`}
-                  {...register(`id`)}
-                  error={Boolean(errors?.name)}
+                  {...register(`promotionCode`)}
+                  error={Boolean(errors?.promotionCode)}
                   inputProps={{ maxLength: 100 }}
                 />
-                <FormHelperText error={errors?.name}>
-                  {errors?.name?.message}
+                <FormHelperText error={errors?.promotionCode}>
+                  {errors?.promotionCode?.message}
                 </FormHelperText>
               </Grid>
             </Grid>
-            {
-              //#endregion
-            }
-            {
-              //#region Date
-            }
             <Grid container spacing={2}>
               <Grid item xs={12} md={3}>
                 <Controller
@@ -1393,6 +565,9 @@ const AppPromotion = () => {
                           margin="dense"
                           size="small"
                           disableFuture
+                          minDate={new Date(watch("fromCreateDate"))}
+                          disabled={!watch("fromCreateDate")}
+                          readOnly={!watch("fromCreateDate")}
                           onChange={(date) => {
                             onChange(date);
                           }}
@@ -1455,6 +630,9 @@ const AppPromotion = () => {
                           margin="dense"
                           size="small"
                           disableFuture
+                          minDate={new Date(watch("fromUpdateDate"))}
+                          disabled={!watch("fromUpdateDate")}
+                          readOnly={!watch("fromUpdateDate")}
                           onChange={(date) => {
                             onChange(date);
                           }}
@@ -1470,13 +648,7 @@ const AppPromotion = () => {
                 />
               </Grid>
             </Grid>
-            {
-              //#endregion
-            }
-            {
-              //#region from button
-            }
-            <Grid container spacing={2} justifyContent={"end"}>
+            <Grid container spacing={2} justifyContent={"end"} mb={2}>
               <Grid item xs={12} md={"auto"} order={{ xs: 2, md: 1 }}>
                 <Button
                   variant="outlined"
@@ -1500,20 +672,20 @@ const AppPromotion = () => {
                 </Button>
               </Grid>
             </Grid>
-            {
-              //#endregion
-            }
           </form>
           <Grid item xs={12} sx={{ height: "25rem" }}>
             <AppDataGrid
-              rows={watch("promotion")}
-              rowCount={watch("promotion.0.total_records")}
+              rows={promotion}
+              rowCount={promotion?.[0]?.total_records}
               columns={columns}
               loading={loading}
               hiddenColumn={hiddenColumn}
               pageNumber={pageNumber}
               pageSize={pageSize}
+              sortField={sortField}
+              sortDirection={sortDirection}
               onPaginationModelChange={handlePageModelChange}
+              onSortModelChange={handleSortModelChange}
             />
           </Grid>
         </AppCard>

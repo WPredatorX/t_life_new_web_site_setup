@@ -14,7 +14,5 @@ export default function RootLayout({ children }) {
         </Suspense>
       </body>
     </html>
-
-    /* เพิ่มปุ่ม FAB */
   );
 }

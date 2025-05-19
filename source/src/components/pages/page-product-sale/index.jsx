@@ -1,67 +1,93 @@
 "use client";
+
 import { useState, useEffect } from "react";
-import { useAppSnackbar, useAppRouter, useAppForm } from "@hooks";
 import {
   Tab,
+  Tabs,
   Grid,
+  Card,
+  Divider,
   TextField,
   Typography,
-  FormHelperText,
-  Switch,
-  FormControlLabel,
-  Button,
-  Card,
-  useTheme,
   CardContent,
-  CircularProgress,
 } from "@mui/material";
-import { Yup } from "@/utilities";
-import { yupResolver } from "@hookform/resolvers/yup";
-import { AppCard, AppCardWithTab } from "@/components";
-import { Controller } from "react-hook-form";
-import { setDialog } from "@stores/slices";
-import { useAppDispatch, useAppSelector } from "@hooks";
-import { PageCommonDataProductSale, PageDataOutput } from "./components";
+import { AppCard } from "@/components";
+import { useAppFeatureCheck, useAppSnackbar } from "@hooks";
+import { PageCommonDataProductSale, PageProductDisplay } from "./components";
 
 const PageProductsSale = ({
-  productPlanId,
   mode,
   type,
+  channel,
+  productPlanId,
   saleChannelId,
   productCondition,
 }) => {
-  const [tabContent, setTabContent] = useState([]);
-  const [tabLabel, setTabLabel] = useState([]);
-  const theme = useTheme();
+  const [broker, setBroker] = useState();
+  const { handleSnackAlert } = useAppSnackbar();
+  const { validFeature: grantGeneral } = useAppFeatureCheck([
+    "direct.product.general.read",
+    "direct.product.general.write",
+    "direct.product.general.request",
+    "direct.product.general.approve",
+  ]);
+  const { validFeature: grantDisplay } = useAppFeatureCheck([
+    "direct.product.display.read",
+    "direct.product.display.write",
+    "direct.product.display.request",
+    "direct.product.display.approve",
+    "direct.product.display.drop",
+  ]);
+  const [value, setValue] = useState(grantGeneral ? 0 : 1);
 
-  const [loading, setLoading] = useState(false);
-  const brokerId = useAppSelector((state) => state.global.brokerId);
-  const dispatch = useAppDispatch();
-  useEffect(() => {
-    settab();
-  }, []);
-  const settab = () => {
-    let data = [
-      <PageCommonDataProductSale
-        productId={productPlanId}
-        type={type}
-        saleChannelId={saleChannelId}
-        productCondition={productCondition}
-      />,
-      <PageDataOutput saleChannelId={saleChannelId} />,
-    ];
-    let labeltab = ["ข้อมูลทั่วไป", "ข้อมูลการแสดงผล"];
-    setTabContent(data);
-    setTabLabel(labeltab);
+  const handleChange = (event, newValue) => {
+    setValue(newValue);
   };
 
-  if (loading) {
-    return <CircularProgress />;
-  }
+  const handleFetchBrokerData = async () => {
+    try {
+      const payload = {
+        i_subbusiness_line: channel,
+      };
+      const response = await fetch(`/api/direct?action=GetDirectGeneralInfo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json();
+      const targetData = data[0];
+      setBroker(targetData);
+    } catch (error) {
+      handleSnackAlert({
+        open: true,
+        message: "ทำรายการไม่สำเร็จ",
+      });
+    }
+  };
+
+  useEffect(() => {
+    handleFetchBrokerData();
+  }, []);
+
   return (
     <Grid container>
       <Grid item xs={12}>
         <AppCard title={"สินค้าที่ขาย"}>
+          <Grid container spacing={2} mb={2}>
+            <Grid item xs={12} md={4}>
+              <Typography>ช่องทาง</Typography>
+              <TextField fullWidth value={channel} size="small" disabled />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Typography>ชื่อช่องทาง</Typography>
+              <TextField
+                fullWidth
+                value={broker?.c_subbusiness_line}
+                size="small"
+                disabled
+              />
+            </Grid>
+          </Grid>
           <Grid container spacing={2}>
             <Grid item xs={12} md={4}>
               <Typography>Plan Code</Typography>
@@ -96,15 +122,48 @@ const PageProductsSale = ({
         </AppCard>
       </Grid>
       <Grid item xs={12} mt={2}>
-        <AppCardWithTab
-          mode={mode}
-          tabContent={tabContent}
-          tabLabels={tabLabel}
-          cardstyle={{
-            border: "1px solid",
-            borderColor: "#e7e7e7",
-          }}
-        />
+        <Card>
+          <Tabs
+            value={value}
+            onChange={handleChange}
+            variant="scrollable"
+            scrollButtons="auto"
+            indicatorColor="primary"
+            textColor="primary"
+          >
+            {grantGeneral && <Tab value={0} label={"ข้อมูลทั่วไป"} />}
+            {grantDisplay && <Tab value={1} label={"ข้อมูลการแสดงผล"} />}
+          </Tabs>
+          <Divider />
+          <CardContent>
+            <Grid container>
+              {value === 0 && grantGeneral && (
+                <Grid item xs={12}>
+                  <PageCommonDataProductSale
+                    mode={mode}
+                    type={type}
+                    channel={channel}
+                    productId={productPlanId}
+                    saleChannelId={saleChannelId}
+                    productCondition={productCondition}
+                  />
+                </Grid>
+              )}
+              {value === 1 && grantDisplay && (
+                <Grid item xs={12}>
+                  <PageProductDisplay
+                    mode={mode}
+                    type={type}
+                    channel={channel}
+                    productId={productPlanId}
+                    saleChannelId={saleChannelId}
+                    productCondition={productCondition}
+                  />
+                </Grid>
+              )}
+            </Grid>
+          </CardContent>
+        </Card>
       </Grid>
     </Grid>
   );

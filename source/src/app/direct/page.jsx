@@ -1,8 +1,7 @@
-"use client";
-import { PageDirect } from "@/components";
+import { Direct } from "./components";
 
-const Direct = () => {
-  return <PageDirect />;
+const PageDireact = ({ searchParams: { tabIndex, promotionCode } }) => {
+  return <Direct tabIndex={tabIndex} promotionCode={promotionCode} />;
 };
 
-export default Direct;
+export default PageDireact;

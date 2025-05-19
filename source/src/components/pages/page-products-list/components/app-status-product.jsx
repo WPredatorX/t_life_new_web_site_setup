@@ -5,32 +5,18 @@ import { Chip } from "@mui/material";
 const AppStatusProduct = ({ status }) => {
   const getColor = () => {
     switch (status) {
-      case true:
+      case "เปิดใช้งาน":
         return "success";
-      case false:
+      case "ยกเลิกใช้งาน":
         return "error";
+      case "แบบร่าง":
+        return "info";
       default:
-        return "primary";
+        return "info";
     }
   };
 
-  const getText = () => {
-    switch (status) {
-      case true:
-        return "เปิดใช้งาน";
-      case false:
-        return "ยกเลิกการใช้งาน";
-      default:
-        return "แบบร่าง";
-    }
-  };
-  return (
-    <Chip
-      sx={{ width: "8rem", color: "white" }}
-      color={getColor()}
-      label={getText()}
-    />
-  );
+  return <Chip sx={{ width: "8rem" }} color={getColor()} label={status} />;
 };
 
 export default AppStatusProduct;

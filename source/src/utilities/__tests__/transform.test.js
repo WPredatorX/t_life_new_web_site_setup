@@ -1,4 +1,4 @@
-import { flatten } from "../transform";
+import { flatten, snakeToPascalCase } from "../transform";
 
 describe("Transform Utility", () => {
   it("shoudl handle flatten json", () => {
@@ -117,39 +117,50 @@ describe("Transform Utility", () => {
       ],
     });
   });
-});
 
-it("shoudl handle flatten json with array props and maxDepth option", () => {
-  // arrange
-  const json = {
-    id: 0,
-    label: {
-      th: "mock-label-th",
-      en: "mock-label-en",
-    },
-    child: [
-      {
-        id: 0,
-        label: {
-          th: "mock-child-0-label-th",
-          en: "mock-child-0-label-en",
-        },
+  it("shoudl handle flatten json with array props and maxDepth option", () => {
+    // arrange
+    const json = {
+      id: 0,
+      label: {
+        th: "mock-label-th",
+        en: "mock-label-en",
       },
-      {
-        id: 1,
-        label: {
-          th: "mock-child-1-label-th",
-          en: "mock-child-1-label-en",
+      child: [
+        {
+          id: 0,
+          label: {
+            th: "mock-child-0-label-th",
+            en: "mock-child-0-label-en",
+          },
         },
-      },
-    ],
-  };
+        {
+          id: 1,
+          label: {
+            th: "mock-child-1-label-th",
+            en: "mock-child-1-label-en",
+          },
+        },
+      ],
+    };
 
-  // act
-  const flattenResult = flatten(json, { maxDepth: 1 });
+    // act
+    const flattenResult = flatten(json, { maxDepth: 1 });
 
-  // assert
-  expect(flattenResult).toStrictEqual({
-    ...json,
+    // assert
+    expect(flattenResult).toStrictEqual({
+      ...json,
+    });
+  });
+
+  it("should transform snake case to pascal", () => {
+    // arrange
+    const input = "number_of_change";
+
+    // act
+    const transformResult = snakeToPascalCase(input);
+
+    // assert
+    expect(transformResult).toStrictEqual("NumberOfChange");
   });
 });

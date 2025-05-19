@@ -27,6 +27,7 @@ const AppAutocomplete = forwardRef(
       error = false,
       helperText = "",
       disabled = false,
+      renderOption = null,
       ...otherProps
     },
     ref
@@ -57,6 +58,7 @@ const AppAutocomplete = forwardRef(
       size: size,
       value: value,
       disabled: disabled,
+      required: required,
       ref: ref,
       options: onBeforeOpen ? optionAsync : options,
       loading: loading,
@@ -69,32 +71,30 @@ const AppAutocomplete = forwardRef(
       getOptionLabel: (option) => {
         return option.label;
       },
-      renderOption: (props, option) => {
-        return (
-          <li {...props} key={option.id}>
-            {multilingual ? option.label[lang.toLowerCase()] : option.label}
-          </li>
-        );
+      getOptionDisabled: (option) => {
+        return option.disabled;
       },
-      renderOption: (props, option) => {
-        return (
-          <Box
-            {...props}
-            key={props.id}
-            sx={{
-              "&:hover": {
-                cursor: "pointer",
-                backgroundColor: theme.palette.grey.main,
-                color: theme.palette.primary.main,
-              },
-            }}
-            py={0.5}
-            px={2}
-          >
-            <Typography variant="subtitle1">{option.label}</Typography>
-          </Box>
-        );
-      },
+      renderOption: renderOption
+        ? renderOption
+        : (props, option) => {
+            return (
+              <Box
+                {...props}
+                key={props.id}
+                sx={{
+                  "&:hover": {
+                    cursor: "pointer",
+                    backgroundColor: theme.palette.grey.main,
+                    color: theme.palette.primary.main,
+                  },
+                }}
+                py={0.5}
+                px={2}
+              >
+                <Typography variant="subtitle1">{option.label}</Typography>
+              </Box>
+            );
+          },
       renderTags: (tagValue, getTagProps) =>
         tagValue.map((option, index) => {
           const { key, ...tagProps } = getTagProps({ index });
@@ -120,6 +120,7 @@ const AppAutocomplete = forwardRef(
         <TextField
           {...params}
           label={label}
+          required={required}
           error={error}
           helperText={helperText}
           margin={margin}

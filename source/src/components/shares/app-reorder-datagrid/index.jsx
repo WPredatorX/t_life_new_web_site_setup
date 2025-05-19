@@ -13,11 +13,11 @@ import {
   Grid,
 } from "@mui/material";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
-import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { APPLICATION_DEFAULT } from "@/constants";
 
 // Example overlays (replace these with your actual components)
-const GridNoRowsOverlay = () => <div>No rows to display</div>;
+const GridNoRowsOverlay = () => <div>ไม่พบข้อมูล</div>;
 const GridLoadingOverlay = () => <div>Loading...</div>;
 
 // APPLICATION_DEFAULT should be defined in your project.
@@ -36,6 +36,15 @@ function CustomDataGrid({
   noRowsOverlay = () => <GridNoRowsOverlay />,
   loadingOverlay = () => <GridLoadingOverlay />,
   labelDisplayedRows = ({ from, to, count }) => `${from}–${to} จาก ${count}`,
+  sortField = "",
+  sortDirection = "asc",
+  onRowClick = () => {},
+  pagination = true,
+  disableColumnSorting = false,
+  hideFooter = false,
+  hideFooterPagination = false,
+  hideFooterSelectedRowCount = false,
+  handleUpdateRow = () => {},
 }) {
   // Local state for rows (to enable reordering)
   const [localRows, setLocalRows] = useState(rows);
@@ -50,6 +59,7 @@ function CustomDataGrid({
     const updatedRows = Array.from(localRows);
     const [removed] = updatedRows.splice(result.source.index, 1);
     updatedRows.splice(result.destination.index, 0, removed);
+    handleUpdateRow(updatedRows);
     setLocalRows(updatedRows);
   };
 
@@ -69,7 +79,12 @@ function CustomDataGrid({
   const visibleColumns = columns.filter(
     (col) => hiddenColumn[col.field] !== false
   );
-
+  const renderCell = (col, row) => {
+    return col.renderCell({
+      value: row[col.field],
+      row: row,
+    });
+  };
   // Calculate total columns count for overlay colspan: 1 for drag handle + 1 for selection (if any) + visible columns length.
   const totalColumns = visibleColumns.length + 1 + (rowSelection ? 1 : 0);
 
@@ -85,7 +100,9 @@ function CustomDataGrid({
                   <TableCell sx={{ width: 50 }} />
                   {rowSelection && <TableCell />}
                   {visibleColumns.map((col) => (
-                    <TableCell key={col.field}>{col.headerName}</TableCell>
+                    <TableCell style={{ color: "white" }} key={col.field}>
+                      {col.headerName}
+                    </TableCell>
                   ))}
                 </TableRow>
               </TableHead>
@@ -96,7 +113,7 @@ function CustomDataGrid({
                     {...provided.droppableProps}
                   >
                     {localRows.length === 0 ? (
-                      <TableRow>
+                      <TableRow sx={{ height: "104px" }}>
                         <TableCell colSpan={totalColumns} align="center">
                           {noRowsOverlay()}
                         </TableCell>
@@ -126,11 +143,15 @@ function CustomDataGrid({
                                     <Checkbox checked={false} />
                                   </TableCell>
                                 )}
-                                {visibleColumns.map((col) => (
-                                  <TableCell key={col.field}>
-                                    {row[col.field]}
-                                  </TableCell>
-                                ))}
+                                {visibleColumns.map((col) => {
+                                  return (
+                                    <TableCell key={col.field}>
+                                      {col.renderCell
+                                        ? renderCell(col, row)
+                                        : row[col.field]}
+                                    </TableCell>
+                                  );
+                                })}
                               </TableRow>
                             )}
                           </Draggable>
@@ -147,7 +168,7 @@ function CustomDataGrid({
       </Grid>
       <Grid item xs={12}>
         {/* Render loading overlay if loading */}
-        {rowCount !== 0 && (
+        {rowCount !== 0 && !hideFooter && (
           <TablePagination
             component="div"
             count={rowCount}

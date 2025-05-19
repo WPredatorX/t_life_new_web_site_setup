@@ -8,6 +8,7 @@ import {
 import { APPLICATION_DEFAULT } from "@constants";
 
 const AppDataGrid = ({
+  apiRef = null,
   columns = [],
   rows = [],
   rowCount = 0,
@@ -16,6 +17,8 @@ const AppDataGrid = ({
   hiddenColumn = {},
   loading = false,
   rowSelection = false,
+  onRowSelectionModelChange = () => {},
+  rowSelectionModel = [],
   getRowId = (row) => row.id,
   onPaginationModelChange = () => {},
   onSortModelChange = () => {},
@@ -24,41 +27,72 @@ const AppDataGrid = ({
   labelDisplayedRows = ({ from, to, count }) => `${from}–${to} จาก ${count}`,
   sortField = "",
   sortDirection = "asc",
-  onRowClick = {},
+  onRowClick = () => {},
+  pagination = true,
+  disableColumnSorting = false,
+  hideFooter = false,
+  hideFooterPagination = false,
+  hideFooterSelectedRowCount = false,
+  disableRowSelectionOnClick = false,
+  sortingMode = "server", // client
+  paginationMode = "server", // client
 }) => {
   return (
     <DataGrid
+      apiRef={apiRef}
       rows={rows}
       getRowId={getRowId}
       rowSelection={rowSelection}
+      onRowSelectionModelChange={onRowSelectionModelChange}
+      rowSelectionModel={rowSelectionModel}
       columns={columns}
       loading={loading}
       rowCount={rowCount}
       onRowClick={onRowClick}
+      pagination={pagination}
+      disableColumnSorting={disableColumnSorting}
       initialState={{
-        pagination: {
-          paginationModel: { page: 0, pageSize: pageSize },
-        },
+        pagination:
+          paginationMode === "server"
+            ? {
+                paginationModel: { page: 0, pageSize: pageSize },
+              }
+            : null,
         columns: {
           columnVisibilityModel: hiddenColumn,
         },
-        sorting: { sortModel: [{ field: sortField, sort: sortDirection }] },
+        sorting:
+          sortingMode === "server"
+            ? { sortModel: [{ field: sortField, sort: sortDirection }] }
+            : null,
       }}
+      hideFooter={hideFooter}
+      hideFooterPagination={hideFooterPagination}
+      hideFooterSelectedRowCount={hideFooterSelectedRowCount}
       disableColumnMenu
       disableVirtualization
-      sortModel={[{ field: sortField, sort: sortDirection }]}
-      sortingMode="server"
-      paginationMode="server"
+      sortingOrder={["asc", "desc"]}
+      sortingMode={sortingMode}
+      {...(sortingMode === "server" && {
+        sortModel: [{ field: sortField, sort: sortDirection }],
+      })}
+      paginationMode={paginationMode}
       pageSizeOptions={[...APPLICATION_DEFAULT.dataGrid.pageSizeOption]}
-      paginationModel={{
-        page: pageNumber,
-        pageSize: pageSize,
-      }}
+      {...(paginationMode === "server" && {
+        paginationModel: {
+          page: pageNumber,
+          pageSize: pageSize,
+        },
+      })}
       onPaginationModelChange={onPaginationModelChange}
       onSortModelChange={onSortModelChange}
       slots={{
         noRowsOverlay: noRowsOverlay,
         loadingOverlay: loadingOverlay,
+      }}
+      localeText={{
+        noRowsLabel: "ไม่พบข้อมูล",
+        noResultsOverlayLabel: "ไม่พบข้อมูล",
       }}
       slotProps={{
         pagination: {
@@ -66,6 +100,7 @@ const AppDataGrid = ({
           labelRowsPerPage: "จำนวนรายการต่อหน้า",
         },
       }}
+      disableRowSelectionOnClick={disableRowSelectionOnClick}
     />
   );
 };

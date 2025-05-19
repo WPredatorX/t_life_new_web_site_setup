@@ -1,300 +1,175 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
-  Button,
   Grid,
-  TextField,
-  Typography,
+  Button,
   useTheme,
   FormHelperText,
   CircularProgress,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Card,
-  FormControlLabel,
-  Switch,
 } from "@mui/material";
 import {
   AppCard,
-  AppDataGrid,
   AppStatus,
-  AppAutocomplete,
+  AppDataGrid,
   AppDatePicker,
-  AppCollapseCard,
+  AppAutocomplete,
 } from "@/components";
 import { Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { Yup } from "@utilities";
+import { Yup, Transform } from "@utilities";
 import {
-  useAppSnackbar,
-  useAppRouter,
+  useAppDialog,
   useAppForm,
-  useAppDispatch,
   useAppSelector,
-  useAppFieldArray,
+  useAppSnackbar,
 } from "@hooks";
-import { APPLICATION_DEFAULT } from "@constants";
-import { format, addYears, addDays, parseISO } from "date-fns";
+import {
+  APPLICATION_DEFAULT,
+  APPLICATION_RECORD_PRODUCT_CHANNEL_DETAIL_STATUS,
+} from "@constants";
+import { format, addYears, parseISO, addHours } from "date-fns";
 import { GridActionsCellItem } from "@mui/x-data-grid";
 import {
-  RemoveRedEye,
+  Add,
   Edit,
   Search,
-  RestartAlt,
-  ExpandMore,
-  Add,
   Delete,
+  RestartAlt,
+  RemoveRedEye,
 } from "@mui/icons-material";
-import { setDialog } from "@stores/slices";
-const AppProductSaleRange = ({ formMethods, productId }) => {
-  const { handleSnackAlert } = useAppSnackbar();
-  const theme = useTheme();
-  const dispatch = useAppDispatch();
-  const { dialog } = useAppSelector((state) => state.global);
+import AppManageSaleRange from "./appManageSaleRange";
 
+const AppProductSaleRange = ({ dataForm, productId, preventInput }) => {
+  const theme = useTheme();
+  const { handleSnackAlert } = useAppSnackbar();
+  const { handleNotification } = useAppDialog();
+  const { activator } = useAppSelector((state) => state.global);
   const [pageNumber, setPageNumber] = useState(
     APPLICATION_DEFAULT.dataGrid.pageNumber
   );
   const [pageSize, setPageSize] = useState(
     APPLICATION_DEFAULT.dataGrid.pageSize
   );
+  const defaultSortField = "create_date";
+  const defaultSortDirection = "desc";
+  const [sortField, setSortField] = useState(defaultSortField);
+  const [sortDirection, setSortDirection] = useState(defaultSortDirection);
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState({
-    rows: [],
-    totalRows: 0,
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogMode, setDialogMode] = useState("view");
+  const [selectedRow, setSelectedRow] = useState(null);
+
+  const validationSchema = Yup.object().shape({
+    active_status: Yup.mixed().nullable(),
+    sale_start_date_start: Yup.date().nullable(),
+    sale_start_date_end: Yup.date()
+      .nullable()
+      .when("sale_start_date_start", {
+        is: (value) => {
+          return Boolean(value);
+        },
+        then: (schema) => schema.required(),
+      }),
+    sale_end_date_start: Yup.date().nullable(),
+    sale_end_date_end: Yup.date()
+      .nullable()
+      .when("sale_end_date_start", {
+        is: (value) => {
+          return Boolean(value);
+        },
+        then: (schema) => schema.required(),
+      }),
+    create_date_start: Yup.date().nullable(),
+    create_date_end: Yup.date()
+      .nullable()
+      .when("create_date_start", {
+        is: (value) => {
+          return Boolean(value);
+        },
+        then: (schema) => schema.required(),
+      }),
+    update_date_start: Yup.date().nullable(),
+    update_date_end: Yup.date()
+      .nullable()
+      .when("update_date_start", {
+        is: (value) => {
+          return Boolean(value);
+        },
+        then: (schema) => schema.required(),
+      }),
   });
+
+  const formMethods = useAppForm({
+    mode: "onBlur",
+    reValidateMode: "onChange",
+    resolver: yupResolver(validationSchema),
+    defaultValues: {
+      active_status: null,
+      sale_start_date_start: null,
+      sale_start_date_end: null,
+      sale_end_date_start: null,
+      sale_end_date_end: null,
+      create_date_start: null,
+      create_date_end: null,
+      update_date_start: null,
+      update_date_end: null,
+    },
+  });
+
   const {
     watch,
     reset,
     control,
-    register,
     handleSubmit,
-    setValue,
+    clearErrors,
     formState: { errors },
   } = formMethods;
-  const baseName = "saleRange";
-  const baseErrors = errors?.[baseName];
-  const baseObject = `${baseName}.rows`;
-  const { fields, insert, remove, update } = useAppFieldArray({
-    control,
-    name: baseObject,
-  });
-  const router = useAppRouter();
-  const AddField = () => {
-    let newid = crypto.randomUUID();
-    setValue(`${baseName}.baseRows.id`, newid);
-    setValue(`${baseName}.baseRows.status`, 1);
-    setValue(`${baseName}.baseRows.statusText`, "รายการใหม่");
-    setValue(`${baseName}.baseRows.create_by`, "admin");
-    setValue(`${baseName}.baseRows.create_date`, new Date());
-    setValue(`${baseName}.baseRows.update_by`, "admin");
-    setValue(`${baseName}.baseRows.update_date`, new Date());
-    let re = watch(`${baseName}.baseRows`);
 
-    insert(fields.length, re);
-  };
-  const DeleteField = (index) => {
-    remove(index);
-  };
-  const UpdateField = (index) => {
-    let oldValue = watch(`${baseName}.rows.${index}`);
-    setValue(`${baseName}.baseRows.id`, oldValue.id);
-    setValue(`${baseName}.baseRows.status`, oldValue.status);
-    setValue(`${baseName}.baseRows.statusText`, oldValue.statusText);
-    setValue(`${baseName}.baseRows.update_by`, "admin");
-    setValue(`${baseName}.baseRows.update_date`, new Date());
-    let re = watch(`${baseName}.baseRows`);
-    update(index, re);
-  };
-  const handleAdd = () => {
-    handleNotiification("จัดการระยะเวลาขาย", "add", () => {
-      setTimeout(() => {}, 400);
+  const {
+    // getValues: getValuesData,
+    watch: watchData,
+    reset: resetData,
+    // resetField: resetFieldData,
+    setValue: setValueData,
+    formState: formStateData,
+  } = dataForm;
+  const { dirtyFields: dirtyFieldsData } = formStateData;
+  const isDirtyData = dirtyFieldsData.saleRangeTemp;
+
+  const watchedSaleRange = watchData("saleRange");
+  const watchedSaleRangeTemp = watchData("saleRangeTemp");
+
+  const rowsDisplay = useMemo(() => {
+    const tempData = watchedSaleRangeTemp ?? [];
+    const rowData = watchedSaleRange ?? [];
+
+    // 1. Merge ของเก่า
+    const merged = rowData.map((item) => {
+      const override = tempData.find(
+        (i) => i.sale_period_id === item.sale_period_id
+      );
+      return override ? { ...item, ...override } : item;
     });
-  };
-  const handleEdit = (params) => {
-    handleNotiification(
-      "จัดการระยะเวลาขาย",
-      "edit",
-      () => {
-        setTimeout(() => {}, 400);
-      },
-      params
+
+    // 2. หาตัวใหม่จาก temp ที่ยังไม่มีใน rowData
+    const newItems = tempData.filter(
+      (item) => !rowData.some((r) => r.sale_period_id === item.sale_period_id)
     );
-  };
-  const handleView = (params) => {
-    handleNotiification(
-      "จัดการระยะเวลาขาย",
-      "view",
-      () => {
-        setTimeout(() => {}, 400);
-      },
-      params
-    );
-  };
-  const handleDelete = (index) => {
-    DeleteField(index);
-  };
-  const handleNotiification = (message, mode, callback, index) => {
-    dispatch(
-      setDialog({
-        ...dialog,
-        open: true,
-        title: message,
-        useDefaultBehavior: false,
-        renderAction: () => {
-          return (
-            <Grid container>
-              <Grid container justifyContent={"center"}>
-                <Grid item xs={11}>
-                  <Card sx={{ border: "1px solid", borderColor: "#e7e7e7" }}>
-                    <Grid container justifyContent={"center"}>
-                      <Grid item xs={11}>
-                        <Controller
-                          name={`${baseName}.baseRows.sale_start_date`}
-                          control={control}
-                          render={({ field }) => {
-                            const { name, onChange, ...otherProps } = field;
 
-                            return (
-                              <>
-                                <AppDatePicker
-                                  id={name}
-                                  name={name}
-                                  label="วันที่เริ่มต้น"
-                                  disabled={mode === "view" ? true : false}
-                                  fullWidth
-                                  margin="dense"
-                                  size="small"
-                                  disableFuture
-                                  onChange={(date) => {
-                                    onChange(date);
-                                  }}
-                                  error={Boolean(errors?.fromCreateDate)}
-                                  {...otherProps}
-                                />
-                                <FormHelperText error={errors?.fromCreateDate}>
-                                  {errors?.fromCreateDate?.message}
-                                </FormHelperText>
-                              </>
-                            );
-                          }}
-                        />
-                      </Grid>
-                      <Grid item xs={11} mb={2}>
-                        <Controller
-                          name={`${baseName}.baseRows.sale_end_date`}
-                          control={control}
-                          disabled={mode === "view" ? true : false}
-                          render={({ field }) => {
-                            const { name, onChange, ...otherProps } = field;
+    // 3. รวมทั้งหมด
+    return [...merged, ...newItems];
+  }, [watchedSaleRange, watchedSaleRangeTemp]);
 
-                            return (
-                              <>
-                                <AppDatePicker
-                                  id={name}
-                                  name={name}
-                                  label="จากวันที่สิ้นสุด"
-                                  fullWidth
-                                  margin="dense"
-                                  size="small"
-                                  disableFuture
-                                  onChange={(date) => {
-                                    onChange(date);
-                                  }}
-                                  error={Boolean(errors?.fromUpdateDate)}
-                                  {...otherProps}
-                                />
-                                <FormHelperText error={errors?.fromUpdateDate}>
-                                  {errors?.fromUpdateDate?.message}
-                                </FormHelperText>
-                              </>
-                            );
-                          }}
-                        />
-                      </Grid>
-                    </Grid>
-                  </Card>
-                </Grid>
-              </Grid>
-              <Grid container justifyContent={"space-around"} mt={2}>
-                <Grid item xs={11}>
-                  <Grid container justifyContent={"center"}>
-                    {mode === "add" && (
-                      <Grid item xs={12} md="auto" pr={2}>
-                        <Button
-                          variant="contained"
-                          onClick={() => {
-                            AddField();
-                            dispatch(
-                              setDialog({
-                                ...dialog,
-                                open: false,
-                              })
-                            );
-                          }}
-                        >
-                          ยืนยัน
-                        </Button>
-                      </Grid>
-                    )}
-
-                    {mode === "edit" && (
-                      <Grid item xs={12} md="auto" pr={2}>
-                        <Button
-                          variant="contained"
-                          onClick={() => {
-                            UpdateField(index);
-                            dispatch(
-                              setDialog({
-                                ...dialog,
-                                open: false,
-                              })
-                            );
-                          }}
-                        >
-                          ยืนยัน
-                        </Button>
-                      </Grid>
-                    )}
-
-                    <Grid item xs={12} md="auto">
-                      <Button
-                        variant="contained"
-                        onClick={() => {
-                          dispatch(
-                            setDialog({
-                              ...dialog,
-                              open: false,
-                              title: message,
-                            })
-                          );
-                        }}
-                      >
-                        ยกเลิก
-                      </Button>
-                    </Grid>
-                  </Grid>
-                </Grid>
-              </Grid>
-            </Grid>
-          );
-        },
-      })
-    );
-  };
   const hiddenColumn = {
     id: false,
   };
-  useEffect(() => {
-    handleFetchProduct();
-  }, [pageNumber, pageSize]);
+
   const columns = [
     {
       field: "id",
     },
     {
       flex: 1,
-      field: "status",
+      field: "active_status",
       type: "string",
       headerAlign: "center",
       headerName: "สถานะ",
@@ -302,7 +177,11 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
       align: "center",
       minWidth: 200,
       renderCell: (params) => (
-        <AppStatus status={params.value} statusText={params.row.statusText} />
+        <AppStatus
+          type="2"
+          status={params.value}
+          statusText={params.row.name_status}
+        />
       ),
     },
     {
@@ -375,7 +254,10 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
           let date;
           date = typeof value === "string" ? parseISO(value) : new Date(value);
           if (isNaN(date.getTime())) return value;
-          let formattedValue = format(addYears(date, 543), "dd/MM/yyyy");
+          let formattedValue = format(
+            addYears(date, 543),
+            "dd/MM/yyyy HH:mm:ss"
+          );
           return formattedValue;
         } catch (error) {
           return value;
@@ -407,7 +289,10 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
           let date;
           date = typeof value === "string" ? parseISO(value) : new Date(value);
           if (isNaN(date.getTime())) return value;
-          let formattedValue = format(addYears(date, 543), "dd/MM/yyyy");
+          let formattedValue = format(
+            addYears(date, 543),
+            "dd/MM/yyyy HH:mm:ss"
+          );
           return formattedValue;
         } catch (error) {
           return value;
@@ -424,17 +309,25 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
       minWidth: 100,
       getActions: (params) => {
         const id = params?.row?.id;
-        const index = Array.from(watch(`${baseName}.rows`)).findIndex(
-          (item) => item.id === id
-        );
-        let disabledView = false; // TODO: เช็คตามสิทธิ์
-        let disabledEdit = false; // TODO: เช็คตามสิทธิ์
-        let disabledDelete = false; // TODO: เช็คตามสิทธิ์
-        const viewFunction = disabledView ? null : () => handleView(index);
-        const editFunction = disabledEdit ? null : () => handleEdit(index);
-        const deleteFunction = disabledDelete
-          ? null
-          : () => handleDelete(index);
+        const row = params.row;
+        const tempRow = params?.row?.is_new ?? false;
+        const isActive =
+          params?.row?.is_active || params?.row?.is_active === null || tempRow;
+
+        let disabledView = false;
+        let disabledEdit = false;
+        let disabledDelete = false;
+        let viewFunction = disabledView ? null : () => handleView(row);
+        let editFunction = disabledEdit ? null : () => handleEdit(row);
+        let deleteFunction = disabledDelete ? null : () => handleDelete(row);
+
+        if (preventInput) {
+          disabledEdit = true;
+          disabledDelete = true;
+          editFunction = null;
+          deleteFunction = null;
+        }
+
         const defaultProps = {
           showInMenu: true,
           sx: {
@@ -444,7 +337,7 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
           },
         };
 
-        return [
+        let actions = [
           <GridActionsCellItem
             key={`view_${id}`}
             icon={<RemoveRedEye />}
@@ -453,31 +346,115 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
             disabled={disabledView}
             onClick={viewFunction}
           />,
-          <GridActionsCellItem
-            key={`edit_${id}`}
-            icon={<Edit />}
-            {...defaultProps}
-            label="แก้ไข"
-            disabled={disabledEdit}
-            onClick={editFunction}
-          />,
-          <GridActionsCellItem
-            key={`delete_${id}`}
-            icon={<Delete />}
-            {...defaultProps}
-            label="ลบ"
-            disabled={disabledDelete}
-            onClick={deleteFunction}
-          />,
         ];
+
+        if (isActive) {
+          actions.push(
+            <GridActionsCellItem
+              key={`edit_${id}`}
+              icon={<Edit />}
+              {...defaultProps}
+              label="แก้ไขรายละเอียด"
+              disabled={disabledEdit}
+              onClick={editFunction}
+            />
+          );
+          actions.push(
+            <GridActionsCellItem
+              key={`delete_${id}`}
+              icon={<Delete />}
+              {...defaultProps}
+              label={tempRow ? `นำรายการออก` : `ยกเลิกใช้งาน`}
+              disabled={disabledDelete}
+              onClick={deleteFunction}
+            />
+          );
+        }
+
+        return actions;
       },
     },
   ];
+
+  const handleAdd = () => {
+    setDialogMode("create");
+    setSelectedRow(null);
+    setDialogOpen(true);
+  };
+
+  const handleEdit = (row) => {
+    setDialogMode("edit");
+    setSelectedRow(row);
+    setDialogOpen(true);
+  };
+
+  const handleView = (row) => {
+    setDialogMode("view");
+    setSelectedRow(row);
+    setDialogOpen(true);
+  };
+
+  const handleSave = (data) => {
+    let updated;
+    const currentValue = watchData("saleRangeTemp") ?? [];
+    const existsIndex = currentValue.findIndex(
+      (item) => item.sale_period_id === data.sale_period_id
+    );
+    if (existsIndex > -1) {
+      // กรณี create ซ้ำ หรือ edit
+      updated = [...currentValue];
+      updated[existsIndex] = { ...updated[existsIndex], ...data };
+    } else {
+      // เพิ่มใหม่ หรือแก้ไขจากของจริง
+      updated = [...currentValue, data];
+    }
+
+    // ถ้ายังมีรายการใน Temp ถึงจะให้ฟอร์ม dirty ต่อไป
+    setValueData("saleRangeTemp", updated, {
+      shouldDirty: updated.length > 0,
+    });
+  };
+
+  const handleDelete = (row) => {
+    handleNotification(
+      "คุณต้องการยกเลิกรายการนี้หรือไม่ ?",
+      () => {
+        const tempData = watchData("saleRangeTemp") ?? [];
+        const isTemp = tempData.some(
+          (item) => item.sale_period_id === row.sale_period_id
+        );
+
+        if (isTemp) {
+          // เอาออกจาก temp array ไปเลย
+          const newTempData = tempData.filter(
+            (item) => item.sale_period_id !== row.sale_period_id
+          );
+
+          setValueData("saleRangeTemp", [...newTempData]);
+        } else {
+          // กรณีไม่ใช่ temp → ทำ soft delete
+          const deleteRow = {
+            ...row,
+            sale_start_date:
+              row?.sale_start_date && new Date(row.sale_start_date),
+            sale_end_date: row?.sale_end_date && new Date(row.sale_end_date),
+            active_status: 3,
+            name_status: "ยกเลิกใช้งาน",
+            update_date: new Date(),
+            update_by: activator,
+          };
+          handleSave(deleteRow);
+        }
+      },
+      null,
+      "question"
+    );
+  };
+
   const onSubmit = async (data) => {
     setLoading(true);
-
     try {
-      console.log("submit", { data });
+      await handleFetchProduct();
     } catch (error) {
       handleSnackAlert({ open: true, message: "ล้มเหลวเกิดข้อผิดพลาด" });
     } finally {
@@ -485,8 +462,11 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
     }
   };
 
-  const handleResetForm = () => {
+  const onError = (error, event) => console.error({ error, event });
+
+  const handleResetForm = async () => {
     reset();
+    await handleFetchProduct();
   };
 
   const handlePageModelChange = (model, detail) => {
@@ -494,17 +474,38 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
     setPageSize(model.pageSize);
   };
 
+  const handleSortModelChange = (model, detail) => {
+    let _sortField = defaultSortField;
+    let _sortDirection = defaultSortDirection;
+
+    if (Array.from(model).length > 0) {
+      _sortField = model[0].field;
+      _sortDirection = model[0].sort;
+    }
+
+    setSortField(_sortField);
+    setSortDirection(_sortDirection);
+  };
+
   const handleFetchProduct = async () => {
     setLoading(true);
+
     try {
-      const start = pageNumber;
-      const limit = pageSize;
       const body = {
-        field: "create_date",
-        direction: "desc",
-        page_number: start,
-        page_size: limit,
+        field: Transform.snakeToPascalCase(sortField),
+        direction: sortDirection,
+        page_number: pageNumber,
+        page_size: pageSize,
         product_sale_channel_id: productId,
+        active_status: watch("active_status")?.id ?? "0",
+        sale_start_date_start: addHours(watch("sale_start_date_start"), 7),
+        sale_start_date_end: addHours(watch("sale_start_date_end"), 7),
+        sale_end_date_start: addHours(watch("sale_end_date_start"), 7),
+        sale_end_date_end: addHours(watch("sale_end_date_end"), 7),
+        create_date_start: addHours(watch("create_date_start"), 7),
+        create_date_end: addHours(watch("create_date_end"), 7),
+        update_date_start: addHours(watch("update_date_start"), 7),
+        update_date_end: addHours(watch("update_date_end"), 7),
       };
       const response = await fetch(
         `/api/direct?action=getProductSalePeriodById`,
@@ -515,22 +516,20 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
         }
       );
 
-      const data = await response.json();
       let resultData = [];
+      const data = await response.json();
       if (data.status !== 204) {
         if (data) {
-          resultData = data.map((value) => {
-            return {
-              ...value,
-              id: value.sale_period_id,
-              status: value.is_active,
-              statusText: value.name_status,
-            };
-          });
+          resultData = data;
         }
       }
-      const resetData = watch();
-      reset({ ...resetData, saleRange: { rows: [...resultData] } });
+
+      const currentValue = watchData();
+      resetData({
+        ...currentValue,
+        saleRange: [...resultData],
+        saleRangeTemp: [],
+      });
     } catch (error) {
       handleSnackAlert({
         open: true,
@@ -540,21 +539,30 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    handleFetchProduct();
+  }, [pageNumber, pageSize, sortField, sortDirection]);
+
   return (
     <Grid container justifyContent={"center"} my={2}>
       <Grid item xs={12}>
+        <AppManageSaleRange
+          mode={dialogMode}
+          open={dialogOpen}
+          setOpen={setDialogOpen}
+          initialData={selectedRow}
+          handleSave={handleSave}
+        />
         <AppCard
           title={`ระยะเวลาในการขาย (เปิดใช้งานได้ 1 รายการ)`}
           cardstyle={{ border: "1px solid", borderColor: "#e7e7e7" }}
         >
-          <form onSubmit={handleSubmit(onSubmit)}>
-            {
-              //#region first label
-            }
+          <form onSubmit={handleSubmit(onSubmit, onError)}>
             <Grid container spacing={2}>
               <Grid item xs={12} md={3}>
                 <Controller
-                  name={`status`}
+                  name={`active_status`}
                   control={control}
                   render={({ field }) => {
                     const { name, onChange, ...otherProps } = field;
@@ -565,67 +573,31 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
                           id={name}
                           name={name}
                           disablePortal
+                          disabled={isDirtyData}
                           fullWidth
                           label="สถานะ"
-                          options={[
-                            {
-                              id: "1",
-                              label: "เปิดใช้งาน",
-                            },
-                            {
-                              id: "2",
-                              label: "ยกเลิกการใช้งาน",
-                            },
-                            {
-                              id: "3",
-                              label: "รออนุมัติ",
-                            },
-                            {
-                              id: "4",
-                              label: "แบบร่าง",
-                            },
-                          ]}
+                          options={
+                            APPLICATION_RECORD_PRODUCT_CHANNEL_DETAIL_STATUS
+                          }
                           onChange={(event, value) => {
                             onChange(value);
                           }}
                           {...otherProps}
-                          error={Boolean(errors?.status)}
+                          error={Boolean(errors?.active_status)}
                         />
-                        <FormHelperText error={errors?.status}>
-                          {errors?.status?.message}
+                        <FormHelperText error={errors?.active_status}>
+                          {errors?.active_status?.message}
                         </FormHelperText>
                       </>
                     );
                   }}
                 />
               </Grid>
-              <Grid item xs={12} md={3}>
-                <TextField
-                  fullWidth
-                  label="ชื่อ"
-                  margin="dense"
-                  size="small"
-                  id={`name`}
-                  {...register(`name`)}
-                  error={Boolean(errors?.name)}
-                  inputProps={{ maxLength: 100 }}
-                />
-                <FormHelperText error={errors?.name}>
-                  {errors?.name?.message}
-                </FormHelperText>
-              </Grid>
             </Grid>
-            {
-              //#endregion
-            }
-            {
-              //#region Date1
-            }
-
             <Grid container spacing={2}>
               <Grid item xs={12} md={3}>
                 <Controller
-                  name={`fromStartDate`}
+                  name={`sale_start_date_start`}
                   control={control}
                   render={({ field }) => {
                     const { name, onChange, ...otherProps } = field;
@@ -639,15 +611,19 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
                           fullWidth
                           margin="dense"
                           size="small"
-                          disableFuture
+                          disabled={isDirtyData}
                           onChange={(date) => {
+                            clearErrors([
+                              "sale_start_date_start",
+                              "sale_start_date_end",
+                            ]);
                             onChange(date);
                           }}
-                          error={Boolean(errors?.fromCreateDate)}
+                          error={Boolean(errors?.sale_start_date_start)}
                           {...otherProps}
                         />
-                        <FormHelperText error={errors?.fromCreateDate}>
-                          {errors?.fromCreateDate?.message}
+                        <FormHelperText error={errors?.sale_start_date_start}>
+                          {errors?.sale_start_date_start?.message}
                         </FormHelperText>
                       </>
                     );
@@ -656,7 +632,7 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
               </Grid>
               <Grid item xs={12} md={3}>
                 <Controller
-                  name={`toStartDate`}
+                  name={`sale_start_date_end`}
                   control={control}
                   render={({ field }) => {
                     const { name, onChange, ...otherProps } = field;
@@ -668,17 +644,23 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
                           name={name}
                           label="ถึงวันที่เริ่มต้น"
                           fullWidth
+                          minDate={new Date(watch("sale_start_date_start"))}
+                          disabled={
+                            !watch("sale_start_date_start") || isDirtyData
+                          }
+                          readOnly={
+                            !watch("sale_start_date_start") || isDirtyData
+                          }
                           margin="dense"
                           size="small"
-                          disableFuture
                           onChange={(date) => {
                             onChange(date);
                           }}
-                          error={Boolean(errors?.toCreateDate)}
+                          error={Boolean(errors?.sale_start_date_end)}
                           {...otherProps}
                         />
-                        <FormHelperText error={errors?.toCreateDate}>
-                          {errors?.toCreateDate?.message}
+                        <FormHelperText error={errors?.sale_start_date_end}>
+                          {errors?.sale_start_date_end?.message}
                         </FormHelperText>
                       </>
                     );
@@ -687,7 +669,7 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
               </Grid>
               <Grid item xs={12} md={3}>
                 <Controller
-                  name={`fromEndDate`}
+                  name={`sale_end_date_start`}
                   control={control}
                   render={({ field }) => {
                     const { name, onChange, ...otherProps } = field;
@@ -701,15 +683,19 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
                           fullWidth
                           margin="dense"
                           size="small"
-                          disableFuture
+                          disabled={isDirtyData}
                           onChange={(date) => {
+                            clearErrors([
+                              "sale_end_date_start",
+                              "sale_end_date_end",
+                            ]);
                             onChange(date);
                           }}
-                          error={Boolean(errors?.fromUpdateDate)}
+                          error={Boolean(errors?.sale_end_date_start)}
                           {...otherProps}
                         />
-                        <FormHelperText error={errors?.fromUpdateDate}>
-                          {errors?.fromUpdateDate?.message}
+                        <FormHelperText error={errors?.sale_end_date_start}>
+                          {errors?.sale_end_date_start?.message}
                         </FormHelperText>
                       </>
                     );
@@ -718,7 +704,7 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
               </Grid>
               <Grid item xs={12} md={3}>
                 <Controller
-                  name={`toEndDate`}
+                  name={`sale_end_date_end`}
                   control={control}
                   render={({ field }) => {
                     const { name, onChange, ...otherProps } = field;
@@ -732,15 +718,21 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
                           fullWidth
                           margin="dense"
                           size="small"
-                          disableFuture
+                          minDate={new Date(watch("sale_end_date_start"))}
+                          disabled={
+                            !watch("sale_end_date_start") || isDirtyData
+                          }
+                          readOnly={
+                            !watch("sale_end_date_start") || isDirtyData
+                          }
                           onChange={(date) => {
                             onChange(date);
                           }}
-                          error={Boolean(errors?.toUpdateDate)}
+                          error={Boolean(errors?.sale_end_date_end)}
                           {...otherProps}
                         />
-                        <FormHelperText error={errors?.toUpdateDate}>
-                          {errors?.toUpdateDate?.message}
+                        <FormHelperText error={errors?.sale_end_date_end}>
+                          {errors?.sale_end_date_end?.message}
                         </FormHelperText>
                       </>
                     );
@@ -748,17 +740,10 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
                 />
               </Grid>
             </Grid>
-
-            {
-              //#endregion
-            }
-            {
-              //#region Date
-            }
             <Grid container spacing={2}>
               <Grid item xs={12} md={3}>
                 <Controller
-                  name={`fromCreateDate`}
+                  name={`create_date_start`}
                   control={control}
                   render={({ field }) => {
                     const { name, onChange, ...otherProps } = field;
@@ -773,14 +758,19 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
                           margin="dense"
                           size="small"
                           disableFuture
+                          disabled={isDirtyData}
                           onChange={(date) => {
+                            clearErrors([
+                              "create_date_start",
+                              "create_date_end",
+                            ]);
                             onChange(date);
                           }}
-                          error={Boolean(errors?.fromCreateDate)}
+                          error={Boolean(errors?.create_date_start)}
                           {...otherProps}
                         />
-                        <FormHelperText error={errors?.fromCreateDate}>
-                          {errors?.fromCreateDate?.message}
+                        <FormHelperText error={errors?.create_date_start}>
+                          {errors?.create_date_start?.message}
                         </FormHelperText>
                       </>
                     );
@@ -789,7 +779,7 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
               </Grid>
               <Grid item xs={12} md={3}>
                 <Controller
-                  name={`toCreateDate`}
+                  name={`create_date_end`}
                   control={control}
                   render={({ field }) => {
                     const { name, onChange, ...otherProps } = field;
@@ -804,14 +794,17 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
                           margin="dense"
                           size="small"
                           disableFuture
+                          minDate={new Date(watch("create_date_start"))}
+                          disabled={!watch("create_date_start") || isDirtyData}
+                          readOnly={!watch("create_date_start") || isDirtyData}
                           onChange={(date) => {
                             onChange(date);
                           }}
-                          error={Boolean(errors?.toCreateDate)}
+                          error={Boolean(errors?.create_date_end)}
                           {...otherProps}
                         />
-                        <FormHelperText error={errors?.toCreateDate}>
-                          {errors?.toCreateDate?.message}
+                        <FormHelperText error={errors?.create_date_end}>
+                          {errors?.create_date_end?.message}
                         </FormHelperText>
                       </>
                     );
@@ -820,7 +813,7 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
               </Grid>
               <Grid item xs={12} md={3}>
                 <Controller
-                  name={`fromUpdateDate`}
+                  name={`update_date_start`}
                   control={control}
                   render={({ field }) => {
                     const { name, onChange, ...otherProps } = field;
@@ -835,14 +828,19 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
                           margin="dense"
                           size="small"
                           disableFuture
+                          disabled={isDirtyData}
                           onChange={(date) => {
+                            clearErrors([
+                              "update_date_start",
+                              "update_date_end",
+                            ]);
                             onChange(date);
                           }}
-                          error={Boolean(errors?.fromUpdateDate)}
+                          error={Boolean(errors?.update_date_start)}
                           {...otherProps}
                         />
-                        <FormHelperText error={errors?.fromUpdateDate}>
-                          {errors?.fromUpdateDate?.message}
+                        <FormHelperText error={errors?.update_date_start}>
+                          {errors?.update_date_start?.message}
                         </FormHelperText>
                       </>
                     );
@@ -851,7 +849,7 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
               </Grid>
               <Grid item xs={12} md={3}>
                 <Controller
-                  name={`toUpdateDate`}
+                  name={`update_date_end`}
                   control={control}
                   render={({ field }) => {
                     const { name, onChange, ...otherProps } = field;
@@ -866,14 +864,17 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
                           margin="dense"
                           size="small"
                           disableFuture
+                          minDate={new Date(watch("update_date_start"))}
+                          disabled={!watch("update_date_start") || isDirtyData}
+                          readOnly={!watch("update_date_start") || isDirtyData}
                           onChange={(date) => {
                             onChange(date);
                           }}
-                          error={Boolean(errors?.toUpdateDate)}
+                          error={Boolean(errors?.update_date_end)}
                           {...otherProps}
                         />
-                        <FormHelperText error={errors?.toUpdateDate}>
-                          {errors?.toUpdateDate?.message}
+                        <FormHelperText error={errors?.update_date_end}>
+                          {errors?.update_date_end?.message}
                         </FormHelperText>
                       </>
                     );
@@ -881,18 +882,12 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
                 />
               </Grid>
             </Grid>
-            {
-              //#endregion
-            }
-            {
-              //#region from button
-            }
             <Grid container spacing={2} justifyContent={"end"}>
               <Grid item xs={12} md={"auto"} order={{ xs: 2, md: 1 }}>
                 <Button
                   variant="outlined"
                   fullWidth
-                  disabled={loading}
+                  disabled={loading || isDirtyData}
                   endIcon={<RestartAlt />}
                   onClick={handleResetForm}
                 >
@@ -904,7 +899,7 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
                   type="submit"
                   variant="contained"
                   fullWidth
-                  disabled={loading}
+                  disabled={loading || isDirtyData}
                   endIcon={
                     loading ? <CircularProgress size={15} /> : <Search />
                   }
@@ -912,36 +907,42 @@ const AppProductSaleRange = ({ formMethods, productId }) => {
                   ค้นหา
                 </Button>
               </Grid>
-              <Grid item xs={12} md={"auto"} order={{ xs: 1, md: 1 }}>
-                <Button
-                  variant="contained"
-                  color="success"
-                  sx={{
-                    color: theme.palette.common.white,
-                  }}
-                  fullWidth
-                  disabled={loading}
-                  endIcon={loading ? <CircularProgress size={15} /> : <Add />}
-                  onClick={handleAdd}
-                >
-                  เพิ่ม
-                </Button>
-              </Grid>
+              {!preventInput && (
+                <Grid item xs={12} md={"auto"} order={{ xs: 1, md: 1 }}>
+                  <Button
+                    variant="contained"
+                    color="success"
+                    sx={{
+                      color: theme.palette.common.white,
+                    }}
+                    fullWidth
+                    disabled={loading}
+                    endIcon={loading ? <CircularProgress size={15} /> : <Add />}
+                    onClick={handleAdd}
+                  >
+                    เพิ่ม
+                  </Button>
+                </Grid>
+              )}
             </Grid>
-            {
-              //#endregion
-            }
           </form>
-
           <Grid item xs={12} sx={{ height: "25rem" }} mt={1}>
             <AppDataGrid
-              rows={watch(`${baseName}.rows`)}
-              rowCount={watch(`${baseName}.pagination.totalRows`)}
+              getRowId={(row) => row.sale_period_id}
               columns={columns}
+              rows={rowsDisplay}
+              rowCount={rowsDisplay.length}
               hiddenColumn={hiddenColumn}
               pageNumber={APPLICATION_DEFAULT.dataGrid.pageNumber}
               pageSize={APPLICATION_DEFAULT.dataGrid.pageSize}
+              sortField={sortField}
+              sortDirection={sortDirection}
               onPaginationModelChange={handlePageModelChange}
+              onSortModelChange={handleSortModelChange}
+              pagination={!isDirtyData}
+              disableColumnSorting={isDirtyData}
+              hideFooterPagination={isDirtyData}
+              hideFooterSelectedRowCount={isDirtyData}
             />
           </Grid>
         </AppCard>

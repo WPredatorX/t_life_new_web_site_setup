@@ -29,9 +29,10 @@ export async function POST(request) {
         data = response.data?.data;
       }
       if (response.status === 204) {
-        return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
+        data = [];
       }
       return NextResponse.json(data);
+
     case "AddOrUpdatePromotion":
       body = await request.json();
       response = await axios.post(

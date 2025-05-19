@@ -103,6 +103,10 @@ yup.addMethod(yup.array, "atLeastOneObject", function (message) {
 yup.setLocale({
   mixed: {
     required: `จำเป็นต้องระบุข้อมูลนี้`,
+    typeError: `จำเป็นต้องระบุข้อมูลนี้`,
+  },
+  string: {
+    email: "รูปแบบอีเมลไม่ถูกต้อง ตัวอย่าง user@email.com",
   },
 });
 

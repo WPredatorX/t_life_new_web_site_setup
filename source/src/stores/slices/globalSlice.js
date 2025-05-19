@@ -7,8 +7,16 @@ export const initialState = {
   dialog: APPLICATION_DEFAULT.dialog,
   activeMenu: APPLICATION_DEFAULT.activeMenu,
   auth: null,
+  tabIndex: 0,
+  promotionCode: "",
   openDrawer: true,
   brokerId: null,
+  userProfile: {
+    id: "",
+    name: "",
+  },
+  sasToken: null,
+  activator: null,
 };
 
 const globalSlice = createSlice({
@@ -51,6 +59,21 @@ const globalSlice = createSlice({
     setBrokerId: (state, action) => {
       state.brokerId = action.payload;
     },
+    setUserProfile: (state, action) => {
+      state.userProfile = action.payload;
+    },
+    setSasToken: (state, action) => {
+      state.sasToken = action.payload;
+    },
+    setActivator: (state, action) => {
+      state.activator = action.payload;
+    },
+    setTabIndex: (state, action) => {
+      state.tabIndex = action.payload;
+    },
+    setPromotionCode: (state, action) => {
+      state.promotionCode = action.payload;
+    },
   },
 });
 
@@ -68,4 +91,9 @@ export const {
   setOpenDrawer,
   closeDialog,
   setBrokerId,
+  setUserProfile,
+  setSasToken,
+  setActivator,
+  setTabIndex,
+  setPromotionCode,
 } = globalSlice.actions;

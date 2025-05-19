@@ -1,133 +1,31 @@
 import { AppDataGrid, AppStatus } from "@/components";
 import { APPLICATION_DEFAULT } from "@/constants";
 import { Transform } from "@/utilities";
-import {
-  ArrowDropDown,
-  Check,
-  Delete,
-  Edit,
-  RemoveRedEye,
-} from "@mui/icons-material";
-import { useAppSnackbar, useAppRouter, useAppForm } from "@hooks";
+import { ArrowDropDown } from "@mui/icons-material";
 import {
   Accordion,
   AccordionDetails,
   AccordionSummary,
   Button,
   Grid,
-  Menu,
-  MenuItem,
   Typography,
 } from "@mui/material";
 import { useEffect, useState } from "react";
-import { format, addYears, addDays, parseISO } from "date-fns";
+import { format, addYears, parseISO } from "date-fns";
+import AppManageProductGroup from "./appManageProductGroup";
+import AppProductListItemComponent from "./appProductLisItemComponent";
+
 const AppProductListItem = ({ hiddenColumn, formMethods }) => {
-  const router = useAppRouter();
+  const [dialogGroupOpen, setDialogGroupOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [pageNumber, setPageNumber] = useState(
     APPLICATION_DEFAULT.dataGrid.pageNumber
   );
   const [pageSize, setPageSize] = useState(
     APPLICATION_DEFAULT.dataGrid.pageSize
   );
-  const [dataSub, setDataSub] = useState({
-    rows: [],
-    details: [],
-    groupType: 0,
-    totalRows: 0,
-  });
-  const [dataSubNoGroup, setDataSubNoGroup] = useState({
-    rows: [],
-    details: [],
-    groupType: 0,
-    totalRows: 0,
-  });
-  const handlePageModelChange = (model, detail) => {
-    setPageNumber(model.page);
-    setPageSize(model.pageSize);
-  };
-  const {
-    watch,
-    reset,
-    control,
-    register,
-    handleSubmit,
-    setValue,
-    formState: { errors },
-  } = formMethods;
-  useEffect(() => {
-    handleFetchProductSub();
-  }, [pageNumber, pageSize]);
-  const handleFetchProductSub = async () => {
-    setLoading(true);
-    try {
-      const body = {
-        is_active: true,
-        product_status: watch("status")
-          ? watch("status").id === "0"
-            ? null
-            : watch("status").id
-          : null,
-        c_plan: watch(`name`) ? watch(`name`) : null,
-
-        min_coverage_amount_start: watch(`min_coverage_amount_start`),
-        min_coverage_amount_end: watch(`min_coverage_amount_end`),
-        max_coverage_amount_start: watch(`max_coverage_amount_start`),
-        max_coverage_amount_end: watch(`max_coverage_amount_end`),
-        create_date_start: watch(`create_date_start`),
-        create_date_end: watch(`create_date_end`),
-        update_date_start: watch(`update_date_start`),
-        update_date_end: watch(`update_date_end`),
-      };
-
-      const response = await fetch(
-        `/api/direct?action=GetAllProductSaleGroupRider`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        }
-      );
-      const data = await response.json();
-      const mapData = data.map((item) => {
-        return {
-          ...item,
-          id: item.item_id,
-        };
-      });
-      setDataSub({
-        rows: data,
-        details: mapData,
-        groupType: data.product_sale_group_type,
-        totalRows: data.total_records,
-      });
-
-      const responseNoGroup = await fetch(
-        `/api/direct?action=GetAllProductSaleRiderDirect`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        }
-      );
-      const dataNoGroup = await responseNoGroup.json();
-      const mapDataNoGroup = dataNoGroup.map((item) => {
-        return {
-          ...item,
-          id: item.item_id,
-        };
-      });
-      setDataSubNoGroup({
-        rows: dataNoGroup,
-        details: mapDataNoGroup,
-        groupType: dataNoGroup.product_sale_group_type,
-        totalRows: dataNoGroup.total_records,
-      });
-    } catch (error) {
-      handleSnackAlert({ open: true, message: "ล้มเหลวเกิดข้อผิดพลาด" });
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [dataSub, setDataSub] = useState([]);
+  const [dataSubNoGroup, setDataSubNoGroup] = useState([]);
   const subColumn = [
     {
       field: "id",
@@ -236,147 +134,165 @@ const AppProductListItem = ({ hiddenColumn, formMethods }) => {
         return formattedValue;
       },
     },
-    {
-      flex: 1,
-      field: "type",
-      type: "string",
-      headerAlign: "center",
-      headerName: "ชื่อผลิตภัณฑ์",
-      headerClassName: "header-main",
-      align: "right",
-      minWidth: 50,
-    },
-    {
-      flex: 1,
-      field: "Group",
-      type: "string",
-      headerAlign: "center",
-      headerName: "ชื่อผลิตภัณฑ์",
-      headerClassName: "header-main",
-      align: "right",
-      minWidth: 50,
-    },
   ];
-  let disabledView = false; // TODO: Check permissions
-  let disabledEdit = false; // TODO: Check permissions
 
-  const handleClick = (event, id) => {
-    event.stopPropagation();
-    setAnchorEl(event.currentTarget);
+  const {
+    watch,
+    formState: { errors },
+  } = formMethods;
+
+  useEffect(() => {
+    handleFetchProductSub();
+  }, [pageNumber, pageSize]);
+
+  const handleFetchProductSub = async () => {
+    setLoading(true);
+    try {
+      const body = {
+        is_active: true,
+        product_status: watch("status")
+          ? watch("status").id === "0"
+            ? null
+            : watch("status").id
+          : null,
+        c_plan: watch(`name`) ? watch(`name`) : null,
+        min_coverage_amount_start: watch(`min_coverage_amount_start`),
+        min_coverage_amount_end: watch(`min_coverage_amount_end`),
+        max_coverage_amount_start: watch(`max_coverage_amount_start`),
+        max_coverage_amount_end: watch(`max_coverage_amount_end`),
+        create_date_start: watch(`create_date_start`),
+        create_date_end: watch(`create_date_end`),
+        update_date_start: watch(`update_date_start`),
+        update_date_end: watch(`update_date_end`),
+      };
+
+      const response = await fetch(
+        `/api/direct?action=GetAllProductSaleGroupRider`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
+      );
+
+      const data = await response.json();
+      const mapData = data.map((item) => {
+        return {
+          ...item,
+          id: item.product_sale_group_id,
+        };
+      });
+      setDataSub(mapData);
+
+      const responseNoGroup = await fetch(
+        `/api/direct?action=GetAllProductSaleRiderDirect`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
+      );
+      const dataNoGroup = await responseNoGroup.json();
+      const mapDataNoGroup = dataNoGroup.map((item) => {
+        return {
+          ...item,
+          id: item.product_sale_channel_id,
+        };
+      });
+      setDataSubNoGroup(mapDataNoGroup);
+    } catch (error) {
+      handleSnackAlert({ open: true, message: "ล้มเหลวเกิดข้อผิดพลาด" });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleClose = (event) => {
-    event.stopPropagation();
-    setAnchorEl(null);
+  const handlePageModelChange = (model, detail) => {
+    setPageNumber(model.page);
+    setPageSize(model.pageSize);
   };
 
-  const handleView = (id) => {
-    router.push(`/productsale/1?mode=VIEW&type=1`);
-    setAnchorEl(null);
+  const handleOpenGroupModal = () => {
+    setDialogGroupOpen(true);
   };
 
-  const handleEdit = (id) => {
-    router.push(`/productsale/1?mode=EDIT&type=1`);
-    setAnchorEl(null);
-  };
-  const [anchorEl, setAnchorEl] = useState(null);
-  const open = Boolean(anchorEl);
-
-  console.log("anchorEl", anchorEl);
-  console.log("open", open);
   return (
-    <Grid item xs={12}>
-      <Accordion
-        aria-controls="panel1-content"
+    <Grid container>
+      <AppManageProductGroup
+        group={null}
+        open={dialogGroupOpen}
+        setOpen={setDialogGroupOpen}
+      />
+      <Grid
+        item
+        xs={12}
         sx={{
-          border: "1px solid",
-          borderColor: "#e7e7e7",
-          borderRadius: 2,
-          "&:before": {
-            display: "none",
-          },
-          marginTop: 2,
+          display: "flex",
+          justifyContent: "end",
+          border: "0px solid red",
         }}
       >
-        <AccordionSummary expandIcon={<ArrowDropDown />}>
-          <Grid container spacing={2}>
-            <Grid item xs="auto">
-              <Typography variant="h5" sx={{ fontWeight: 900 }}>
-                {data.product_sale_group_name}
-              </Typography>
-            </Grid>
-            <Grid item xs></Grid>
-            <Grid item xs={1}>
-              {data.id !== 2 && (
-                <Button
-                  fullWidth
-                  variant="outlined"
-                  aria-controls={open ? "basic-menu" : undefined}
-                  aria-haspopup="true"
-                  aria-expanded={open ? "true" : undefined}
-                  onClick={(e) => {
-                    handleClick(e, data.id);
-                  }}
-                >
-                  จัดการ
-                </Button>
-              )}
-
-              <Menu
-                id="basic-menu"
-                anchorEl={anchorEl}
-                open={open}
-                onClose={handleClose}
-                MenuListProps={{
-                  "aria-labelledby": "basic-button",
-                }}
-              >
-                <MenuItem onClick={handleView}>
-                  <RemoveRedEye />
-                  ดูรายละเอียด
-                </MenuItem>
-                <MenuItem onClick={handleEdit}>
-                  <Edit />
-                  จัดการข้อมูล
-                </MenuItem>
-                <MenuItem onClick={handleEdit}>
-                  <Edit />
-                  แก้ไขข้อมูล
-                </MenuItem>
-                <MenuItem onClick={handleClose}>
-                  <Check />
-                  อนุมัติข้อมูลทั่วไป
-                </MenuItem>
-                <MenuItem onClick={handleClose}>
-                  <Check />
-                  อนุมัติข้อมูลการแสดงผล
-                </MenuItem>
-                <MenuItem onClick={handleClose}>
-                  <Delete />
-                  ยกเลิกการใช้งาน
-                </MenuItem>
-              </Menu>
-            </Grid>
-          </Grid>
-        </AccordionSummary>
-        <AccordionDetails
-          sx={{ borderTop: "1px solid", borderColor: "#e7e7e7" }}
+        <Button onClick={handleOpenGroupModal} variant="contained">
+          เพิ่มกลุ่ม
+        </Button>
+      </Grid>
+      <Grid item xs={12}>
+        {dataSub.map((item, index) => {
+          return (
+            <AppProductListItemComponent
+              key={index}
+              item={item}
+              index={index}
+              subColumn={subColumn}
+              hiddenColumn={hiddenColumn}
+              pageNumber={pageNumber}
+              pageSize={pageSize}
+              handlePageModelChange={handlePageModelChange}
+            />
+          );
+        })}
+        <Accordion
+          defaultExpanded
+          aria-controls="panel1-content"
+          sx={{
+            border: "1px solid",
+            borderColor: "#e7e7e7",
+            borderRadius: 2,
+            "&:before": {
+              display: "none",
+            },
+            marginTop: 2,
+          }}
         >
-          <Grid container>
-            <Grid item xs={12} sx={{ height: "25rem" }}>
-              <AppDataGrid
-                rows={dataSub.details}
-                rowCount={dataSub.total_records}
-                columns={subColumn}
-                hiddenColumn={hiddenColumn}
-                pageNumber={pageNumber}
-                pageSize={pageSize}
-                onPaginationModelChange={handlePageModelChange}
-              />
+          <AccordionSummary expandIcon={<ArrowDropDown />}>
+            <Grid container spacing={2}>
+              <Grid item xs="auto">
+                <Typography variant="h5" sx={{ fontWeight: 900 }}>
+                  ไม่มีกลุ่ม
+                </Typography>
+              </Grid>
+              <Grid item xs></Grid>
             </Grid>
-          </Grid>
-        </AccordionDetails>
-      </Accordion>
+          </AccordionSummary>
+          <AccordionDetails
+            sx={{ borderTop: "1px solid", borderColor: "#e7e7e7" }}
+          >
+            <Grid container>
+              <Grid item xs={12} sx={{ height: "25rem" }}>
+                <AppDataGrid
+                  rows={dataSubNoGroup}
+                  rowCount={dataSubNoGroup?.[0]?.total_records || 0}
+                  columns={subColumn}
+                  hiddenColumn={hiddenColumn}
+                  pageNumber={pageNumber}
+                  pageSize={pageSize}
+                  onPaginationModelChange={handlePageModelChange}
+                />
+              </Grid>
+            </Grid>
+          </AccordionDetails>
+        </Accordion>
+      </Grid>
     </Grid>
   );
 };

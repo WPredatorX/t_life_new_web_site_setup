@@ -76,15 +76,146 @@ export async function POST(request) {
         return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
       }
       return NextResponse.json(data);
-    case "AddOrUpdateContentSection":
+
+    case "GetProductSaleCardByProductSaleId":
       body = await request.json();
       response = await axios.post(
-        `${baseUrl}BackOffice/AddOrUpdateContentSection`,
+        `${baseUrl}BackOffice/GetProductSaleCardByProductSaleId`,
         body,
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       if (response.status === 200) {
         data = response.data?.data;
+      }
+      return NextResponse.json(data);
+
+    case "GetContentSectionItemsById":
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}BackOffice/GetContentSectionItemsById`,
+        body,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      if (response.status === 200) {
+        data = response.data?.data;
+      }
+      if (response.status === 204) {
+        data = [];
+      }
+      return NextResponse.json(data);
+
+    case "GetCopyProfileProductSaleCardId":
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}BackOffice/GetCopyProfileProductSaleCardId`,
+        body,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      if (response.status === 200) {
+        data = response.data?.data;
+      }
+      if (response.status === 204) {
+        data = [];
+      }
+      return NextResponse.json(data);
+
+    case "PreviewBrochure":
+      body = await request.json();
+      const fileName = body?.fileName;
+      const pdfUrl = body?.pdfUrl;
+      const res = await fetch(pdfUrl);
+      const blob = await res.blob();
+      return new NextResponse(blob, {
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `inline; filename*=UTF-8''${encodeURIComponent(
+            fileName
+          )}`,
+        },
+      });
+
+    case "GetMainProductSaleCardId":
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}BackOffice/GetMainProductSaleCardId`,
+        body,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      if (response.status === 200) {
+        data = response.data?.data;
+      }
+      if (response.status === 204) {
+        return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
+      }
+      return NextResponse.json(data);
+
+    case "AddOrUpdateProfileProductSaleCard":
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}BackOffice/AddOrUpdateProfileProductSaleCard`,
+        body,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      if (response.status === 200) {
+        data = response.data?.data;
+      }
+      if (response.status === 204) {
+        return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
+      }
+      return NextResponse.json(data);
+
+    case "AddOrUpdateContentSection":
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}BackOffice/AddOrUpdateContentSection`,
+        body,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      if (response.status === 200) {
+        data = response.data?.data;
+      }
+      if (response.status === 204) {
+        return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
+      }
+      return NextResponse.json(data);
+
+    case "AddOrUpdateProductSaleStatusGroup":
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}BackOffice/AddOrUpdateProductSaleStatusGroup`,
+        body,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      if (response.status === 200) {
+        data = response.data?.data;
+      }
+      if (response.status === 204) {
+        return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
+      }
+      return NextResponse.json(data);
+
+    case "DeleteContentSection":
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}BackOffice/DeleteContentSection`,
+        body,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      if (response.status === 200) {
+        data = response.data?.data;
+      }
+      if (response.status === 204) {
+        return NextResponse.json({ status: 204, message: "ไม่พบข้อมูล" });
       }
       return NextResponse.json(data);
   }

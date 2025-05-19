@@ -12,6 +12,11 @@ import globalSliceReducer, {
   setOpenDrawer,
   closeDialog,
   setBrokerId,
+  setUserProfile,
+  setSasToken,
+  setActivator,
+  setTabIndex,
+  setPromotionCode,
 } from "./globalSlice";
 
 export {
@@ -30,5 +35,10 @@ export {
   setOpenDrawer,
   closeDialog,
   setBrokerId,
+  setUserProfile,
+  setSasToken,
+  setActivator,
+  setTabIndex,
+  setPromotionCode,
   // #endregion
 };

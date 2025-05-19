@@ -22,3 +22,5 @@ export { default as AppCardDataGrid } from "./shares/app-card-datagrid";
 export { default as AppNumericFormat } from "./shares/app-numeric-format";
 export { default as AppWyswig } from "./shares/app-wyswig";
 export { default as AppReOrderDatagrid } from "./shares/app-reorder-datagrid";
+export { default as AppLoadData } from "./shares/app-load-data";
+export { default as AppScrollTo } from "./shares/app-scroll-to";

@@ -1,32 +1,28 @@
 "use client";
-import { useState, useEffect } from "react";
-import { useAppSnackbar, useAppRouter, useAppForm } from "@hooks";
-import { Yup } from "@/utilities";
-import {
-  Grid,
-  TextField,
-  Typography,
-  FormHelperText,
-  Switch,
-  FormControlLabel,
-  Button,
-  Card,
-  useTheme,
-} from "@mui/material";
-import { yupResolver } from "@hookform/resolvers/yup";
-import { AppCard, AppDirectBrokerCard } from "@/components";
-import { Controller } from "react-hook-form";
-import { setDialog } from "@stores/slices";
-import { useAppDispatch, useAppSelector } from "@hooks";
 
-const PageDirect = () => {
-  const router = useAppRouter();
-  const theme = useTheme();
-  const [data, setData] = useState();
-  const { handleSnackAlert } = useAppSnackbar();
-  const [loading, setLoading] = useState(true);
+import { useEffect } from "react";
+import { useAppDispatch, useAppSelector } from "@hooks";
+import { setTabIndex, setPromotionCode } from "@stores/slices";
+import { AppDirectBrokerCard } from "@components";
+
+const PageDirect = ({ tabIndex, promotionCode }) => {
   const dispatch = useAppDispatch();
-  const { dialog } = useAppSelector((state) => state.global);
-  return <AppDirectBrokerCard mode={"Direct"} />;
+  const { tabIndex: currentTabIndex, promotionCode: currentPromotionCode } =
+    useAppSelector((state) => state.global);
+
+  useEffect(() => {
+    if (tabIndex !== currentTabIndex) {
+      dispatch(setTabIndex(tabIndex));
+    }
+  }, [tabIndex, currentTabIndex]);
+
+  useEffect(() => {
+    if (promotionCode !== currentPromotionCode) {
+      dispatch(setPromotionCode(promotionCode));
+    }
+  }, [promotionCode, currentPromotionCode]);
+
+  return <AppDirectBrokerCard mode={"direct"} channel={"606"} />;
 };
+
 export default PageDirect;

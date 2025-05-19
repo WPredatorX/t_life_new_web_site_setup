@@ -39,6 +39,7 @@ export const flatten = (target, opts) => {
 
   return output;
 };
+
 export const formatNumber = (
   number,
   _minimumFractionDigits = 2,
@@ -56,4 +57,11 @@ export const formatHrefFromItemTitle = (inputText) => {
   const lowerCaseText = inputText.toLowerCase();
   const transformedText = lowerCaseText.replace(/\s+/g, "-");
   return transformedText;
+};
+
+export const snakeToPascalCase = (input) => {
+  return input
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join("");
 };

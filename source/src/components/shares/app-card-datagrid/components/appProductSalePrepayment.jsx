@@ -1,135 +1,176 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
-  Button,
   Grid,
-  TextField,
-  Typography,
+  Button,
   useTheme,
   FormHelperText,
   CircularProgress,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Card,
-  FormControlLabel,
-  Switch,
-  InputAdornment,
+  TextField,
 } from "@mui/material";
 import {
   AppCard,
-  AppDataGrid,
   AppStatus,
-  AppAutocomplete,
+  AppDataGrid,
   AppDatePicker,
-  AppCollapseCard,
-  AppStatusBool,
+  AppAutocomplete,
 } from "@/components";
 import { Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { Yup } from "@utilities";
+import { Yup, Transform } from "@utilities";
 import {
-  useAppSnackbar,
-  useAppRouter,
+  useAppDialog,
   useAppForm,
-  useAppDispatch,
   useAppSelector,
-  useAppFieldArray,
+  useAppSnackbar,
 } from "@hooks";
-import { APPLICATION_DEFAULT } from "@constants";
-import { format, addYears, addDays, parseISO } from "date-fns";
+import {
+  APPLICATION_DEFAULT,
+  APPLICATION_RECORD_PRODUCT_CHANNEL_DETAIL_STATUS,
+} from "@constants";
+import { format, addYears, addDays, parseISO, addHours } from "date-fns";
 import { GridActionsCellItem } from "@mui/x-data-grid";
 import {
-  RemoveRedEye,
+  Add,
   Edit,
   Search,
-  RestartAlt,
-  ExpandMore,
-  Add,
   Delete,
+  RestartAlt,
+  RemoveRedEye,
 } from "@mui/icons-material";
+import AppManageSalePrepayment from "./appManageSalePrepayment";
 
-import { setDialog } from "@stores/slices";
-const AppProductSalePrepayment = ({ formMethods, productId }) => {
-  const { handleSnackAlert } = useAppSnackbar();
+const AppProductSalePrepayment = ({ dataForm, productId, preventInput }) => {
   const theme = useTheme();
-
-  const dispatch = useAppDispatch();
-  const { dialog } = useAppSelector((state) => state.global);
-  const validationSchema = Yup.object().shape({
-    statusList: Yup.array().of(Yup.mixed()).nullable(),
-    status: Yup.mixed().nullable(),
-    name: Yup.string().nullable(),
-    PrepaymentForm: Yup.string().nullable(),
-    NumberOfInstallments: Yup.mixed().nullable(),
-    createBy: Yup.string().nullable(),
-    createDate: Yup.date().nullable(),
-    updateBy: Yup.string().nullable(),
-    updateDate: Yup.date().nullable(),
-  });
+  const { handleSnackAlert } = useAppSnackbar();
+  const { handleNotification } = useAppDialog();
+  const { activator } = useAppSelector((state) => state.global);
   const [pageNumber, setPageNumber] = useState(
     APPLICATION_DEFAULT.dataGrid.pageNumber
   );
   const [pageSize, setPageSize] = useState(
     APPLICATION_DEFAULT.dataGrid.pageSize
   );
+  const defaultSortField = "create_date";
+  const defaultSortDirection = "desc";
+  const [sortField, setSortField] = useState(defaultSortField);
+  const [sortDirection, setSortDirection] = useState(defaultSortDirection);
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState({
-    rows: [],
-    totalRows: 0,
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogMode, setDialogMode] = useState("view");
+  const [selectedRow, setSelectedRow] = useState(null);
+
+  const validationSchema = Yup.object().shape({
+    active_status: Yup.mixed().nullable(),
+    installment: Yup.string().nullable(),
+    create_date_start: Yup.date().nullable(),
+    create_date_end: Yup.date()
+      .nullable()
+      .when("create_date_start", {
+        is: (value) => {
+          return Boolean(value);
+        },
+        then: (schema) => schema.required(),
+      }),
+    update_date_start: Yup.date().nullable(),
+    update_date_end: Yup.date()
+      .nullable()
+      .when("update_date_start", {
+        is: (value) => {
+          return Boolean(value);
+        },
+        then: (schema) => schema.required(),
+      }),
   });
+
+  const formMethods = useAppForm({
+    mode: "onBlur",
+    reValidateMode: "onChange",
+    resolver: yupResolver(validationSchema),
+    defaultValues: {
+      active_status: null,
+      installment: "",
+      create_date_start: null,
+      create_date_end: null,
+      update_date_start: null,
+      update_date_end: null,
+    },
+  });
+
   const {
     watch,
     reset,
     control,
-    register,
     handleSubmit,
-    setValue,
+    clearErrors,
+    register,
     formState: { errors },
   } = formMethods;
-  const baseName = "salePrepayment";
-  const baseErrors = errors?.[baseName];
-  const baseObject = `${baseName}.rows`;
-  const { fields, insert, remove, update } = useAppFieldArray({
-    control,
-    name: baseObject,
-  });
-  const router = useAppRouter();
+
+  const {
+    watch: watchData,
+    reset: resetData,
+    setValue: setValueData,
+    formState: formStateData,
+  } = dataForm;
+  const { dirtyFields: dirtyFieldsData } = formStateData;
+  const isDirtyData = !!dirtyFieldsData.salePrepaymentTemp;
+
+  const watchedData = watchData("salePrepayment");
+
+  const watchedDataTemp = watchData("salePrepaymentTemp");
+
+  const rowsDisplay = useMemo(() => {
+    const tempData = watchedDataTemp ?? [];
+    const rowData = watchedData ?? [];
+
+    // 1. Merge ของเก่า
+    const merged = rowData.map((item) => {
+      const override = tempData.find(
+        (i) => i.installment_id === item.installment_id
+      );
+      return override ? { ...item, ...override } : item;
+    });
+
+    // 2. หาตัวใหม่จาก temp ที่ยังไม่มีใน rowData
+    const newItems = tempData.filter(
+      (item) => !rowData.some((r) => r.installment_id === item.installment_id)
+    );
+
+    // 3. รวมทั้งหมด
+    return [...merged, ...newItems];
+  }, [watchedData, watchedDataTemp]);
 
   const hiddenColumn = {
     id: false,
   };
-  useEffect(() => {
-    handleFetchProduct();
-  }, [pageNumber, pageSize]);
+
   const columns = [
     {
       field: "id",
     },
-
     {
       flex: 1,
-      field: "PrepaymentForm",
+      field: "installment_description",
       type: "string",
       headerAlign: "center",
       headerName: "รูปแบบ",
       headerClassName: "header-main",
-      align: "left",
-      minWidth: 200,
+      align: "center",
+      minWidth: 100,
     },
     {
       flex: 1,
-      field: "NumberOfInstallments",
+      field: "num_installments",
       type: "string",
       headerAlign: "center",
-      headerName: "จำนวนงวด",
+      headerName: "จำนวน",
       headerClassName: "header-main",
-      align: "right",
-      minWidth: 200,
+      align: "center",
+      minWidth: 100,
     },
-
     {
       flex: 1,
-      field: "status",
+      field: "active_status",
       type: "string",
       headerAlign: "center",
       headerName: "สถานะ",
@@ -137,15 +178,16 @@ const AppProductSalePrepayment = ({ formMethods, productId }) => {
       align: "center",
       minWidth: 200,
       renderCell: (params) => (
-        <AppStatusBool
+        <AppStatus
+          type="2"
           status={params.value}
-          statusText={params.row.statusText}
+          statusText={params.row.name_status}
         />
       ),
     },
     {
       flex: 1,
-      field: "createBy",
+      field: "create_by",
       type: "string",
       headerAlign: "center",
       headerName: "สร้างโดย",
@@ -155,7 +197,7 @@ const AppProductSalePrepayment = ({ formMethods, productId }) => {
     },
     {
       flex: 1,
-      field: "createDate",
+      field: "create_date",
       type: "string",
       headerAlign: "center",
       headerName: "สร้างเมื่อ",
@@ -177,7 +219,7 @@ const AppProductSalePrepayment = ({ formMethods, productId }) => {
     },
     {
       flex: 1,
-      field: "updateBy",
+      field: "update_by",
       type: "string",
       headerAlign: "center",
       headerName: "แก้ไขโดย",
@@ -187,7 +229,7 @@ const AppProductSalePrepayment = ({ formMethods, productId }) => {
     },
     {
       flex: 1,
-      field: "updateDate",
+      field: "update_date",
       type: "string",
       headerAlign: "center",
       headerName: "แก้ไขเมื่อ",
@@ -217,17 +259,25 @@ const AppProductSalePrepayment = ({ formMethods, productId }) => {
       minWidth: 100,
       getActions: (params) => {
         const id = params?.row?.id;
-        const index = Array.from(watch(`${baseName}.rows`)).findIndex(
-          (item) => item.id === id
-        );
-        let disabledView = false; // TODO: เช็คตามสิทธิ์
-        let disabledEdit = false; // TODO: เช็คตามสิทธิ์
-        let disabledDelete = false; // TODO: เช็คตามสิทธิ์
-        const viewFunction = disabledView ? null : () => handleView(index);
-        const editFunction = disabledEdit ? null : () => handleEdit(index);
-        const deleteFunction = disabledDelete
-          ? null
-          : () => handleDelete(index);
+        const row = params.row;
+        const tempRow = params?.row?.is_new ?? false;
+        const isActive =
+          params?.row?.is_active || params?.row?.is_active === null || tempRow;
+
+        let disabledView = false;
+        let disabledEdit = false;
+        let disabledDelete = false;
+        let viewFunction = disabledView ? null : () => handleView(row);
+        let editFunction = disabledEdit ? null : () => handleEdit(row);
+        let deleteFunction = disabledDelete ? null : () => handleDelete(row);
+
+        if (preventInput) {
+          disabledEdit = true;
+          disabledDelete = true;
+          editFunction = null;
+          deleteFunction = null;
+        }
+
         const defaultProps = {
           showInMenu: true,
           sx: {
@@ -237,7 +287,7 @@ const AppProductSalePrepayment = ({ formMethods, productId }) => {
           },
         };
 
-        return [
+        let actions = [
           <GridActionsCellItem
             key={`view_${id}`}
             icon={<RemoveRedEye />}
@@ -246,200 +296,108 @@ const AppProductSalePrepayment = ({ formMethods, productId }) => {
             disabled={disabledView}
             onClick={viewFunction}
           />,
-          <GridActionsCellItem
-            key={`edit_${id}`}
-            icon={<Edit />}
-            {...defaultProps}
-            label="แก้ไข"
-            disabled={disabledEdit}
-            onClick={editFunction}
-          />,
-          <GridActionsCellItem
-            key={`delete_${id}`}
-            icon={<Delete />}
-            {...defaultProps}
-            label="ลบ"
-            disabled={disabledDelete}
-            onClick={deleteFunction}
-          />,
         ];
+
+        if (isActive) {
+          actions.push(
+            <GridActionsCellItem
+              key={`edit_${id}`}
+              icon={<Edit />}
+              {...defaultProps}
+              label="แก้ไขรายละเอียด"
+              disabled={disabledEdit}
+              onClick={editFunction}
+            />
+          );
+          actions.push(
+            <GridActionsCellItem
+              key={`delete_${id}`}
+              icon={<Delete />}
+              {...defaultProps}
+              label={tempRow ? `นำรายการออก` : `ยกเลิกใช้งาน`}
+              disabled={disabledDelete}
+              onClick={deleteFunction}
+            />
+          );
+        }
+
+        return actions;
       },
     },
   ];
-  const AddField = () => {
-    setValue(`${baseName}.baseRows.id`, crypto.randomUUID());
-    setValue(`${baseName}.baseRows.status`, 1);
-    setValue(`${baseName}.baseRows.statusText`, "รายการใหม่");
-    setValue(`${baseName}.baseRows.createBy`, "admin");
-    setValue(`${baseName}.baseRows.createDate`, new Date());
-    setValue(`${baseName}.baseRows.updateBy`, "admin");
-    setValue(`${baseName}.baseRows.updateDate`, new Date());
-    let re = watch(`${baseName}.baseRows`);
-    insert(fields.length, re);
-  };
-  const UpdateField = (index) => {
-    let oldValue = watch(`${baseName}.rows.${index}`);
-    setValue(`${baseName}.baseRows.id`, oldValue.id);
-    setValue(`${baseName}.baseRows.status`, oldValue.status);
-    setValue(`${baseName}.baseRows.statusText`, oldValue.statusText);
-    setValue(`${baseName}.baseRows.updateBy`, "admin");
-    setValue(`${baseName}.baseRows.updateDate`, new Date());
-    let re = watch(`${baseName}.baseRows`);
-
-    update(index, re);
-  };
-  const DeleteField = (index) => {
-    remove(index);
-  };
 
   const handleAdd = () => {
-    handleNotiification("จัดการงวดชำระ", "add", () => {
-      setTimeout(() => {}, 400);
-    });
-  };
-  const handleEdit = (index) => {
-    handleNotiification("จัดการงวดชำระ", "edit", index, () => {
-      setTimeout(() => {}, 400);
-    });
-  };
-  const handleView = (index) => {
-    handleNotiification("จัดการงวดชำระ", "view", index, () => {
-      setTimeout(() => {}, 400);
-    });
+    setDialogMode("create");
+    setSelectedRow(null);
+    setDialogOpen(true);
   };
 
-  const handleDelete = (index) => {
-    DeleteField(index);
+  const handleEdit = (row) => {
+    setDialogMode("edit");
+    setSelectedRow(row);
+    setDialogOpen(true);
   };
-  const handleNotiification = (message, mode, index, callback) => {
-    dispatch(
-      setDialog({
-        ...dialog,
-        open: true,
-        title: message,
-        useDefaultBehavior: false,
-        renderAction: () => {
-          return (
-            <Grid container>
-              <Grid container justifyContent={"center"}>
-                <Grid item xs={11}>
-                  <Card sx={{ border: "1px solid", borderColor: "#e7e7e7" }}>
-                    <Grid container justifyContent={"center"}>
-                      <Grid item xs={11} mb={2}>
-                        <Grid container spacing={2}>
-                          <Grid item xs={12} md={6}>
-                            <TextField
-                              fullWidth
-                              required
-                              disabled={mode === "view" ? true : false}
-                              label="รูปแบบ"
-                              margin="dense"
-                              size="small"
-                              id={`${baseName}.baseRows.PrepaymentForm`}
-                              {...register(
-                                `${baseName}.baseRows.PrepaymentForm`
-                              )}
-                              error={Boolean(errors?.name)}
-                              inputProps={{ maxLength: 100 }}
-                            />
-                            <FormHelperText error={errors?.name}>
-                              {errors?.name?.message}
-                            </FormHelperText>
-                          </Grid>
-                          <Grid item xs={12} md={6}>
-                            <TextField
-                              type="number"
-                              required
-                              disabled={mode === "view" ? true : false}
-                              fullWidth
-                              label="จำนวนงวด"
-                              margin="dense"
-                              size="small"
-                              id={`${baseName}.baseRows.NumberOfInstallments`}
-                              {...register(
-                                `${baseName}.baseRows.NumberOfInstallments`
-                              )}
-                              error={Boolean(errors?.name)}
-                              inputProps={{ maxLength: 100 }}
-                            />
-                            <FormHelperText error={errors?.name}>
-                              {errors?.name?.message}
-                            </FormHelperText>
-                          </Grid>
-                        </Grid>
-                      </Grid>
-                    </Grid>
-                  </Card>
-                </Grid>
-              </Grid>
 
-              <Grid container justifyContent={"center"} columnGap={2}>
-                {mode === "add" && (
-                  <Grid item xs={12} md="auto">
-                    <Button
-                      variant="contained"
-                      onClick={() => {
-                        AddField();
-                        dispatch(
-                          setDialog({
-                            ...dialog,
-                            open: false,
-                            title: message,
-                          })
-                        );
-                      }}
-                    >
-                      ยืนยัน
-                    </Button>
-                  </Grid>
-                )}
-                {mode === "edit" && (
-                  <Grid item xs={12} md="auto">
-                    <Button
-                      variant="contained"
-                      onClick={() => {
-                        UpdateField(index);
-                        dispatch(
-                          setDialog({
-                            ...dialog,
-                            open: false,
-                            title: message,
-                          })
-                        );
-                      }}
-                    >
-                      ยืนยัน
-                    </Button>
-                  </Grid>
-                )}
-                <Grid xs={12} md="auto">
-                  <Button
-                    variant="contained"
-                    onClick={() => {
-                      dispatch(
-                        setDialog({
-                          ...dialog,
-                          open: false,
-                          title: message,
-                        })
-                      );
-                    }}
-                  >
-                    ยกเลิก
-                  </Button>
-                </Grid>
-              </Grid>
-            </Grid>
+  const handleView = (row) => {
+    setDialogMode("view");
+    setSelectedRow(row);
+    setDialogOpen(true);
+  };
+
+  const handleSave = (data) => {
+    let updated;
+    const currentValue = watchData("salePrepaymentTemp") ?? [];
+    const existsIndex = currentValue.findIndex(
+      (item) => item.installment_id === data.installment_id
+    );
+    if (existsIndex > -1) {
+      // กรณี create ซ้ำ หรือ edit
+      updated = [...currentValue];
+      updated[existsIndex] = { ...updated[existsIndex], ...data };
+    } else {
+      // เพิ่มใหม่ หรือแก้ไขจากของจริง
+      updated = [...currentValue, data];
+    }
+
+    setValueData("salePrepaymentTemp", updated, { shouldDirty: true });
+  };
+
+  const handleDelete = (row) => {
+    handleNotification(
+      "คุณต้องการยกเลิกรายการนี้หรือไม่ ?",
+      () => {
+        const tempData = watchData("salePrepaymentTemp") ?? [];
+        const isTemp = tempData.some(
+          (item) => item.installment_id === row.installment_id
+        );
+
+        if (isTemp) {
+          // เอาออกจาก temp array ไปเลย
+          const newTempData = tempData.filter(
+            (item) => item.installment_id !== row.installment_id
           );
-        },
-      })
+          setValueData("salePrepaymentTemp", newTempData);
+        } else {
+          // กรณีไม่ใช่ temp → ทำ soft delete
+          const deleteRow = {
+            ...row,
+            active_status: 3,
+            name_status: "ยกเลิกใช้งาน",
+            update_date: new Date(),
+            update_by: activator,
+          };
+          handleSave(deleteRow);
+        }
+      },
+      null,
+      "question"
     );
   };
+
   const onSubmit = async (data) => {
     setLoading(true);
-
     try {
-      console.log("submit", { data });
+      await handleFetchProduct();
     } catch (error) {
       handleSnackAlert({ open: true, message: "ล้มเหลวเกิดข้อผิดพลาด" });
     } finally {
@@ -447,8 +405,11 @@ const AppProductSalePrepayment = ({ formMethods, productId }) => {
     }
   };
 
-  const handleResetForm = () => {
+  const onError = (error, event) => console.error({ error, event });
+
+  const handleResetForm = async () => {
     reset();
+    await handleFetchProduct();
   };
 
   const handlePageModelChange = (model, detail) => {
@@ -456,71 +417,93 @@ const AppProductSalePrepayment = ({ formMethods, productId }) => {
     setPageSize(model.pageSize);
   };
 
+  const handleSortModelChange = (model, detail) => {
+    let _sortField = defaultSortField;
+    let _sortDirection = defaultSortDirection;
+
+    if (Array.from(model).length > 0) {
+      _sortField = model[0].field;
+      _sortDirection = model[0].sort;
+    }
+
+    setSortField(_sortField);
+    setSortDirection(_sortDirection);
+  };
+
   const handleFetchProduct = async () => {
     setLoading(true);
+
     try {
-      let body = JSON.stringify({
-        field: "create_date",
-        direction: "asc",
+      const body = {
+        field: Transform.snakeToPascalCase(sortField),
+        direction: sortDirection,
         page_number: pageNumber,
         page_size: pageSize,
         product_sale_channel_id: productId,
-      });
+        active_status: watch("active_status")?.id ?? "0",
+        installment_description: watch("installment"),
+        create_date_start: addHours(watch("create_date_start"), 7),
+        create_date_end: addHours(watch("create_date_end"), 7),
+        update_date_start: addHours(watch("update_date_start"), 7),
+        update_date_end: addHours(watch("update_date_end"), 7),
+      };
       const response = await fetch(
         `/api/direct?action=getInstallmentTypeById`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body,
+          body: JSON.stringify(body),
         }
       );
 
-      const data = await response.json();
-
       let resultData = [];
+      const data = await response.json();
       if (data.status !== 204) {
         if (data) {
-          resultData = Array.from(data).map((value) => {
-            return {
-              ...value,
-              id: value.installment_id,
-              PrepaymentForm: value.installment_description,
-              StartDate: value.start_date,
-              EndDate: value.end_date,
-              createDate: value.create_date,
-              updateDate: value.update_date,
-              status: value.is_active,
-              statusText: value.name_status,
-              createBy: value.create_by,
-              updateBy: value.update_by,
-              NumberOfInstallments: value.num_installments,
-            };
-          });
+          resultData = data;
         }
       }
-      const resetData = watch();
-      reset({ ...resetData, salePrepayment: { rows: [...resultData] } });
+
+      const currentValue = watchData();
+      resetData(
+        { ...currentValue, salePrepayment: [...resultData] },
+        {
+          keepDirty: true,
+        }
+      );
     } catch (error) {
-      handleSnackAlert({ open: true, message: "ล้มเหลวเกิดข้อผิดพลาด" });
+      handleSnackAlert({
+        open: true,
+        message: `ล้มเหลวเกิดข้อผิดพลาด ${error.message}`,
+      });
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    handleFetchProduct();
+  }, [pageNumber, pageSize, sortField, sortDirection]);
+
   return (
     <Grid container justifyContent={"center"} my={2}>
       <Grid item xs={12}>
+        <AppManageSalePrepayment
+          mode={dialogMode}
+          open={dialogOpen}
+          setOpen={setDialogOpen}
+          initialData={selectedRow}
+          handleSave={handleSave}
+        />
         <AppCard
-          title={`รูปแบบการชำระล่วงหน้า (เปิดใช้งานได้ 1 รายการ)`}
+          title={`รูปแบบการชำระล่วงหน้า (เปิดใช้งานได้ 1 รายการ : เฉพาะแบบรายเดือน)`}
           cardstyle={{ border: "1px solid", borderColor: "#e7e7e7" }}
         >
-          <form onSubmit={handleSubmit(onSubmit)}>
-            {
-              //#region first label
-            }
+          <form onSubmit={handleSubmit(onSubmit, onError)}>
             <Grid container spacing={2}>
               <Grid item xs={12} md={3}>
                 <Controller
-                  name={`status`}
+                  name={`active_status`}
                   control={control}
                   render={({ field }) => {
                     const { name, onChange, ...otherProps } = field;
@@ -531,30 +514,20 @@ const AppProductSalePrepayment = ({ formMethods, productId }) => {
                           id={name}
                           name={name}
                           disablePortal
+                          disabled={isDirtyData}
                           fullWidth
                           label="สถานะ"
-                          options={[
-                            {
-                              id: "1",
-                              label: "เปิดใช้งาน",
-                            },
-                            {
-                              id: "2",
-                              label: "ยกเลิกการใช้งาน",
-                            },
-                            {
-                              id: "3",
-                              label: "รายการใหม่",
-                            },
-                          ]}
+                          options={
+                            APPLICATION_RECORD_PRODUCT_CHANNEL_DETAIL_STATUS
+                          }
                           onChange={(event, value) => {
                             onChange(value);
                           }}
                           {...otherProps}
-                          error={Boolean(errors?.status)}
+                          error={Boolean(errors?.active_status)}
                         />
-                        <FormHelperText error={errors?.status}>
-                          {errors?.status?.message}
+                        <FormHelperText error={errors?.active_status}>
+                          {errors?.active_status?.message}
                         </FormHelperText>
                       </>
                     );
@@ -564,30 +537,22 @@ const AppProductSalePrepayment = ({ formMethods, productId }) => {
               <Grid item xs={12} md={3}>
                 <TextField
                   fullWidth
-                  label="ชื่อ"
-                  margin="dense"
                   size="small"
-                  id={`name`}
-                  {...register(`name`)}
-                  error={Boolean(errors?.name)}
-                  inputProps={{ maxLength: 100 }}
+                  margin="dense"
+                  label="รูปแบบ"
+                  disabled={isDirtyData}
+                  {...register("installment")}
+                  error={errors?.installment}
                 />
-                <FormHelperText error={errors?.name}>
-                  {errors?.name?.message}
+                <FormHelperText error={errors?.installment}>
+                  {errors?.installment?.message}
                 </FormHelperText>
               </Grid>
             </Grid>
-            {
-              //#endregion
-            }
-
-            {
-              //#region Date
-            }
             <Grid container spacing={2}>
               <Grid item xs={12} md={3}>
                 <Controller
-                  name={`fromCreateDate`}
+                  name={`create_date_start`}
                   control={control}
                   render={({ field }) => {
                     const { name, onChange, ...otherProps } = field;
@@ -602,14 +567,19 @@ const AppProductSalePrepayment = ({ formMethods, productId }) => {
                           margin="dense"
                           size="small"
                           disableFuture
+                          disabled={isDirtyData}
                           onChange={(date) => {
+                            clearErrors([
+                              "create_date_start",
+                              "create_date_end",
+                            ]);
                             onChange(date);
                           }}
-                          error={Boolean(errors?.fromCreateDate)}
+                          error={Boolean(errors?.create_date_start)}
                           {...otherProps}
                         />
-                        <FormHelperText error={errors?.fromCreateDate}>
-                          {errors?.fromCreateDate?.message}
+                        <FormHelperText error={errors?.create_date_start}>
+                          {errors?.create_date_start?.message}
                         </FormHelperText>
                       </>
                     );
@@ -618,7 +588,7 @@ const AppProductSalePrepayment = ({ formMethods, productId }) => {
               </Grid>
               <Grid item xs={12} md={3}>
                 <Controller
-                  name={`toCreateDate`}
+                  name={`create_date_end`}
                   control={control}
                   render={({ field }) => {
                     const { name, onChange, ...otherProps } = field;
@@ -633,14 +603,17 @@ const AppProductSalePrepayment = ({ formMethods, productId }) => {
                           margin="dense"
                           size="small"
                           disableFuture
+                          minDate={new Date(watch("create_date_start"))}
+                          disabled={!watch("create_date_start") || isDirtyData}
+                          readOnly={!watch("create_date_start") || isDirtyData}
                           onChange={(date) => {
                             onChange(date);
                           }}
-                          error={Boolean(errors?.toCreateDate)}
+                          error={Boolean(errors?.create_date_end)}
                           {...otherProps}
                         />
-                        <FormHelperText error={errors?.toCreateDate}>
-                          {errors?.toCreateDate?.message}
+                        <FormHelperText error={errors?.create_date_end}>
+                          {errors?.create_date_end?.message}
                         </FormHelperText>
                       </>
                     );
@@ -649,7 +622,7 @@ const AppProductSalePrepayment = ({ formMethods, productId }) => {
               </Grid>
               <Grid item xs={12} md={3}>
                 <Controller
-                  name={`fromUpdateDate`}
+                  name={`update_date_start`}
                   control={control}
                   render={({ field }) => {
                     const { name, onChange, ...otherProps } = field;
@@ -664,14 +637,19 @@ const AppProductSalePrepayment = ({ formMethods, productId }) => {
                           margin="dense"
                           size="small"
                           disableFuture
+                          disabled={isDirtyData}
                           onChange={(date) => {
+                            clearErrors([
+                              "update_date_start",
+                              "update_date_end",
+                            ]);
                             onChange(date);
                           }}
-                          error={Boolean(errors?.fromUpdateDate)}
+                          error={Boolean(errors?.update_date_start)}
                           {...otherProps}
                         />
-                        <FormHelperText error={errors?.fromUpdateDate}>
-                          {errors?.fromUpdateDate?.message}
+                        <FormHelperText error={errors?.update_date_start}>
+                          {errors?.update_date_start?.message}
                         </FormHelperText>
                       </>
                     );
@@ -680,7 +658,7 @@ const AppProductSalePrepayment = ({ formMethods, productId }) => {
               </Grid>
               <Grid item xs={12} md={3}>
                 <Controller
-                  name={`toUpdateDate`}
+                  name={`update_date_end`}
                   control={control}
                   render={({ field }) => {
                     const { name, onChange, ...otherProps } = field;
@@ -695,14 +673,17 @@ const AppProductSalePrepayment = ({ formMethods, productId }) => {
                           margin="dense"
                           size="small"
                           disableFuture
+                          minDate={new Date(watch("update_date_start"))}
+                          disabled={!watch("update_date_start") || isDirtyData}
+                          readOnly={!watch("update_date_start") || isDirtyData}
                           onChange={(date) => {
                             onChange(date);
                           }}
-                          error={Boolean(errors?.toUpdateDate)}
+                          error={Boolean(errors?.update_date_end)}
                           {...otherProps}
                         />
-                        <FormHelperText error={errors?.toUpdateDate}>
-                          {errors?.toUpdateDate?.message}
+                        <FormHelperText error={errors?.update_date_end}>
+                          {errors?.update_date_end?.message}
                         </FormHelperText>
                       </>
                     );
@@ -710,18 +691,12 @@ const AppProductSalePrepayment = ({ formMethods, productId }) => {
                 />
               </Grid>
             </Grid>
-            {
-              //#endregion
-            }
-            {
-              //#region from button
-            }
             <Grid container spacing={2} justifyContent={"end"}>
               <Grid item xs={12} md={"auto"} order={{ xs: 2, md: 1 }}>
                 <Button
                   variant="outlined"
                   fullWidth
-                  disabled={loading}
+                  disabled={loading || isDirtyData}
                   endIcon={<RestartAlt />}
                   onClick={handleResetForm}
                 >
@@ -733,7 +708,7 @@ const AppProductSalePrepayment = ({ formMethods, productId }) => {
                   type="submit"
                   variant="contained"
                   fullWidth
-                  disabled={loading}
+                  disabled={loading || isDirtyData}
                   endIcon={
                     loading ? <CircularProgress size={15} /> : <Search />
                   }
@@ -741,36 +716,42 @@ const AppProductSalePrepayment = ({ formMethods, productId }) => {
                   ค้นหา
                 </Button>
               </Grid>
-              <Grid item xs={12} md={"auto"} order={{ xs: 1, md: 1 }}>
-                <Button
-                  variant="contained"
-                  color="success"
-                  sx={{
-                    color: theme.palette.common.white,
-                  }}
-                  fullWidth
-                  disabled={loading}
-                  endIcon={loading ? <CircularProgress size={15} /> : <Add />}
-                  onClick={handleAdd}
-                >
-                  เพิ่ม
-                </Button>
-              </Grid>
+              {!preventInput && (
+                <Grid item xs={12} md={"auto"} order={{ xs: 1, md: 1 }}>
+                  <Button
+                    variant="contained"
+                    color="success"
+                    sx={{
+                      color: theme.palette.common.white,
+                    }}
+                    fullWidth
+                    disabled={loading}
+                    endIcon={loading ? <CircularProgress size={15} /> : <Add />}
+                    onClick={handleAdd}
+                  >
+                    เพิ่ม
+                  </Button>
+                </Grid>
+              )}
             </Grid>
-            {
-              //#endregion
-            }
           </form>
-
           <Grid item xs={12} sx={{ height: "25rem" }} mt={1}>
             <AppDataGrid
-              rows={watch(`${baseName}.rows`)}
-              rowCount={watch(`${baseName}.pagination.totalRows`)}
+              getRowId={(row) => row.installment_id}
               columns={columns}
+              rows={rowsDisplay}
+              rowCount={rowsDisplay.length}
               hiddenColumn={hiddenColumn}
               pageNumber={APPLICATION_DEFAULT.dataGrid.pageNumber}
               pageSize={APPLICATION_DEFAULT.dataGrid.pageSize}
+              sortField={sortField}
+              sortDirection={sortDirection}
               onPaginationModelChange={handlePageModelChange}
+              onSortModelChange={handleSortModelChange}
+              pagination={!isDirtyData}
+              disableColumnSorting={isDirtyData}
+              hideFooterPagination={isDirtyData}
+              hideFooterSelectedRowCount={isDirtyData}
             />
           </Grid>
         </AppCard>
@@ -778,4 +759,5 @@ const AppProductSalePrepayment = ({ formMethods, productId }) => {
     </Grid>
   );
 };
+
 export default AppProductSalePrepayment;

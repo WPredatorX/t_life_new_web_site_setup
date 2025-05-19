@@ -2,6 +2,10 @@ import { render, renderHook, act, within } from "@testing-library/react";
 import { theme } from "@themes";
 import { Provider } from "react-redux";
 import { AppSnackBar, AppDialog, AppNavigationBar } from "@components";
+import {
+  PageLayoutProvider,
+  PageLayoutMainContent,
+} from "@components/pages/page-layout/components";
 import { ThemeProvider, CssBaseline } from "@mui/material";
 import {
   StoreProvider,
@@ -14,27 +18,15 @@ import userEvent from "@testing-library/user-event";
 import mediaQuery from "css-mediaquery";
 
 const Providers = ({ mockStore, children }) => {
-  // const loadedTheme = theme();
-
   const generateMockStore = () => {
     return mockStore;
   };
 
   return (
     <StoreProvider mockStore={generateMockStore}>
-      <ReactQueryProvider>
-        {/* <ThemeProvider theme={loadedTheme}> */}
-        <LanguageProvider>
-          <DateTimeProvider>
-            <CssBaseline />
-            <AppNavigationBar />
-            <AppSnackBar />
-            <AppDialog />
-            {children}
-          </DateTimeProvider>
-        </LanguageProvider>
-        {/* </ThemeProvider> */}
-      </ReactQueryProvider>
+      <PageLayoutProvider>
+        <PageLayoutMainContent>{children}</PageLayoutMainContent>
+      </PageLayoutProvider>
     </StoreProvider>
   );
 };
@@ -83,6 +75,12 @@ const createMatchMedia = (width) => {
   });
 };
 
-export { act, screen, fireEvent, within } from "@testing-library/react";
+export {
+  act,
+  screen,
+  fireEvent,
+  within,
+  waitFor,
+} from "@testing-library/react";
 export { customRender as render, customRenderHook as renderHook };
 export { userEvent, createMatchMedia };

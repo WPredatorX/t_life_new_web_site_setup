@@ -2,16 +2,22 @@
 
 import { useState, useEffect } from "react";
 import {
+  Link,
   Grid,
-  InputLabel,
-  TextField,
   Button,
+  TextField,
+  IconButton,
   FormHelperText,
   CircularProgress,
-  Link,
 } from "@mui/material";
 import { GridActionsCellItem } from "@mui/x-data-grid";
-import { RemoveRedEye, Edit, Search, RestartAlt } from "@mui/icons-material";
+import {
+  RemoveRedEye,
+  Edit,
+  Search,
+  RestartAlt,
+  ContentCopy,
+} from "@mui/icons-material";
 import {
   AppCard,
   AppDataGrid,
@@ -19,14 +25,28 @@ import {
   AppAutocomplete,
   AppDatePicker,
 } from "@components";
-import { useAppSnackbar, useAppRouter, useAppForm } from "@hooks";
-import { format, addYears, addDays, parseISO } from "date-fns";
-import { APPLICATION_DEFAULT } from "@constants";
+import {
+  useAppSnackbar,
+  useAppRouter,
+  useAppForm,
+  useAppFeatureCheck,
+} from "@hooks";
+import { format, addYears, parseISO, addHours } from "date-fns";
+import {
+  APPLICATION_DEFAULT,
+  APPLICATION_RECORD_BROKER_STATUS,
+} from "@constants";
 import { Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { Yup, Transform } from "@utilities";
 
 const PageBrokerList = () => {
+  const { validFeature: grantRead } = useAppFeatureCheck([
+    "broker.general.read",
+  ]);
+  const { validFeature: grantEdit } = useAppFeatureCheck([
+    "broker.general.write",
+  ]);
   const router = useAppRouter();
   const { handleSnackAlert } = useAppSnackbar();
   const [loading, setLoading] = useState(true);
@@ -40,6 +60,14 @@ const PageBrokerList = () => {
   const [pageSize, setPageSize] = useState(
     APPLICATION_DEFAULT.dataGrid.pageSize
   );
+  const defaultSortField = "create_date";
+  const defaultSortDirection = "desc";
+  const [sortField, setSortField] = useState(defaultSortField);
+  const [sortDirection, setSortDirection] = useState(defaultSortDirection);
+
+  const hiddenColumn = {
+    id: false,
+  };
 
   const columns = [
     {
@@ -47,7 +75,7 @@ const PageBrokerList = () => {
     },
     {
       flex: 1,
-      field: "name",
+      field: "c_subbusiness_line",
       type: "string",
       headerAlign: "center",
       headerName: "ชื่อ",
@@ -57,51 +85,79 @@ const PageBrokerList = () => {
     },
     {
       flex: 1,
-      field: "email",
+      field: "broker_email",
       type: "string",
       headerAlign: "center",
-      headerName: "ชื่อ",
+      headerName: "อีเมล",
       headerClassName: "header-main",
       align: "left",
-      minWidth: 200,
+      minWidth: 150,
     },
     {
       flex: 1,
-      field: "registerId",
+      field: "broker_license_number",
       type: "string",
       headerAlign: "center",
       headerName: "เลขทะเบียน",
       headerClassName: "header-main",
       align: "center",
-      minWidth: 200,
+      minWidth: 100,
     },
     {
       flex: 1,
-      field: "url",
+      field: "broker_url",
       type: "string",
       headerAlign: "center",
-      headerName: "ประเภท",
+      headerName: "ลิ้งค์เข้าถึง",
       headerClassName: "header-main",
-      align: "left",
-      minWidth: 200,
-      renderCell: (params) => <Link>{params.value}</Link>,
+      align: "center",
+      minWidth: 100,
+      renderCell: (params) => {
+        if (params?.value) {
+          return (
+            <>
+              <Link href={params?.value}>คลิก</Link>
+              <IconButton
+                size="small"
+                title="คัดลอก"
+                onClick={async () => {
+                  await navigator.clipboard.writeText(params?.value);
+                  handleSnackAlert({
+                    open: true,
+                    severity: "success",
+                    message: `คัดลอกลิ้งค์เข้าถึงของโบรกเกอร์${params?.row?.name}เรียบร้อยแล้ว`,
+                  });
+                }}
+              >
+                <ContentCopy style={{ fontSize: 15 }} />
+              </IconButton>
+            </>
+          );
+        }
+
+        return <>-</>;
+      },
     },
     {
       flex: 1,
-      field: "status",
+      field: "active_status",
       type: "string",
       headerAlign: "center",
       headerName: "สถานะ",
       headerClassName: "header-main",
       align: "center",
-      minWidth: 200,
+      minWidth: 100,
       renderCell: (params) => (
-        <AppStatus status={params.value} statusText={params.row.statusText} />
+        <AppStatus
+          type="3"
+          status={params.value}
+          statusText={params.row.name_status}
+        />
       ),
     },
     {
       flex: 1,
-      field: "createBy",
+      field: "create_by",
       type: "string",
       headerAlign: "center",
       headerName: "สร้างโดย",
@@ -111,7 +167,7 @@ const PageBrokerList = () => {
     },
     {
       flex: 1,
-      field: "createDate",
+      field: "create_date",
       type: "string",
       headerAlign: "center",
       headerName: "สร้างเมื่อ",
@@ -119,16 +175,15 @@ const PageBrokerList = () => {
       align: "center",
       minWidth: 100,
       valueGetter: (value) => {
-        let formattedValue = format(
-          addYears(parseISO(value), 543),
-          "dd/MM/yyyy"
-        );
+        let formattedValue = value
+          ? format(addYears(parseISO(value), 543), "dd/MM/yyyy HH:mm:ss")
+          : "";
         return formattedValue;
       },
     },
     {
       flex: 1,
-      field: "updateBy",
+      field: "update_by",
       type: "string",
       headerAlign: "center",
       headerName: "แก้ไขโดย",
@@ -138,7 +193,7 @@ const PageBrokerList = () => {
     },
     {
       flex: 1,
-      field: "updateDate",
+      field: "update_date",
       type: "string",
       headerAlign: "center",
       headerName: "แก้ไขเมื่อ",
@@ -146,10 +201,9 @@ const PageBrokerList = () => {
       align: "center",
       minWidth: 100,
       valueGetter: (value) => {
-        let formattedValue = format(
-          addYears(parseISO(value), 543),
-          "dd/MM/yyyy"
-        );
+        let formattedValue = value
+          ? format(addYears(parseISO(value), 543), "dd/MM/yyyy HH:mm:ss")
+          : "";
         return formattedValue;
       },
     },
@@ -163,14 +217,15 @@ const PageBrokerList = () => {
       minWidth: 100,
       getActions: (params) => {
         const id = params?.row?.id;
-        let disabledView = false; // TODO: เช็คตามสิทธิ์
-        let disabledEdit = false; // TODO: เช็คตามสิทธิ์
+        const subbusiness_line = params?.row?.i_subbusiness_line;
+        let disabledView = false;
+        let disabledEdit = false;
         const viewFunction = disabledView
           ? null
-          : () => router.push(`/brokers/`);
+          : () => router.push(`/brokers/${subbusiness_line}`);
         const editFunction = disabledEdit
           ? null
-          : () => router.push(`/brokers/`);
+          : () => router.push(`/brokers/${subbusiness_line}`);
 
         const defaultProps = {
           showInMenu: true,
@@ -181,45 +236,66 @@ const PageBrokerList = () => {
           },
         };
 
-        return [
-          <GridActionsCellItem
-            key={`view_${id}`}
-            icon={<RemoveRedEye />}
-            {...defaultProps}
-            label="ดูรายละเอียด"
-            disabled={disabledView}
-            onClick={viewFunction}
-          />,
-          <GridActionsCellItem
-            key={`edit_${id}`}
-            icon={<Edit />}
-            {...defaultProps}
-            label="แก้ไข"
-            disabled={disabledEdit}
-            onClick={editFunction}
-          />,
-        ];
+        let actions = [];
+
+        if (grantRead) {
+          actions.push(
+            <GridActionsCellItem
+              key={`view_${id}`}
+              icon={<RemoveRedEye />}
+              {...defaultProps}
+              label="ดูรายละเอียด"
+              disabled={disabledView}
+              onClick={viewFunction}
+            />
+          );
+        }
+
+        if (grantEdit) {
+          actions.push(
+            <GridActionsCellItem
+              key={`edit_${id}`}
+              icon={<Edit />}
+              {...defaultProps}
+              label="แก้ไข"
+              disabled={disabledEdit}
+              onClick={editFunction}
+            />
+          );
+        }
+
+        return actions;
       },
     },
   ];
 
-  const hiddenColumn = {
-    id: false,
-  };
-
   const validationSchema = Yup.object().shape({
-    statusList: Yup.array().of(Yup.mixed()).nullable(),
-    status: Yup.mixed().nullable(),
-    name: Yup.string().nullable(),
-    registerId: Yup.string().nullable(),
-    email: Yup.string().nullable(),
+    active_status: Yup.mixed().nullable(),
+    c_subbusiness_line: Yup.string().nullable(),
+    broker_license_number: Yup.string().nullable(),
+    broker_email: Yup.string().nullable(),
     fromCreateDate: Yup.date().nullable(),
-    toCreateDate: Yup.date().nullable(),
+    toCreateDate: Yup.date()
+      .nullable()
+      .when("fromCreateDate", {
+        is: (value) => {
+          return Boolean(value);
+        },
+        then: (schema) => schema.required(),
+      }),
     fromUpdateDate: Yup.date().nullable(),
-    toUpdateDate: Yup.date().nullable(),
+    toUpdateDate: Yup.date()
+      .nullable()
+      .when("fromUpdateDate", {
+        is: (value) => {
+          return Boolean(value);
+        },
+        then: (schema) => schema.required(),
+      }),
   });
 
   const {
+    watch,
     reset,
     control,
     register,
@@ -230,24 +306,40 @@ const PageBrokerList = () => {
     reValidateMode: "onChange",
     resolver: yupResolver(validationSchema),
     defaultValues: {
-      statusList: [],
-      status: null,
-      name: "",
-      registerId: "",
-      email: "",
-      fromCreateDate: addDays(new Date(), -7),
-      toCreateDate: new Date(),
+      c_subbusiness_line: "",
+      active_status: null,
+      broker_license_number: "",
+      broker_email: "",
+      fromCreateDate: null,
+      toCreateDate: null,
       fromUpdateDate: null,
       toUpdateDate: null,
     },
   });
+
   const handleFetchBroker = async () => {
     setLoading(true);
     try {
+      const payload = {
+        field: Transform.snakeToPascalCase(sortField),
+        direction: sortDirection,
+        page_number: pageNumber,
+        page_size: pageSize,
+        active_status: watch("active_status")?.id ?? "0",
+        broker_email: watch("broker_email"),
+        broker_license_number: watch("broker_license_number"),
+        c_subbusiness_line: watch("c_subbusiness_line"),
+        create_date_start: addHours(watch("fromCreateDate"), 7),
+        create_date_end: addHours(watch("toCreateDate"), 7),
+        update_date_start: addHours(watch("fromUpdateDate"), 7),
+        update_date_end: addHours(watch("toUpdateDate"), 7),
+      };
       const response = await fetch(`/api/broker?action=getBroker`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
+
       const data = await response.json();
       setData(data);
     } catch (error) {
@@ -257,20 +349,34 @@ const PageBrokerList = () => {
     }
   };
 
-  useEffect(() => {
-    handleFetchBroker();
-  }, [pageNumber, pageSize]);
-
   const handlePageModelChange = (model, detail) => {
     setPageNumber(model.page);
     setPageSize(model.pageSize);
   };
 
-  const onSubmit = async (data) => {
+  const handleSortModelChange = (model, detail) => {
+    let _sortField = defaultSortField;
+    let _sortDirection = defaultSortDirection;
+
+    if (Array.from(model).length > 0) {
+      _sortField = model[0].field;
+      _sortDirection = model[0].sort;
+    }
+
+    setSortField(_sortField);
+    setSortDirection(_sortDirection);
+  };
+
+  const handleResetForm = async () => {
+    reset();
+    await handleFetchBroker();
+  };
+
+  const onSubmit = async (data, event) => {
     setLoading(true);
 
     try {
-      console.log("submit", { data });
+      handleFetchBroker();
     } catch (error) {
       handleSnackAlert({ open: true, message: "ล้มเหลวเกิดข้อผิดพลาด" });
     } finally {
@@ -278,18 +384,21 @@ const PageBrokerList = () => {
     }
   };
 
-  const handleResetForm = () => {
-    reset();
-  };
+  const onError = (error, event) => console.error(error);
+
+  useEffect(() => {
+    handleFetchBroker();
+  }, [pageNumber, pageSize, sortField, sortDirection]);
+
   return (
     <AppCard title={"ช่องทาง Broker"}>
       <Grid container spacing={2}>
         <Grid item xs={12}>
-          <form onSubmit={handleSubmit(onSubmit)}>
+          <form onSubmit={handleSubmit(onSubmit, onError)}>
             <Grid container spacing={2} alignItems={"center"}>
               <Grid item xs={12} md={3}>
                 <Controller
-                  name={`status`}
+                  name={`active_status`}
                   control={control}
                   render={({ field }) => {
                     const { name, onChange, ...otherProps } = field;
@@ -302,20 +411,15 @@ const PageBrokerList = () => {
                           disablePortal
                           fullWidth
                           label="สถานะ"
-                          options={[
-                            {
-                              id: "1",
-                              label: "Option 1",
-                            },
-                          ]}
+                          options={APPLICATION_RECORD_BROKER_STATUS}
                           onChange={(event, value) => {
                             onChange(value);
                           }}
                           {...otherProps}
-                          error={Boolean(errors?.status)}
+                          error={Boolean(errors?.active_status)}
                         />
-                        <FormHelperText error={errors?.status}>
-                          {errors?.status?.message}
+                        <FormHelperText error={errors?.active_status}>
+                          {errors?.active_status?.message}
                         </FormHelperText>
                       </>
                     );
@@ -328,28 +432,32 @@ const PageBrokerList = () => {
                   label="เลขทะเบียน"
                   margin="dense"
                   size="small"
-                  id={`registerId`}
-                  {...register(`registerId`)}
-                  error={Boolean(errors?.name)}
+                  {...register(`broker_license_number`)}
+                  error={Boolean(errors?.broker_license_number)}
                   inputProps={{ maxLength: 100 }}
+                  InputLabelProps={{
+                    shrink: watch(`broker_license_number`),
+                  }}
                 />
-                <FormHelperText error={errors?.name}>
-                  {errors?.name?.message}
+                <FormHelperText error={errors?.broker_license_number}>
+                  {errors?.broker_license_number?.message}
                 </FormHelperText>
               </Grid>
               <Grid item xs={12} md={3}>
                 <TextField
                   fullWidth
-                  label="email"
+                  label="อีเมล"
                   margin="dense"
                   size="small"
-                  id={`email`}
-                  {...register(`email`)}
-                  error={Boolean(errors?.name)}
+                  {...register(`broker_email`)}
+                  error={Boolean(errors?.broker_email)}
                   inputProps={{ maxLength: 100 }}
+                  InputLabelProps={{
+                    shrink: watch(`broker_email`),
+                  }}
                 />
-                <FormHelperText error={errors?.name}>
-                  {errors?.name?.message}
+                <FormHelperText error={errors?.broker_email}>
+                  {errors?.broker_email?.message}
                 </FormHelperText>
               </Grid>
               <Grid item xs={12} md={3}>
@@ -358,13 +466,15 @@ const PageBrokerList = () => {
                   label="ชื่อ"
                   margin="dense"
                   size="small"
-                  id={`name`}
-                  {...register(`name`)}
-                  error={Boolean(errors?.name)}
+                  {...register(`c_subbusiness_line`)}
+                  error={Boolean(errors?.c_subbusiness_line)}
                   inputProps={{ maxLength: 100 }}
+                  InputLabelProps={{
+                    shrink: watch(`c_subbusiness_line`),
+                  }}
                 />
-                <FormHelperText error={errors?.name}>
-                  {errors?.name?.message}
+                <FormHelperText error={errors?.c_subbusiness_line}>
+                  {errors?.c_subbusiness_line?.message}
                 </FormHelperText>
               </Grid>
             </Grid>
@@ -417,6 +527,8 @@ const PageBrokerList = () => {
                           margin="dense"
                           size="small"
                           disableFuture
+                          disabled={!watch("fromCreateDate")}
+                          readOnly={!watch("fromCreateDate")}
                           onChange={(date) => {
                             onChange(date);
                           }}
@@ -479,6 +591,8 @@ const PageBrokerList = () => {
                           margin="dense"
                           size="small"
                           disableFuture
+                          disabled={!watch("fromUpdateDate")}
+                          readOnly={!watch("fromUpdateDate")}
                           onChange={(date) => {
                             onChange(date);
                           }}
@@ -524,13 +638,17 @@ const PageBrokerList = () => {
         </Grid>
         <Grid item xs={12} sx={{ height: "25rem" }}>
           <AppDataGrid
+            getRowId={(row) => row.i_subbusiness_line}
             rows={data}
-            rowCount={100}
+            rowCount={data[0]?.total_records || 0}
             columns={columns}
             hiddenColumn={hiddenColumn}
             loading={loading}
             pageNumber={pageNumber}
             pageSize={pageSize}
+            sortField={sortField}
+            sortDirection={sortDirection}
+            onSortModelChange={handleSortModelChange}
             onPaginationModelChange={handlePageModelChange}
           />
         </Grid>

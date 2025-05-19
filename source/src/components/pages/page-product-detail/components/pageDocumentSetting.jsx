@@ -27,7 +27,7 @@ const PageDocumentSetting = () => {
               InputProps={{
                 inputComponent: AppNumericFormat,
                 endAdornment: (
-                  <InputAdornment position="end">อัพโหลด</InputAdornment>
+                  <InputAdornment position="end">อัปโหลด</InputAdornment>
                 ),
               }}
             />
@@ -68,6 +68,7 @@ const PageDocumentSetting = () => {
                     </Grid>
                     <Grid item xs={3} mt={0.7}>
                       <Button
+                        disabled
                         sx={{
                           backgroundColor: theme.palette.primary.main,
                           color: "white",
