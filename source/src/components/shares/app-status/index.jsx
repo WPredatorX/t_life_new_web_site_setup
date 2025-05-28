@@ -95,6 +95,7 @@ const AppStatus = ({ status, statusText, type = "1" }) => {
 
   return (
     <Chip
+      data-testid="app-status"
       sx={{ width: "8rem" }}
       color={getColorFunction()}
       label={statusText}

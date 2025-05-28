@@ -9,10 +9,6 @@ const RichTextEditor = dynamic(
   () => import("mui-tiptap").then((mod) => mod.RichTextEditor),
   { ssr: false }
 );
-const RichTextReadOnly = dynamic(
-  () => import("mui-tiptap").then((mod) => mod.RichTextReadOnly),
-  { ssr: false }
-);
 const MenuButtonBold = dynamic(
   () => import("mui-tiptap").then((mod) => mod.MenuButtonBold),
   { ssr: false }
@@ -63,10 +59,6 @@ const MenuButtonHighlightColor = dynamic(
 );
 const MenuSelectFontSize = dynamic(
   () => import("mui-tiptap").then((mod) => mod.MenuSelectFontSize),
-  { ssr: false }
-);
-const MenuSelectFontFamily = dynamic(
-  () => import("mui-tiptap").then((mod) => mod.MenuSelectFontFamily),
   { ssr: false }
 );
 const MenuButtonOrderedList = dynamic(

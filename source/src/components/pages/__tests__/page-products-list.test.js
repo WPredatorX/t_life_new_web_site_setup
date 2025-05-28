@@ -17,7 +17,34 @@ jest.mock("@/hooks", () => ({
   useAppFeatureCheck: jest.fn(() => ({ validFeature: true })),
 }));
 
+global.fetch = jest.fn(() =>
+  Promise.resolve({
+    json: () =>
+      Promise.resolve({
+        current_page: 1,
+        page_size: 10,
+        total_records: 1,
+        products: [
+          {
+            plan_code: "P001",
+            product_name: "Product 1",
+            i_package: "NP-00",
+            active_status: "active",
+            create_by: "admin",
+            create_date: new Date().toISOString(),
+            update_by: "admin",
+            update_date: new Date().toISOString(),
+          },
+        ],
+      }),
+  })
+);
+
 describe("PageProductsList", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   beforeEach(() => {
     const useAppFormMock = {
       reset: jest.fn(),
@@ -43,10 +70,7 @@ describe("PageProductsList", () => {
       handleSnackAlert: jest.fn(),
     });
     require("@/hooks").useAppRouter.mockReturnValue({ push: jest.fn() });
-    require("@/hooks").useAppSelector.mockReturnValue({
-      activator: "admin",
-      someArray: [], // Mock the 'array' property or any required data
-    });
+    require("@/hooks").useAppSelector.mockReturnValue({ activator: "admin" });
     require("@/hooks").useAppForm.mockReturnValue(useAppFormMock);
   });
 

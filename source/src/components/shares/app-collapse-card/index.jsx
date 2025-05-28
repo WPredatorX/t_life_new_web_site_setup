@@ -25,7 +25,7 @@ import { format, addYears, addDays, parseISO } from "date-fns";
 import { GridActionsCellItem } from "@mui/x-data-grid";
 import { useAppRouter } from "@hooks";
 import { Transform } from "@/utilities";
-const appCollapsecard = ({ content = {}, setactive = false }) => {
+const AppCollapsecard = ({ content = {}, setactive = false }) => {
   const router = useAppRouter();
   const [expand, setExpand] = useState(setactive);
   const columns = [
@@ -170,6 +170,7 @@ const appCollapsecard = ({ content = {}, setactive = false }) => {
 
         return [
           <GridActionsCellItem
+            role="button"
             key={`view_${id}`}
             icon={<RemoveRedEye />}
             {...defaultProps}
@@ -220,6 +221,7 @@ const appCollapsecard = ({ content = {}, setactive = false }) => {
             <AccordionDetails>
               <Grid item xs={12} sx={{ height: "25rem" }}>
                 <AppDataGrid
+                  data-testid="app-data-grid"
                   rows={dataRows}
                   rowCount={100}
                   columns={columns}
@@ -237,4 +239,4 @@ const appCollapsecard = ({ content = {}, setactive = false }) => {
   );
 };
 
-export default appCollapsecard;
+export default AppCollapsecard;

@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "esModuleInterop": true,
     "paths": {
       "@/*": ["./src/*"],
       "@app": ["./src/app"],
@@ -22,7 +21,7 @@
       "@utilities": ["./src/utilities"],
       "@utilities/*": ["./src/utilities/*"],
       "@hooks": ["./src/hooks"],
-      "@hooks/*": ["./src/hooks/*"]
+      "@hooks/*": ["./src/hooks/*"],
     }
   },
   "typeAcquisition": {
