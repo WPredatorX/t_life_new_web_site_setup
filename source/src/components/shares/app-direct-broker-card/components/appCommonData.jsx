@@ -486,7 +486,7 @@ const AppCommonData = ({ mode, brokerData }) => {
               {grantCommonEdit && (
                 <Grid item xs={12} textAlign={"end"}>
                   <Button
-                    disabled={watch("confirmEmail").length === 0}
+                    disabled={watch("confirmEmail")?.length === 0}
                     color="primary"
                     variant="contained"
                     sx={{
@@ -671,7 +671,7 @@ const AppCommonData = ({ mode, brokerData }) => {
               {grantCommonEdit && (
                 <Grid item xs={12} textAlign={"end"}>
                   <Button
-                    disabled={watch("contactEmail").length === 0}
+                    disabled={watch("contactEmail")?.length === 0}
                     color="primary"
                     variant="contained"
                     sx={{

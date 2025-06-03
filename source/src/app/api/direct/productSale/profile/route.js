@@ -89,21 +89,6 @@ export async function POST(request) {
       }
       return NextResponse.json(data);
 
-    case "GetContentSectionItemsById":
-      body = await request.json();
-      response = await axios.post(
-        `${baseUrl}BackOffice/GetContentSectionItemsById`,
-        body,
-        { headers: { Authorization: `Bearer ${accessToken}` } }
-      );
-      if (response.status === 200) {
-        data = response.data?.data;
-      }
-      if (response.status === 204) {
-        data = [];
-      }
-      return NextResponse.json(data);
-
     case "GetCopyProfileProductSaleCardId":
       body = await request.json();
       response = await axios.post(

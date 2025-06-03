@@ -10,7 +10,12 @@ jest.mock("@/components", () => ({
   ),
   AppDataGrid: (props) => (
     <div data-testid="app-data-grid">
-      {props.rows.length} rows, Page {props.pageNumber}
+      {props.rows.map((row) => (
+        <div key={row.id}>
+          <div data-testid="app-status">{row.statusText}</div>
+          <div>formatted-{row.InsuredSumFrom}</div>
+        </div>
+      ))}
     </div>
   ),
 }));
@@ -59,7 +64,7 @@ describe("AppCollapseCard", () => {
   it("should render AppDataGrid with correct rows", () => {
     render(<AppCollapsecard content={mockContent} />);
     const grid = screen.getByTestId("app-data-grid");
-    expect(grid).toHaveTextContent("1 rows");
+    expect(grid).toHaveTextContent("ใช้งานอยู่");
   });
 
   it("should expand accordion and render content", () => {

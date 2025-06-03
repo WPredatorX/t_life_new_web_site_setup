@@ -220,6 +220,7 @@ const ClientComponent = ({ value, onChange, editable }) => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <RichTextEditor
+        data-testid="rich-text-editor"
         onUpdate={(props) => {
           let _html = props.editor.getHTML();
           let parsed = HtmlParser(_html);
@@ -239,6 +240,7 @@ const ClientComponent = ({ value, onChange, editable }) => {
               <MenuButtonUnderline />
               <MenuButtonStrikethrough />
               <MenuButtonTextColor
+                data-testid="button-text-color"
                 swatchColors={[
                   { value: "#F37021", label: "Thanachart" },
                   { value: "#000000", label: "Black" },
@@ -252,6 +254,7 @@ const ClientComponent = ({ value, onChange, editable }) => {
                 ]}
               />
               <MenuButtonHighlightColor
+                data-testid="button-highlight-color"
                 swatchColors={[
                   { value: "#595959", label: "Dark grey" },
                   { value: "#dddddd", label: "Light grey" },
