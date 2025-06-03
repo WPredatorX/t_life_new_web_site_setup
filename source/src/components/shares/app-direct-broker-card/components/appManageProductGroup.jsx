@@ -145,7 +145,10 @@ const AppManageProductGroup = ({ group, open, setOpen }) => {
         },
       }}
     >
-      <form onSubmit={handleSubmit(onSubmit, onError)}>
+      <form
+        onSubmit={handleSubmit(onSubmit, onError)}
+        data-testid="manageProductGroupForm"
+      >
         <DialogTitle>จัดการกลุ่มประกัน</DialogTitle>
         <DialogContent>
           <Grid container>
@@ -155,6 +158,7 @@ const AppManageProductGroup = ({ group, open, setOpen }) => {
                 fullWidth
                 size="small"
                 variant="outlined"
+                data-testid="groupName"
                 {...register("groupName")}
                 error={Boolean(errors?.groupName)}
               />
