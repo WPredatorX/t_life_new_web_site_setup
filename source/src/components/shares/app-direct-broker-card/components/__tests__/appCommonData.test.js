@@ -1,5 +1,6 @@
 import { AppCommonData } from "..";
 import { render } from "@testing-library/react";
+
 jest.mock("@/hooks", () => ({
   useAppSelector: jest.fn(() => ({
     activator: "me",
@@ -25,6 +26,20 @@ jest.mock("@/hooks", () => ({
     handleSubmit: jest.fn(),
   })),
 }));
+jest.mock("react-hook-form", () => {
+  const actual = jest.requireActual("react-hook-form");
+  return {
+    ...actual,
+    useForm: jest.fn(() => ({
+      register: jest.fn(),
+      handleSubmit: (cb) => cb,
+      formState: { errors: {} },
+      control: {}, // ใส่ mock control object ตรงนี้
+    })),
+    Controller: ({ render }) =>
+      render({ field: { onChange: jest.fn(), value: "" } }),
+  };
+});
 const mockBrokerProfile = {
   generalInfo: "test",
   confirmEmail: "testEmail@test.com",
