@@ -50,6 +50,7 @@ const useAppDialog = () => {
                     sx={{
                       color: "inherit",
                     }}
+                    data-testid="dialogConfirm"
                   >
                     ยืนยัน
                   </Typography>

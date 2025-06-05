@@ -32,8 +32,6 @@ const AppManageProfile = ({ mode, open, setOpen, handleSave }) => {
   const { activator } = useAppSelector((state) => state.global);
   const { handleNotification } = useAppDialog();
   const { handleSnackAlert } = useAppSnackbar();
-  const [ChannelOption, setChannelOption] = useState([]);
-  const [VersionOption, setVersionOption] = useState([]);
   const validationSchema = Yup.object().shape({
     type: Yup.string(),
     channel: Yup.object()
