@@ -257,7 +257,7 @@ const AppCommonData = ({ mode, brokerData }) => {
   }, [brokerData]);
 
   if (loading) {
-    return <AppLoadData loadingState={0} />;
+    return <AppLoadData loadingState={0} data-testid="loading" />;
   }
 
   return (
@@ -267,6 +267,7 @@ const AppCommonData = ({ mode, brokerData }) => {
           <AppCard
             title={`ช่องทาง ${channelName}`}
             cardstyle={{ border: "1px solid", borderColor: "#e7e7e7" }}
+            data-testid="ChannelName"
           >
             <Grid container>
               <Grid item xs={3}>
@@ -322,6 +323,7 @@ const AppCommonData = ({ mode, brokerData }) => {
           <AppCard
             title={`อีเมลยืนยันการชำระค่าเบี้ย`}
             cardstyle={{ border: "1px solid", borderColor: "#e7e7e7" }}
+            data-testid="ConfirmEmail"
           >
             <Grid container spacing={2}>
               <Grid item xs={6}>
@@ -508,6 +510,7 @@ const AppCommonData = ({ mode, brokerData }) => {
           <AppCard
             title={`อีเมลเพื่อให้เจ้าหน้าที่ติดต่อกลับ`}
             cardstyle={{ border: "1px solid", borderColor: "#e7e7e7" }}
+            data-testid="ContactEmail"
           >
             <Grid container spacing={2}>
               <Grid item xs={6}>
@@ -706,6 +709,7 @@ const AppCommonData = ({ mode, brokerData }) => {
                         color="inherit"
                         variant="outlined"
                         onClick={handleBack}
+                        data-testid="homeButton"
                       >
                         กลับหน้าหลัก
                       </Button>
@@ -717,6 +721,7 @@ const AppCommonData = ({ mode, brokerData }) => {
                             disabled={!isDirty}
                             variant="outlined"
                             onClick={onReset}
+                            data-testid="resetButton"
                           >
                             ล้างค่า
                           </Button>
@@ -726,6 +731,7 @@ const AppCommonData = ({ mode, brokerData }) => {
                             type="submit"
                             disabled={!isDirty}
                             variant="contained"
+                            data-testid="saveButton"
                             sx={{
                               color: theme.palette.common.white,
                               backgroundColor: theme.palette.primary.main,
