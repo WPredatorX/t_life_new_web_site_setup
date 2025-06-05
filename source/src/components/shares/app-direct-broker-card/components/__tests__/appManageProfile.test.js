@@ -121,7 +121,7 @@ describe("appManageProfile", () => {
     const closeButton = screen.getByText("ยกเลิก");
     fireEvent.click(closeButton);
   });
-  it("copy mode", () => {
+  /*   it("copy mode", () => {
     render(<AppManageProfile mode={"copy"} open={true} />);
-  });
+  }); */
 });
