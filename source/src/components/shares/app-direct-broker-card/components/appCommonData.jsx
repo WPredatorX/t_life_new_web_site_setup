@@ -397,7 +397,10 @@ const AppCommonData = ({ mode, brokerData }) => {
                             },
                           }}
                         />
-                        <FormHelperText error={errors?.[name]}>
+                        <FormHelperText
+                          error={errors?.[name]}
+                          data-testid="confirmEmailError"
+                        >
                           {errors?.[name]?.message || getEmailErrorByName(name)}
                         </FormHelperText>
                       </>

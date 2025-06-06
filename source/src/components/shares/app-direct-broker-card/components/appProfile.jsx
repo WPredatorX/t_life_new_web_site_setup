@@ -309,7 +309,6 @@ const AppProfile = ({ mode, channel, brokerData }) => {
     // 3. รวมทั้งหมด
     return [...merged, ...newItems];
   }, [watchedProfileData, watchedProfileDataTemp]);
-
   const preventAddVersion = useMemo(() => {
     if (watchedProfileDataTemp?.length > 0) {
       return true;

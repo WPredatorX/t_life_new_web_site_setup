@@ -391,6 +391,7 @@ const AppManageBanner = ({ open, setOpen, addBanner, currentSelected }) => {
                           endAdornment: (
                             <InputAdornment position="end">
                               <Button
+                                data-testid="upload-banner-button"
                                 disabled={watch("useBannerFromProduct")}
                                 sx={{ color: "GrayText" }}
                                 onClick={() => {
