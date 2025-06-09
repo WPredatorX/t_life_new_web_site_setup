@@ -46,6 +46,7 @@ const PageProductsDetail = ({
   const { handleNotification } = useAppDialog();
   const [value, setValue] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [templateList, setTemplateList] = useState([]);
   const { dialog, activator } = useAppSelector((state) => state.global);
   const { validFeature } = useAppFeatureCheck(requireFeature);
 
@@ -296,20 +297,12 @@ const PageProductsDetail = ({
   };
 
   const handleFetchTemplate = async () => {
-    try {
-      const response = await fetch(`/api/products?action=getProductDocument`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      const dataDocument = await response.json();
-
-      return dataDocument;
-    } catch (error) {
-      handleSnackAlert({
-        open: true,
-        message: `ขออภัย เกิดข้อผิดพลาด กรุณาติดต่อเจ้าหน้าที่ที่เกี่ยวข้อง ${error}`,
-      });
-    }
+    const response = await fetch(`/api/products?action=getProductDocument`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+    const dataDocument = await response.json();
+    return dataDocument;
   };
 
   const handleFetchProduct = async () => {
@@ -319,25 +312,25 @@ const PageProductsDetail = ({
       // #region โหลดข้อมูลของแบบแพคเกจ
       let dataInsurancePlan = [];
       let dataInsuranceCapital = [];
-      if (i_package.toUpperCase() !== "NP-00") {
-        let response = await fetch(
-          `/api/products?action=getInsurancePlan&IPackage=${i_package}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-          }
-        );
-        dataInsurancePlan = await response.json();
+      // if (i_package.toUpperCase() !== "NP-00") {
+      //   let response = await fetch(
+      //     `/api/products?action=getInsurancePlan&IPackage=${i_package}`,
+      //     {
+      //       method: "POST",
+      //       headers: { "Content-Type": "application/json" },
+      //     }
+      //   );
+      //   dataInsurancePlan = await response.json();
 
-        let responseCapital = await fetch(
-          `/api/products?action=getAllInsuredCapital&IPackage=${i_package}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-          }
-        );
-        dataInsuranceCapital = await responseCapital.json();
-      }
+      //   let responseCapital = await fetch(
+      //     `/api/products?action=getAllInsuredCapital&IPackage=${i_package}`,
+      //     {
+      //       method: "POST",
+      //       headers: { "Content-Type": "application/json" },
+      //     }
+      //   );
+      //   dataInsuranceCapital = await responseCapital.json();
+      // }
       // #endregion
 
       // #region โหลดข้อมูลผลิตภัณฑ์
@@ -353,6 +346,7 @@ const PageProductsDetail = ({
           body: dataBody,
         }
       );
+      if (responseProductOnShelf.status !== 200) throw new Error("");
       const dataProduct = await responseProductOnShelf.json();
       // #endregion
 
@@ -405,7 +399,7 @@ const PageProductsDetail = ({
 
         dataDocumentAppDetail = await responseDocumentAppDetail.json();
       }
-      const mappedDataDocument = (dataDocumentAppDetail || []).map((item) => {
+      const mappedDataDocument = dataDocumentAppDetail.map((item) => {
         return {
           ...item,
           isNew: false,
@@ -418,10 +412,10 @@ const PageProductsDetail = ({
       const doc1 = mappedDataDocument.filter((item) => item.detail_type === 1);
       const doc2 = mappedDataDocument.filter((item) => item.detail_type === 2);
       const prepareReset = {
-        IPlan: dataInsurancePlan || [],
-        ICapital: dataInsuranceCapital || [],
+        IPlan: dataInsurancePlan,
+        ICapital: dataInsuranceCapital,
         commonSetting: dataProduct[0],
-        document: mappedDataDocument || [],
+        document: mappedDataDocument,
         document_1: doc1,
         document_2: doc2,
         is_CalculateFromCoverageToPremium:
@@ -443,6 +437,7 @@ const PageProductsDetail = ({
         selectDoc: _selectOdct,
       };
       reset({ ...prepareReset });
+      setTemplateList(templateList);
       // #endregion
     } catch (error) {
       handleSnackAlert({
@@ -564,22 +559,21 @@ const PageProductsDetail = ({
       const doc2 = (watch("document_2") || []).filter(
         (item) => (item.isNew && item.is_active) || !item.isNew
       );
-      let docs =
-        [...doc1, ...doc2].map((item, index) => ({
-          detail_id: null,
-          document_id: document_id,
-          quo_document_id: null,
-          product_plan_id: product_plan_id,
-          title: item.title,
-          create_by: activator,
-          create_date: item.create_date,
-          update_by: activator,
-          update_date: item.update_date,
-          is_active: item.is_active,
-          description: item.description,
-          seq: index + 1,
-          detail_type: item.detail_type,
-        })) || [];
+      let docs = [...doc1, ...doc2].map((item, index) => ({
+        detail_id: null,
+        document_id: document_id,
+        quo_document_id: null,
+        product_plan_id: product_plan_id,
+        title: item.title,
+        create_by: activator,
+        create_date: item.create_date,
+        update_by: activator,
+        update_date: item.update_date,
+        is_active: item.is_active,
+        description: item.description,
+        seq: index + 1,
+        detail_type: item.detail_type,
+      }));
 
       if (docs.length === 0) {
         docs = [
@@ -654,39 +648,39 @@ const PageProductsDetail = ({
         debugger;
       }
 
-      if (type === "0") {
-        let policy_document_occupation = watch(
-          "occupation_document.policy_document_file"
-        );
-        if (policy_document_occupation) {
-          dataPolicyholderDocument = {
-            policy_document_id: null,
-            product_plan_id: product_plan_id,
-            policy_document_name: null,
-            policy_document_file_path: null,
-            is_active: true,
-            create_date: new Date(),
-            create_by: activator,
-            update_date: new Date(),
-            update_by: activator,
-            policy_document_type: "2",
-            policy_document_name: watch(
-              "occupation_document.policy_document_name"
-            ),
-            policy_document_file: watch(
-              "occupation_document.policy_document_file"
-            ),
-          };
-          const policyholderOccupationDocument = await fetch(
-            "/api/products?action=AddOrUpdatePolicyholderDocuments",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(dataPolicyholderDocument),
-            }
-          );
-        }
-      }
+      // if (type === "0") {
+      //   let policy_document_occupation = watch(
+      //     "occupation_document.policy_document_file"
+      //   );
+      //   if (policy_document_occupation) {
+      //     dataPolicyholderDocument = {
+      //       policy_document_id: null,
+      //       product_plan_id: product_plan_id,
+      //       policy_document_name: null,
+      //       policy_document_file_path: null,
+      //       is_active: true,
+      //       create_date: new Date(),
+      //       create_by: activator,
+      //       update_date: new Date(),
+      //       update_by: activator,
+      //       policy_document_type: "2",
+      //       policy_document_name: watch(
+      //         "occupation_document.policy_document_name"
+      //       ),
+      //       policy_document_file: watch(
+      //         "occupation_document.policy_document_file"
+      //       ),
+      //     };
+      //     const policyholderOccupationDocument = await fetch(
+      //       "/api/products?action=AddOrUpdatePolicyholderDocuments",
+      //       {
+      //         method: "POST",
+      //         headers: { "Content-Type": "application/json" },
+      //         body: JSON.stringify(dataPolicyholderDocument),
+      //       }
+      //     );
+      //   }
+      // }
 
       handleNotiification("บันทึกข้อมูลสำเร็จ", () => {
         router.push(`/products/`);
@@ -730,7 +724,10 @@ const PageProductsDetail = ({
 
   return (
     <Grid>
-      <form onSubmit={handleSubmit(onSubmit, onError)}>
+      <form
+        data-testid="form-submit"
+        onSubmit={handleSubmit(onSubmit, onError)}
+      >
         <Card>
           <Tabs
             value={value}
@@ -760,7 +757,7 @@ const PageProductsDetail = ({
                     mode={mode}
                     type={type}
                     formMethods={{ ...formMethods }}
-                    handleFetchTemplate={handleFetchTemplate}
+                    handleFetchTemplate={() => templateList}
                   />
                 )}
               </Grid>

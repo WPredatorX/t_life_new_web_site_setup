@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, useRef, Fragment } from "react";
-import { useAppSnackbar, useAppDialog, useAppSelector } from "@hooks";
+import {
+  useAppSnackbar,
+  useAppDialog,
+  useAppSelector,
+  useAppFieldArray,
+} from "@hooks";
 import {
   Grid,
   Switch,
@@ -13,8 +18,8 @@ import {
   FormControlLabel,
   CircularProgress,
 } from "@mui/material";
-import { AppCard, AppAutocomplete } from "@/components";
-import { Controller, useFieldArray } from "react-hook-form";
+import { AppCard, AppAutocomplete } from "@components";
+import { Controller } from "react-hook-form";
 import { APPLICATION_CONFIGURATION } from "@constants";
 
 const PageCommonSetting = ({
@@ -46,8 +51,8 @@ const PageCommonSetting = ({
     fields: _fieldsDocument1,
     insert: insertDocument1,
     update: updateDocument1,
-  } = useFieldArray({
-    control,
+  } = useAppFieldArray({
+    control: control,
     name: "document_1",
   });
 
@@ -55,8 +60,8 @@ const PageCommonSetting = ({
     fields: _fieldsDocument2,
     insert: insertDocument2,
     update: updateDocument2,
-  } = useFieldArray({
-    control,
+  } = useAppFieldArray({
+    control: control,
     name: "document_2",
   });
 

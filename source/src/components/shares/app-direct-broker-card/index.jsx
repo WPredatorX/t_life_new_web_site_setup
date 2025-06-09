@@ -113,9 +113,11 @@ const AppDirectBrokerCard = ({ mode, channel }) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      if (response.status !== 200) throw new Error("");
+
       const data = await response.json();
 
-      let result = Array.from(data || []).map((item) => {
+      let result = Array.from(data).map((item) => {
         return {
           ...item,
           mail_to: item?.mail_to?.split(";") ?? [],
@@ -157,11 +159,11 @@ const AppDirectBrokerCard = ({ mode, channel }) => {
         silentPayload[1].recipient_id = newBroker.recipient_id2;
 
         // map ข้อมูลกลับ
-        silentPayload = Array.from(silentPayload || []).map((item) => {
+        silentPayload = Array.from(silentPayload).map((item) => {
           return {
             ...item,
-            mail_to: item?.mail_to?.split(";") ?? [],
-            mail_cc: item?.mail_cc?.split(";") ?? [],
+            mail_to: item?.mail_to?.split(";"),
+            mail_cc: item?.mail_cc?.split(";"),
           };
         });
       }
@@ -241,9 +243,9 @@ const AppDirectBrokerCard = ({ mode, channel }) => {
           indicatorColor="primary"
           textColor="primary"
         >
-          {grantCommon ? <Tab value={0} label={"ข้อมูลทั่วไป"} /> : null}
-          {grantProduct ? <Tab value={1} label={"ผลิตภัณฑ์ที่ขาย"} /> : null}
-          {grantProfile ? <Tab value={2} label={"โปรไฟล์แสดงผล"} /> : null}
+          {grantCommon && <Tab value={0} label={"ข้อมูลทั่วไป"} />}
+          {grantProduct && <Tab value={1} label={"ผลิตภัณฑ์ที่ขาย"} />}
+          {grantProfile && <Tab value={2} label={"โปรไฟล์แสดงผล"} />}
           {grantPromotion && mode.toLowerCase() === "direct" ? (
             <Tab value={3} label={"โปรโมชั่น"} />
           ) : null}

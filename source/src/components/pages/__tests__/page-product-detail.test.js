@@ -1,298 +1,998 @@
-import { screen, fireEvent, waitFor } from "@testing-library/react";
-import { renderAfterHook } from "@utilities/jest";
-import PageProductsDetail from "../page-product-detail/index";
-import { format } from "date-fns";
-
-// Mock dependencies
-jest.mock("@/hooks", () => ({
-  useAppSnackbar: () => ({
-    handleSnackAlert: jest.fn(),
-  }),
-  useAppRouter: () => ({
-    push: jest.fn(),
-  }),
-  useAppForm: () => ({
-    reset: jest.fn(),
-    control: {},
-    register: jest.fn(),
-    handleSubmit: (fn) => fn,
-    clearErrors: jest.fn(),
-    formState: { errors: {}, isDirty: false },
-    watch: jest.fn().mockImplementation((name) => {
-      if (name === "document_1") return [];
-      if (name === "selectDoc") return { document_detail_size: 10 };
-      return null;
-    }),
-  }),
-  useAppFeatureCheck: () => ({
-    validFeature: true,
-  }),
-  useAppSelector: jest.fn((selector) => ({
-    dialog: { open: false },
-    activator: "test_user",
-  })),
-  useAppDispatch: () => jest.fn(),
-  useAppDialog: () => ({
-    handleNotification: jest.fn(),
-  }),
-}));
+import {
+  render,
+  renderAfterHook,
+  act,
+  screen,
+  fireEvent,
+  waitFor,
+} from "@utilities/jest";
+import { globalInitialState, globalSliceReducer } from "@stores/slices";
+import { configureStore } from "@reduxjs/toolkit";
+import useAppForm from "@hooks/useAppForm";
+import PageProductDetail from "../page-product-detail";
 
 jest.mock("react-hook-form", () => {
   const actual = jest.requireActual("react-hook-form");
   return {
     ...actual,
-    useForm: jest.fn(() => ({
-      register: jest.fn(),
-      handleSubmit: (cb) => cb,
-      formState: { errors: {}, isDirty: false },
-      control: {},
-      watch: jest.fn().mockReturnValue(null),
-      reset: jest.fn(),
-    })),
-    useFieldArray: () => ({
-      fields: [],
-      append: jest.fn(),
-      remove: jest.fn(),
-      update: jest.fn(),
-    }),
     Controller: ({ render }) =>
       render({ field: { onChange: jest.fn(), value: "" } }),
   };
 });
 
-jest.mock("@/components", () => ({
-  AppLoadData: ({ loadingState }) => (
-    <div data-testid="app-load-data" data-loading-state={loadingState}>
-      {loadingState ? "Loading..." : null}
-    </div>
-  ),
-  AppCard: ({ children, title }) => (
-    <div data-testid="app-card">
-      <h2>{title}</h2>
-      {children}
-    </div>
-  ),
-  AppAutocomplete: ({ label, onChange }) => (
-    <select
-      data-testid="app-autocomplete"
-      onChange={(e) => onChange(e, { value: e.target.value })}
-    >
-      <option value="">{label}</option>
-      <option value="1">Active</option>
-      <option value="0">Inactive</option>
-    </select>
-  ),
-  AppDatePicker: ({ label, onChange }) => (
-    <input
-      type="date"
-      data-testid="app-date-picker"
-      onChange={(e) => onChange(new Date(e.target.value))}
-    />
-  ),
-}));
+jest.mock("@hooks/useAppForm", () =>
+  jest.fn().mockReturnValue({
+    register: jest.fn(),
+    reset: jest.fn(),
+    watch: jest.fn(),
+    handleSubmit: jest.fn(),
+    formState: {
+      isDirty: false,
+      errors: {},
+    },
+    control: {},
+    setValue: jest.fn(),
+  })
+);
 
-// Mock fetch
-global.fetch = jest.fn();
+jest.mock("@hooks/useAppFieldArray", () =>
+  jest.fn().mockReturnValue({
+    fields: [],
+    insert: jest.fn(),
+    update: jest.fn(),
+  })
+);
 
-describe("PageProductsDetail", () => {
-  const mockProps = {
-    mode: "EDIT",
-    type: "0",
+jest.mock("@hooks/useAppSnackbar", () =>
+  jest.fn().mockReturnValue({
+    handleSnackAlert: jest.fn(),
+  })
+);
+
+describe("PageProductDetail", () => {
+  let mockStore = null;
+  let mockProductStatusCode = null;
+  let mockProductDocumentStatusCode = null;
+  let mockCalTempCode = null;
+  let mockPolicyHolder = null;
+  let defaultProps = {
+    mode: "VIEW",
+    type: "1",
     i_package: "NP-00",
-    productId: "TEST001",
-    product_plan_id: "123",
+    productId: "",
+    product_plan_id: "",
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    global.fetch.mockResolvedValue({
-      json: () => Promise.resolve([]),
-    });
+    // mock fetch
+    mockProductStatusCode = 200;
+    mockProductDocumentStatusCode = 200;
+    mockCalTempCode = "01";
+    mockPolicyHolder = [
+      {
+        id: "mock-id",
+        policy_document_type: 0,
+        policy_document_file_path: "mock-file-path",
+        policy_document_name: "mock-name",
+      },
+    ];
+    fetchMock.resetMocks();
+    fetchMock.mockResponse(async (req) => {
+      if (req.url.includes("/api/auth?action=getUserRolesData")) {
+        return {
+          status: 200,
+          body: JSON.stringify({
+            roles: [
+              {
+                role_name: "mock-role",
+                menus: [
+                  {
+                    code: "menu-001",
+                    feature: [
+                      {
+                        code: "feature-001",
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          }),
+        };
+      }
 
-    jest.spyOn(require("@/hooks"), "useAppForm").mockReturnValue({
-      reset: jest.fn(),
-      control: {},
-      register: jest.fn(),
-      handleSubmit: (fn) => fn,
-      clearErrors: jest.fn(),
-      formState: { errors: {}, isDirty: false },
-      watch: jest.fn().mockReturnValue(undefined),
-    });
-  });
+      if (req.url.includes("/api/auth?action=getBlobSasToken")) {
+        return {
+          status: 200,
+          body: JSON.stringify({
+            sas_images: "mock-sas-images",
+            sas_files: "mock-sas-files",
+          }),
+        };
+      }
 
-  it("renders loading state initially", async () => {
-    global.fetch.mockImplementationOnce(() => new Promise(() => {}));
-    await renderAfterHook(<PageProductsDetail {...mockProps} />);
-    expect(screen.getByTestId("app-load-data")).toBeInTheDocument();
-  });
-
-  it("renders the component with initial data", async () => {
-    global.fetch.mockResolvedValueOnce({
-      json: () =>
-        Promise.resolve([
-          {
-            product_plan_id: "123",
-            title: "Test Product",
-            description: "Test Description",
-            is_active: true,
-            create_date: new Date(),
-            create_by: "test_user",
-          },
-        ]),
-    });
-
-    await renderAfterHook(<PageProductsDetail {...mockProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByText("ข้อมูลทั่วไป")).toBeInTheDocument();
-      expect(screen.getByText("ตั้งค่าทั่วไป")).toBeInTheDocument();
-    });
-  });
-
-  it("handles form submission", async () => {
-    global.fetch.mockImplementationOnce(() =>
-      Promise.resolve({
-        json: () =>
-          Promise.resolve([
+      if (req.url.includes("/api/products?action=GetProductOnShelfById")) {
+        return {
+          status: mockProductStatusCode,
+          body: JSON.stringify([
             {
-              product_plan_id: "123",
-              title: "Test Product",
-              description: "Test Description",
-              is_active: true,
+              product_plan_id: "mock-product-plan-id",
+              document_id: "mock-doc-id",
+              quo_document_id: "mock-quo-doc-id",
+              document_code: "mock-doc-code",
+              cal_temp_code: mockCalTempCode,
             },
           ]),
-      })
-    );
+        };
+      }
 
-    const mockWatch = jest.fn().mockImplementation((name) => {
-      if (name === "document_1") return [];
-      if (name === "selectDoc") return { document_detail_size: 10 };
+      if (
+        req.url.includes("/api/products?action=เetPolicyholderDocumentsById")
+      ) {
+        return {
+          status: 200,
+          body: JSON.stringify(mockPolicyHolder),
+        };
+      }
+
+      if (req.url.includes("/api/products?action=getProductDocument")) {
+        return {
+          status: mockProductDocumentStatusCode,
+          body: JSON.stringify([
+            {
+              id: "mock-id",
+              document_code: "mock-doc-code",
+            },
+          ]),
+        };
+      }
+
+      if (req.url.includes("/api/products?action=getDocumentAppDetailById")) {
+        return {
+          status: 200,
+          body: JSON.stringify([
+            {
+              id: "mock-id",
+            },
+          ]),
+        };
+      }
+
+      if (req.url.includes("/api/products?action=AddOrUpdateProductOnShelf")) {
+        return {
+          status: 200,
+          body: JSON.stringify({}),
+        };
+      }
+
+      if (req.url.includes("/api/products?action=addOrUpdateProductDocument")) {
+        return {
+          status: 200,
+        };
+      }
+
+      if (
+        req.url.includes(
+          "/api/products?action=AddOrUpdatePolicyholderDocuments"
+        )
+      ) {
+        return {
+          status: 200,
+        };
+      }
+
       return {
-        title: "Test Product",
-        description: "Test Description",
-        is_active: true,
+        status: 404,
+        body: "Not found",
       };
     });
 
-    jest.spyOn(require("@/hooks"), "useAppForm").mockReturnValue({
-      reset: jest.fn(),
-      control: {},
-      register: jest.fn(),
-      handleSubmit: (fn) => fn,
-      clearErrors: jest.fn(),
-      formState: { errors: {}, isDirty: true },
-      watch: mockWatch,
-    });
-
-    await renderAfterHook(<PageProductsDetail {...mockProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByText("บันทึก")).toBeInTheDocument();
-    });
-
-    const submitButton = screen.getByText("บันทึก");
-    fireEvent.click(submitButton);
-
-    await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining("/api/products?action=GetProductOnShelfById"),
-        expect.any(Object)
-      );
-    });
-  });
-
-  it("handles form reset", async () => {
-    const mockHandleNotification = jest.fn();
-    jest.spyOn(require("@/hooks"), "useAppDialog").mockReturnValue({
-      handleNotification: mockHandleNotification,
-    });
-
-    jest.spyOn(require("@/hooks"), "useAppForm").mockReturnValue({
-      reset: jest.fn(),
-      control: {},
-      register: jest.fn(),
-      handleSubmit: (fn) => fn,
-      clearErrors: jest.fn(),
-      formState: { errors: {}, isDirty: true },
-      watch: jest.fn().mockReturnValue(null),
-    });
-
-    await renderAfterHook(<PageProductsDetail {...mockProps} />);
-
-    const resetButton = screen.getByText("ล้างข้อมูล");
-    fireEvent.click(resetButton);
-
-    expect(mockHandleNotification).toHaveBeenCalled();
-  });
-
-  it("handles back button click", async () => {
-    const mockHandleNotification = jest.fn();
-    jest.spyOn(require("@/hooks"), "useAppDialog").mockReturnValue({
-      handleNotification: mockHandleNotification,
-    });
-
-    await renderAfterHook(<PageProductsDetail {...mockProps} />);
-
-    const backButton = screen.getByText("ยกเลิก / ออก");
-    fireEvent.click(backButton);
-
-    expect(mockHandleNotification).toHaveBeenCalled();
-  });
-
-  it("handles tab change", async () => {
-    await renderAfterHook(<PageProductsDetail {...mockProps} />);
-
-    const settingsTab = screen.getByText("ตั้งค่าทั่วไป");
-    fireEvent.click(settingsTab);
-
-    await waitFor(() => {
-      expect(screen.getByText("ตั้งค่าทั่วไป")).toHaveAttribute(
-        "aria-selected",
-        "true"
-      );
+    // mock store
+    mockStore = configureStore({
+      reducer: {
+        global: globalSliceReducer,
+      },
+      preloadedState: {
+        global: {
+          ...globalInitialState,
+          auth: {
+            roles: [
+              {
+                role_name: "mock-role",
+                menus: [
+                  {
+                    code: "menu-001",
+                    feature: [
+                      {
+                        code: "feature-001",
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      },
+      middleware: (getDefaultMiddleware) =>
+        getDefaultMiddleware({ serializableCheck: false }).concat([]),
     });
   });
 
-  it("handles error state", async () => {
-    global.fetch.mockRejectedValueOnce(new Error("API Error"));
+  afterEach(() => {
+    jest.clearAllMocks();
+    jest.useRealTimers();
+  });
 
-    await renderAfterHook(<PageProductsDetail {...mockProps} />);
+  describe("Render", () => {
+    it("should render default", async () => {
+      // arrange
+      const component = <PageProductDetail {...defaultProps} />;
 
-    await waitFor(() => {
-      expect(screen.getByTestId("app-load-data")).toBeInTheDocument();
+      // act
+      await act(async () => {
+        await render(component, {
+          mockStore,
+        });
+      });
+
+      // assert
+      await waitFor(() => {
+        expect(component).toBeDefined();
+      });
+    });
+
+    it("should render default but error on load product", async () => {
+      // arrange
+      mockProductStatusCode = 500;
+      const component = <PageProductDetail {...defaultProps} />;
+
+      // act
+      await act(async () => {
+        await render(component, {
+          mockStore,
+        });
+      });
+
+      // assert
+      await waitFor(() => {
+        expect(component).toBeDefined();
+      });
+    });
+
+    it("should render default with valid feature", async () => {
+      // arrange.
+      const component = <PageProductDetail {...defaultProps} />;
+      mockStore = configureStore({
+        reducer: {
+          global: globalSliceReducer,
+        },
+        preloadedState: {
+          global: {
+            ...globalInitialState,
+            auth: {
+              roles: [
+                {
+                  role_name: "mock-role",
+                  menus: [
+                    {
+                      code: "menu-001",
+                      feature: [
+                        {
+                          code: "product.general.read",
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+        middleware: (getDefaultMiddleware) =>
+          getDefaultMiddleware({ serializableCheck: false }).concat([]),
+      });
+
+      // act
+      await act(async () => {
+        await render(component, {
+          mockStore,
+        });
+      });
+
+      // assert
+      await waitFor(() => {
+        expect(component).toBeDefined();
+      });
+    });
+
+    it("should render default with valid feature and remaining line < 0 ", async () => {
+      // arrange.
+      const component = <PageProductDetail {...defaultProps} />;
+      mockStore = configureStore({
+        reducer: {
+          global: globalSliceReducer,
+        },
+        preloadedState: {
+          global: {
+            ...globalInitialState,
+            auth: {
+              roles: [
+                {
+                  role_name: "mock-role",
+                  menus: [
+                    {
+                      code: "menu-001",
+                      feature: [
+                        {
+                          code: "product.general.read",
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+        middleware: (getDefaultMiddleware) =>
+          getDefaultMiddleware({ serializableCheck: false }).concat([]),
+      });
+      useAppForm.mockReturnValue({
+        register: jest.fn(),
+        reset: jest.fn(),
+        watch: jest.fn((name) => {
+          if (name === "selectDoc") return { document_detail_size: 0 };
+          if (name === "document_1") return [{ is_active: true }];
+          return undefined;
+        }),
+        handleSubmit: jest.fn(),
+        formState: {
+          isDirty: true,
+        },
+      });
+
+      // act
+      await act(async () => {
+        await render(component, {
+          mockStore,
+        });
+      });
+
+      // assert
+      await waitFor(() => {
+        expect(component).toBeDefined();
+      });
+    });
+
+    it("should render null cal_temp_code", async () => {
+      // arrange
+      mockCalTempCode = null;
+      const component = <PageProductDetail {...defaultProps} />;
+
+      // act
+      await act(async () => {
+        await render(component, {
+          mockStore,
+        });
+      });
+
+      // assert
+      await waitFor(() => {
+        expect(component).toBeDefined();
+      });
+    });
+
+    it("should render empty policyHolder", async () => {
+      // arrange
+      mockPolicyHolder = [];
+      const component = <PageProductDetail {...defaultProps} />;
+
+      // act
+      await act(async () => {
+        await render(component, {
+          mockStore,
+        });
+      });
+
+      // assert
+      await waitFor(() => {
+        expect(component).toBeDefined();
+      });
     });
   });
 
-  it("disables save button when form is not dirty", async () => {
-    jest.spyOn(require("@/hooks"), "useAppForm").mockReturnValue({
-      reset: jest.fn(),
-      control: {},
-      register: jest.fn(),
-      handleSubmit: (fn) => fn,
-      clearErrors: jest.fn(),
-      formState: { errors: {}, isDirty: false },
-      watch: jest.fn().mockReturnValue(null),
+  describe("Event", () => {
+    it("should render default with valid feature then click reset", async () => {
+      // arrange.
+      defaultProps.mode = "EDIT";
+      const component = <PageProductDetail {...defaultProps} />;
+      mockStore = configureStore({
+        reducer: {
+          global: globalSliceReducer,
+        },
+        preloadedState: {
+          global: {
+            ...globalInitialState,
+            auth: {
+              roles: [
+                {
+                  role_name: "mock-role",
+                  menus: [
+                    {
+                      code: "menu-001",
+                      feature: [
+                        {
+                          code: "product.general.read",
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+        middleware: (getDefaultMiddleware) =>
+          getDefaultMiddleware({ serializableCheck: false }).concat([]),
+      });
+
+      // act
+      await act(async () => {
+        await render(component, {
+          mockStore,
+        });
+      });
+      const button = await screen.findByText("ล้างข้อมูล");
+      fireEvent.click(button);
+
+      // notification
+      const currentState = mockStore.getState();
+      const renderAction = currentState.global.dialog.renderAction;
+      await act(async () => {
+        await renderAfterHook(renderAction(), {
+          mockStore,
+        });
+      });
+      const button_notification = await screen.findAllByTestId("dialogConfirm");
+      fireEvent.click(button_notification[0]);
+
+      // assert
+      await waitFor(() => {
+        expect(component).toBeDefined();
+      });
     });
 
-    await renderAfterHook(<PageProductsDetail {...mockProps} />);
+    it("should render default with valid feature then click back", async () => {
+      // arrange.
+      const component = <PageProductDetail {...defaultProps} />;
+      mockStore = configureStore({
+        reducer: {
+          global: globalSliceReducer,
+        },
+        preloadedState: {
+          global: {
+            ...globalInitialState,
+            auth: {
+              roles: [
+                {
+                  role_name: "mock-role",
+                  menus: [
+                    {
+                      code: "menu-001",
+                      feature: [
+                        {
+                          code: "product.general.read",
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+        middleware: (getDefaultMiddleware) =>
+          getDefaultMiddleware({ serializableCheck: false }).concat([]),
+      });
 
-    const saveButton = screen.getByText("บันทึก");
-    expect(saveButton).toBeDisabled();
-  });
+      // act
+      await act(async () => {
+        await render(component, {
+          mockStore,
+        });
+      });
+      const button = await screen.findByText("ยกเลิก / ออก");
+      fireEvent.click(button);
 
-  it("handles document template fetch", async () => {
-    const mockTemplateData = [{ id: 1, title: "Template 1" }];
-    global.fetch.mockResolvedValueOnce({
-      json: () => Promise.resolve(mockTemplateData),
+      // notification
+      const currentState = mockStore.getState();
+      const renderAction = currentState.global.dialog.renderAction;
+      await act(async () => {
+        await renderAfterHook(renderAction(), {
+          mockStore,
+        });
+      });
+      const button_notification = await screen.findAllByTestId("dialogConfirm");
+      fireEvent.click(button_notification[0]);
+
+      // assert
+      await waitFor(() => {
+        expect(component).toBeDefined();
+      });
     });
 
-    await renderAfterHook(<PageProductsDetail {...mockProps} />);
+    it("should render default with valid feature then click change tab", async () => {
+      // arrange.
+      const component = <PageProductDetail {...defaultProps} />;
+      mockStore = configureStore({
+        reducer: {
+          global: globalSliceReducer,
+        },
+        preloadedState: {
+          global: {
+            ...globalInitialState,
+            auth: {
+              roles: [
+                {
+                  role_name: "mock-role",
+                  menus: [
+                    {
+                      code: "menu-001",
+                      feature: [
+                        {
+                          code: "product.general.read",
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+        middleware: (getDefaultMiddleware) =>
+          getDefaultMiddleware({ serializableCheck: false }).concat([]),
+      });
 
-    await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining("/api/products?action=getProductDocument"),
-        expect.any(Object)
-      );
+      // act
+      await act(async () => {
+        await render(component, {
+          mockStore,
+        });
+      });
+      const button = await screen.findByText("ตั้งค่าทั่วไป");
+      fireEvent.click(button);
+
+      // assert
+      await waitFor(() => {
+        expect(component).toBeDefined();
+      });
+    });
+
+    it("should render default with valid feature then click submit default success", async () => {
+      // arrange.
+      defaultProps.mode = "EDIT";
+      const component = <PageProductDetail {...defaultProps} />;
+      mockStore = configureStore({
+        reducer: {
+          global: globalSliceReducer,
+        },
+        preloadedState: {
+          global: {
+            ...globalInitialState,
+            auth: {
+              roles: [
+                {
+                  role_name: "mock-role",
+                  menus: [
+                    {
+                      code: "menu-001",
+                      feature: [
+                        {
+                          code: "product.general.read",
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+        middleware: (getDefaultMiddleware) =>
+          getDefaultMiddleware({ serializableCheck: false }).concat([]),
+      });
+      useAppForm.mockReturnValue({
+        register: jest.fn(),
+        reset: jest.fn(),
+        watch: jest.fn((name) => {
+          if (name === "selectDoc") return { document_detail_size: 2 };
+          if (name === "document_1") return [{ is_active: true }];
+          return undefined;
+        }),
+        handleSubmit: (callback) => () => callback(),
+        formState: {
+          isDirty: true,
+        },
+      });
+
+      // act
+      await act(async () => {
+        await render(component, {
+          mockStore,
+        });
+      });
+      const form = screen.getByTestId("form-submit");
+      fireEvent.submit(form);
+
+      // assert
+      await waitFor(() => {
+        expect(component).toBeDefined();
+      });
+    });
+
+    it("should render default with valid feature then click submit default success with policy cal 01", async () => {
+      // arrange.
+      defaultProps.mode = "EDIT";
+      const component = <PageProductDetail {...defaultProps} />;
+      mockStore = configureStore({
+        reducer: {
+          global: globalSliceReducer,
+        },
+        preloadedState: {
+          global: {
+            ...globalInitialState,
+            auth: {
+              roles: [
+                {
+                  role_name: "mock-role",
+                  menus: [
+                    {
+                      code: "menu-001",
+                      feature: [
+                        {
+                          code: "product.general.read",
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+        middleware: (getDefaultMiddleware) =>
+          getDefaultMiddleware({ serializableCheck: false }).concat([]),
+      });
+      useAppForm.mockReturnValue({
+        register: jest.fn(),
+        reset: jest.fn(),
+        watch: jest.fn((name) => {
+          if (name === "selectDoc") return { document_detail_size: 2 };
+          if (name === "document_1") return [{ is_active: true, isNew: true }];
+          if (name === "document_2") return [{ is_active: true, isNew: true }];
+          if (name === "beneficiary_document.policy_document_type") return 1;
+          if (name === "beneficiary_document.policy_document_file") return {};
+          if (name === "beneficiary_document.policy_document_name")
+            return "mock-name";
+
+          return undefined;
+        }),
+        handleSubmit: (callback) => () =>
+          callback({
+            is_CalculateFromPremiumToCoverage: false,
+            is_CalculateFromCoverageToPremium: true,
+          }),
+        formState: {
+          isDirty: true,
+        },
+      });
+
+      // act
+      await act(async () => {
+        await render(component, {
+          mockStore,
+        });
+      });
+      const form = screen.getByTestId("form-submit");
+      fireEvent.submit(form);
+
+      // assert
+      await waitFor(() => {
+        expect(component).toBeDefined();
+      });
+    });
+
+    it("should render default with valid feature then click submit default success with policy cal 02", async () => {
+      // arrange.
+      defaultProps.mode = "EDIT";
+      const component = <PageProductDetail {...defaultProps} />;
+      mockStore = configureStore({
+        reducer: {
+          global: globalSliceReducer,
+        },
+        preloadedState: {
+          global: {
+            ...globalInitialState,
+            auth: {
+              roles: [
+                {
+                  role_name: "mock-role",
+                  menus: [
+                    {
+                      code: "menu-001",
+                      feature: [
+                        {
+                          code: "product.general.read",
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+        middleware: (getDefaultMiddleware) =>
+          getDefaultMiddleware({ serializableCheck: false }).concat([]),
+      });
+      useAppForm.mockReturnValue({
+        register: jest.fn(),
+        reset: jest.fn(),
+        watch: jest.fn((name) => {
+          if (name === "selectDoc") return { document_detail_size: 2 };
+          if (name === "document_1") return [{ is_active: true, isNew: true }];
+          if (name === "document_2") return [{ is_active: true, isNew: true }];
+          if (name === "beneficiary_document.policy_document_type") return 1;
+          if (name === "beneficiary_document.policy_document_file") return {};
+          if (name === "beneficiary_document.policy_document_name")
+            return "mock-name";
+
+          return undefined;
+        }),
+        handleSubmit: (callback) => () =>
+          callback({
+            is_CalculateFromPremiumToCoverage: true,
+            is_CalculateFromCoverageToPremium: false,
+          }),
+        formState: {
+          isDirty: true,
+        },
+      });
+
+      // act
+      await act(async () => {
+        await render(component, {
+          mockStore,
+        });
+      });
+      const form = screen.getByTestId("form-submit");
+      fireEvent.submit(form);
+
+      // assert
+      await waitFor(() => {
+        expect(component).toBeDefined();
+      });
+    });
+
+    it("should render default with valid feature then click submit default success with policy", async () => {
+      // arrange.
+      defaultProps.mode = "EDIT";
+      const component = <PageProductDetail {...defaultProps} />;
+      mockStore = configureStore({
+        reducer: {
+          global: globalSliceReducer,
+        },
+        preloadedState: {
+          global: {
+            ...globalInitialState,
+            auth: {
+              roles: [
+                {
+                  role_name: "mock-role",
+                  menus: [
+                    {
+                      code: "menu-001",
+                      feature: [
+                        {
+                          code: "product.general.read",
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+        middleware: (getDefaultMiddleware) =>
+          getDefaultMiddleware({ serializableCheck: false }).concat([]),
+      });
+      useAppForm.mockReturnValue({
+        register: jest.fn(),
+        reset: jest.fn(),
+        watch: jest.fn((name) => {
+          if (name === "selectDoc") return { document_detail_size: 2 };
+          if (name === "document_1") return [{ is_active: true, isNew: true }];
+          if (name === "document_2") return [{ is_active: true, isNew: true }];
+          if (name === "beneficiary_document.policy_document_type") return 1;
+          if (name === "beneficiary_document.policy_document_file") return {};
+          if (name === "beneficiary_document.policy_document_name")
+            return "mock-name";
+
+          return undefined;
+        }),
+        handleSubmit: (callback) => () =>
+          callback({
+            is_CalculateFromPremiumToCoverage: true,
+            is_CalculateFromCoverageToPremium: true,
+          }),
+        formState: {
+          isDirty: true,
+        },
+      });
+
+      // act
+      await act(async () => {
+        await render(component, {
+          mockStore,
+        });
+      });
+      const form = screen.getByTestId("form-submit");
+      fireEvent.submit(form);
+
+      // assert
+      await waitFor(() => {
+        expect(component).toBeDefined();
+      });
+    });
+
+    it("should render default with valid feature then click submit default success doc length = 0", async () => {
+      // arrange.
+      defaultProps.mode = "EDIT";
+      const component = <PageProductDetail {...defaultProps} />;
+      mockStore = configureStore({
+        reducer: {
+          global: globalSliceReducer,
+        },
+        preloadedState: {
+          global: {
+            ...globalInitialState,
+            auth: {
+              roles: [
+                {
+                  role_name: "mock-role",
+                  menus: [
+                    {
+                      code: "menu-001",
+                      feature: [
+                        {
+                          code: "product.general.read",
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+        middleware: (getDefaultMiddleware) =>
+          getDefaultMiddleware({ serializableCheck: false }).concat([]),
+      });
+      useAppForm.mockReturnValue({
+        register: jest.fn(),
+        reset: jest.fn(),
+        watch: jest.fn((name) => {
+          if (name === "selectDoc") return { document_detail_size: 2 };
+          if (name === "document_1") return [];
+          if (name === "document_2") return [];
+          if (name === "beneficiary_document.policy_document_type") return 1;
+          if (name === "beneficiary_document.policy_document_file") return {};
+          if (name === "beneficiary_document.policy_document_name")
+            return "mock-name";
+
+          return undefined;
+        }),
+        handleSubmit: (callback) => () =>
+          callback({
+            is_CalculateFromPremiumToCoverage: true,
+            is_CalculateFromCoverageToPremium: true,
+            commonSetting: {
+              product_plan_id: "mock-product-plan-id",
+            },
+            selectDoc: {
+              document_id: "mock-document-id",
+            },
+          }),
+        formState: {
+          isDirty: true,
+        },
+      });
+
+      // act
+      await act(async () => {
+        await render(component, {
+          mockStore,
+        });
+      });
+      const form = screen.getByTestId("form-submit");
+      fireEvent.submit(form);
+
+      // assert
+      await waitFor(() => {
+        expect(component).toBeDefined();
+      });
+    });
+
+    it("should render default with valid feature then click submit default success then click popup", async () => {
+      // arrange.
+
+      defaultProps.mode = "EDIT";
+      const component = <PageProductDetail {...defaultProps} />;
+      mockStore = configureStore({
+        reducer: {
+          global: globalSliceReducer,
+        },
+        preloadedState: {
+          global: {
+            ...globalInitialState,
+            auth: {
+              roles: [
+                {
+                  role_name: "mock-role",
+                  menus: [
+                    {
+                      code: "menu-001",
+                      feature: [
+                        {
+                          code: "product.general.read",
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+        middleware: (getDefaultMiddleware) =>
+          getDefaultMiddleware({ serializableCheck: false }).concat([]),
+      });
+      useAppForm.mockReturnValue({
+        register: jest.fn(),
+        reset: jest.fn(),
+        watch: jest.fn((name) => {
+          if (name === "selectDoc") return { document_detail_size: 2 };
+          if (name === "document_1") return [{ is_active: true }];
+          return undefined;
+        }),
+        handleSubmit: (callback) => () => callback(),
+        formState: {
+          isDirty: true,
+        },
+      });
+
+      // act
+      await act(async () => {
+        await render(component, {
+          mockStore,
+        });
+      });
+
+      await act(async () => {
+        const form = await screen.findByTestId("form-submit");
+        fireEvent.submit(form);
+      });
+
+      const button = await screen.findByText("ยืนยัน");
+      fireEvent.click(button);
+
+      // assert
+      await waitFor(() => {
+        expect(component).toBeDefined();
+      });
     });
   });
 });

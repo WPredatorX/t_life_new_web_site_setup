@@ -39,8 +39,6 @@ const AppDatePicker = forwardRef(
       ? DesktopDateTimePicker
       : MobileDateTimePicker;
 
-    const defaultOnChange = () => {};
-
     return (
       <DatePickerComponent
         id={id}
@@ -53,7 +51,7 @@ const AppDatePicker = forwardRef(
         maxDate={maxDate}
         inputFormat={inputFormat}
         views={views}
-        onChange={onChange || defaultOnChange}
+        onChange={onChange}
         disableFuture={disableFuture}
         disablePast={disablePast}
         PopperProps={{

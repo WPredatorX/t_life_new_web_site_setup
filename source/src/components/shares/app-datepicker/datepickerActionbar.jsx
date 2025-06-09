@@ -2,12 +2,9 @@
 
 import { Grid, Button } from "@mui/material";
 import { Today, RestartAlt } from "@mui/icons-material";
-import { useIntl } from "react-intl";
 import PropTypes from "prop-types";
 
-const DatePickerActionBar = ({ onClear = null, onSetToday = null }) => {
-  const intl = useIntl();
-
+const DatePickerActionBar = ({ onClear, onSetToday }) => {
   return (
     <Grid container p={2}>
       <Grid item xs={5}>
@@ -18,7 +15,7 @@ const DatePickerActionBar = ({ onClear = null, onSetToday = null }) => {
           onClick={onSetToday}
           startIcon={<Today />}
         >
-          {intl.formatMessage({ id: "component.date-picker.action.today" })}
+          วันนี้
         </Button>
       </Grid>
       <Grid item xs={2}></Grid>
@@ -30,7 +27,7 @@ const DatePickerActionBar = ({ onClear = null, onSetToday = null }) => {
           onClick={onClear}
           startIcon={<RestartAlt />}
         >
-          {intl.formatMessage({ id: "component.date-picker.action.clear" })}
+          ล้างค่า
         </Button>
       </Grid>
     </Grid>

@@ -1,6 +1,6 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render } from "@utilities/jest";
 import userEvent from "@testing-library/user-event";
-import AppManageInsuranceGroupProduct from "../appManageInsuraceGroupProduct";
+import AppManageInsuranceGroupProduct from "../appManageInsuranceGroupProduct";
 import { useAppForm } from "@hooks";
 
 // Mock crypto.randomUUID

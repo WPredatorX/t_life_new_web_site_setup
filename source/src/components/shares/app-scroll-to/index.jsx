@@ -16,7 +16,8 @@ const AppScrollTop = ({ window }) => {
   const { handleScrollTo } = useAppScroll();
 
   const trigger = useScrollTrigger({
-    target: window ? window() : undefined,
+    // target: window ? window() : undefined,
+    target: undefined,
     disableHysteresis: true,
     threshold: 100,
   });

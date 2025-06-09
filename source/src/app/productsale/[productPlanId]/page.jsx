@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { PageProductSale, AppLoadData } from "@components";
-import { useAppFeatureCheck, useAppDispatch } from "@hooks";
+import { useAppFeatureCheck, useAppDispatch, useAppSnackbar } from "@hooks";
 import { setBrokerId } from "@stores/slices";
 
 const ProductSale = ({
@@ -10,6 +10,7 @@ const ProductSale = ({
   searchParams: { mode, type, saleChannelId, channel, brokerId },
 }) => {
   const dispatch = useAppDispatch();
+  const { handleSnackAlert } = useAppSnackbar();
   const { validFeature } = useAppFeatureCheck([
     // แท็บข้อมูลทั่วไป
     "direct.product.general.read",
@@ -24,12 +25,9 @@ const ProductSale = ({
     "direct.product.display.approve",
     "direct.product.display.drop",
   ]);
-  const [loading, setLoading] = useState(false);
   const [productCondition, setProductCondition] = useState(null);
 
   const handleFetchProductCondition = async () => {
-    setLoading(true);
-
     try {
       const response = await fetch(
         `/api/direct?action=getSaleConditionByProductId&productId=${saleChannelId}`,
@@ -38,6 +36,8 @@ const ProductSale = ({
           headers: { "Content-Type": "application/json" },
         }
       );
+      if (response.status !== 200) throw new Error("");
+
       const data = await response.json();
       setProductCondition(data);
       dispatch(setBrokerId(brokerId));
@@ -46,8 +46,6 @@ const ProductSale = ({
         open: true,
         message: "ล้มเหลวเกิดข้อผิดพลาด " + error,
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -59,11 +57,7 @@ const ProductSale = ({
     return <AppLoadData loadingState={3} />;
   }
 
-  if (!productCondition) {
-    return <AppLoadData loadingState={0} />;
-  }
-
-  if (loading) {
+  if (productCondition === null) {
     return <AppLoadData loadingState={0} />;
   }
 

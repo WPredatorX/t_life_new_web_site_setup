@@ -1,12 +1,12 @@
 import { render, renderHook, act, within } from "@testing-library/react";
 import { theme } from "@themes";
 import { Provider } from "react-redux";
-import { AppSnackBar, AppDialog, AppNavigationBar } from "@components";
+import { AppSnackBar, AppDialog, AppScrollTo } from "@components";
 import {
   PageLayoutProvider,
   PageLayoutMainContent,
 } from "@components/pages/page-layout/components";
-import { ThemeProvider, CssBaseline, createTheme } from "@mui/material";
+import { Grid, ThemeProvider, CssBaseline, createTheme } from "@mui/material";
 import {
   StoreProvider,
   LanguageProvider,
@@ -43,12 +43,23 @@ const Providers = ({ mockStore, children }) => {
     return mockStore;
   };
 
+  // เอา msal ออก
   return (
     <StoreProvider mockStore={generateMockStore}>
       <ThemeProvider theme={loadedTheme}>
-        <PageLayoutProvider>
-          <PageLayoutMainContent>{children}</PageLayoutMainContent>
-        </PageLayoutProvider>
+        <ReactQueryProvider>
+          <LanguageProvider>
+            <DateTimeProvider>
+              <CssBaseline />
+              <AppSnackBar />
+              <AppDialog />
+              <AppScrollTo />
+              <Grid container>
+                <PageLayoutMainContent>{children}</PageLayoutMainContent>
+              </Grid>
+            </DateTimeProvider>
+          </LanguageProvider>
+        </ReactQueryProvider>
       </ThemeProvider>
     </StoreProvider>
   );
