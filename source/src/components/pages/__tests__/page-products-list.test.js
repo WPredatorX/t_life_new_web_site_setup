@@ -1,110 +1,175 @@
-import React from "react";
-import {
-  render,
-  screen,
-  fireEvent,
-  waitFor,
-  cleanup,
-} from "@testing-library/react";
-import PageProductsList from "../page-products-list";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { renderAfterHook } from "@utilities/jest";
+import PageProductsList from "../page-products-list/index";
 
-// Mock useRouter:
+// Mock dependencies
 jest.mock("@/hooks", () => ({
-  useAppSnackbar: jest.fn(),
-  useAppRouter: jest.fn(),
-  useAppForm: jest.fn(),
-  useAppSelector: jest.fn(),
-  useAppFeatureCheck: jest.fn(() => ({ validFeature: true })),
+  useAppSnackbar: () => ({
+    handleSnackAlert: jest.fn(),
+  }),
+  useAppRouter: () => ({
+    push: jest.fn(),
+  }),
+  useAppForm: () => ({
+    reset: jest.fn(),
+    control: {},
+    register: jest.fn(),
+    handleSubmit: (fn) => fn,
+    clearErrors: jest.fn(),
+    formState: { errors: {} },
+    watch: jest.fn().mockReturnValue(null),
+  }),
+  useAppFeatureCheck: () => ({
+    validFeature: true,
+  }),
+  useAppSelector: () => ({
+    activator: "test_user",
+  }),
 }));
 
-global.fetch = jest.fn(() =>
-  Promise.resolve({
-    json: () =>
-      Promise.resolve({
-        current_page: 1,
-        page_size: 10,
-        total_records: 1,
-        products: [
-          {
-            plan_code: "P001",
-            product_name: "Product 1",
-            i_package: "NP-00",
-            active_status: "active",
-            create_by: "admin",
-            create_date: new Date().toISOString(),
-            update_by: "admin",
-            update_date: new Date().toISOString(),
-          },
-        ],
-      }),
-  })
-);
+jest.mock("@/components", () => ({
+  AppCard: ({ children, title }) => (
+    <div data-testid="app-card">
+      <h2>{title}</h2>
+      {children}
+    </div>
+  ),
+  AppDataGrid: ({ rows, loading }) => (
+    <div data-testid="app-data-grid" data-loading={loading}>
+      {rows?.map((row) => (
+        <div key={row.id} data-testid="grid-row">
+          {row.plan_code}
+        </div>
+      ))}
+    </div>
+  ),
+  AppAutocomplete: ({ label, onChange }) => (
+    <select
+      data-testid="app-autocomplete"
+      onChange={(e) => onChange(e, { value: e.target.value })}
+    >
+      <option value="">{label}</option>
+      <option value="1">Active</option>
+      <option value="0">Inactive</option>
+    </select>
+  ),
+  AppDatePicker: ({ label, onChange }) => (
+    <input
+      type="date"
+      data-testid="app-date-picker"
+      onChange={(e) => onChange(new Date(e.target.value))}
+    />
+  ),
+}));
+
+// Mock fetch
+global.fetch = jest.fn();
 
 describe("PageProductsList", () => {
-  afterEach(() => {
-    cleanup();
-  });
-
   beforeEach(() => {
-    const useAppFormMock = {
-      reset: jest.fn(),
-      control: {
-        defaultValues: {
-          statusList: [],
-          status: null,
-          name: "",
-          create_date_start: null,
-          create_date_end: null,
-          update_date_start: null,
-          update_date_end: null,
-        },
-      },
-      register: () => ({}),
-      handleSubmit: (fn) => (e) => fn(e),
-      clearErrors: jest.fn(),
-      formState: { errors: {} },
-      watch: jest.fn(() => null),
-    };
-
-    require("@/hooks").useAppSnackbar.mockReturnValue({
-      handleSnackAlert: jest.fn(),
+    jest.clearAllMocks();
+    global.fetch.mockResolvedValue({
+      json: () =>
+        Promise.resolve({
+          products: [
+            {
+              plan_code: "TEST001",
+              product_name: "Test Product",
+              i_package: "NP-00",
+              active_status: "1",
+            },
+          ],
+          current_page: 1,
+          page_size: 10,
+          total_records: 1,
+        }),
     });
-    require("@/hooks").useAppRouter.mockReturnValue({ push: jest.fn() });
-    require("@/hooks").useAppSelector.mockReturnValue({ activator: "admin" });
-    require("@/hooks").useAppForm.mockReturnValue(useAppFormMock);
   });
 
-  it("should render the page and form controls", async () => {
-    //console.log(PageProductsList.toString());
-    render(<PageProductsList />);
-    /*     expect(screen.getByText("ค้นหา")).toBeInTheDocument();
-    expect(screen.getByText("ล้างค่า")).toBeInTheDocument();
-    expect(screen.getByTestId("data-grid")).toBeInTheDocument(); */
+  it("renders the component with initial state", async () => {
+    await renderAfterHook(<PageProductsList />);
+
+    expect(screen.getByTestId("app-card")).toBeInTheDocument();
+    expect(screen.getByText("ผลิตภัณฑ์ทั้งหมด")).toBeInTheDocument();
+    expect(screen.getByTestId("app-data-grid")).toBeInTheDocument();
   });
 
-  /*   it("should call fetch when search button is clicked", async () => {
-    render(<PageProductsList />);
-    fireEvent.click(screen.getByText("ค้นหา"));
+  it("handles form submission", async () => {
+    await renderAfterHook(<PageProductsList />);
+
+    const searchButton = screen.getByText("ค้นหา");
+    fireEvent.click(searchButton);
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
-        "/api/products?action=getProducts",
+        expect.stringContaining("/api/products?action=getProducts"),
+        expect.any(Object)
+      );
+    });
+  });
+
+  it("handles form reset", async () => {
+    await renderAfterHook(<PageProductsList />);
+
+    const resetButton = screen.getByText("ล้างค่า");
+    fireEvent.click(resetButton);
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalled();
+    });
+  });
+
+  it("handles status filter change", async () => {
+    await renderAfterHook(<PageProductsList />);
+
+    const statusSelect = screen.getByTestId("app-autocomplete");
+    fireEvent.change(statusSelect, { target: { value: "1" } });
+
+    const searchButton = screen.getByText("ค้นหา");
+    fireEvent.click(searchButton);
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining("/api/products?action=getProducts"),
         expect.objectContaining({
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+          body: expect.stringContaining('"is_active":"1"'),
         })
       );
     });
   });
 
-  it('should reset form when clicking "ล้างค่า"', async () => {
-    const resetMock = jest.fn();
+  it("handles date filter changes", async () => {
+    await renderAfterHook(<PageProductsList />);
 
-    render(<PageProductsList />);
-    fireEvent.click(screen.getByText("ล้างค่า"));
+    const datePicker = screen.getByTestId("app-date-picker");
+    fireEvent.change(datePicker, { target: { value: "2024-03-20" } });
+
+    const searchButton = screen.getByText("ค้นหา");
+    fireEvent.click(searchButton);
 
     await waitFor(() => {
-      expect(resetMock).toHaveBeenCalled();
+      expect(global.fetch).toHaveBeenCalled();
     });
-  }); */
+  });
+
+  it("displays loading state", async () => {
+    global.fetch.mockImplementation(() => new Promise(() => {}));
+
+    await renderAfterHook(<PageProductsList />);
+
+    expect(screen.getByTestId("app-data-grid")).toHaveAttribute(
+      "data-loading",
+      "true"
+    );
+  });
+
+  it("handles error state", async () => {
+    global.fetch.mockRejectedValueOnce(new Error("API Error"));
+
+    await renderAfterHook(<PageProductsList />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("app-data-grid")).toBeInTheDocument();
+    });
+  });
 });

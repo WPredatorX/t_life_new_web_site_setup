@@ -555,10 +555,15 @@ describe("AppManageBanner", () => {
     fireEvent.submit(form);
     expect(mockAddBanner).toHaveBeenCalledWith(
       expect.objectContaining({
-        id: "mock-uuid",
+        id: expect.any(String),
         status: 1,
         statusName: "รออนุมัติ",
         is_new: true,
+        product: expect.objectContaining({
+          label: "Product",
+          value: 1,
+          product_sale_group_id: 1,
+        }),
       })
     );
     expect(mockSetOpen).toHaveBeenCalledWith(false);

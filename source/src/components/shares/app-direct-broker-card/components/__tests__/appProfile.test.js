@@ -63,6 +63,7 @@ jest.mock("@/hooks", () => ({
   }),
   useAppGridApiRef: () => ({ current: { getRow: jest.fn() } }),
   useAppFeatureCheck: () => ({ validFeature: true }),
+  useAppScroll: () => ({ scrollToTop: jest.fn() }),
 }));
 
 // Mock constants
