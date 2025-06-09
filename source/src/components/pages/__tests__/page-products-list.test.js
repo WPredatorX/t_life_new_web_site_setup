@@ -1,6 +1,7 @@
 import { screen, fireEvent, waitFor } from "@testing-library/react";
-import { renderAfterHook } from "@utilities/jest";
+import { renderAfterHook, renderHook } from "@utilities/jest";
 import PageProductsList from "../page-products-list/index";
+import { format } from "date-fns";
 
 // Mock dependencies
 jest.mock("@/hooks", () => ({
@@ -22,10 +23,25 @@ jest.mock("@/hooks", () => ({
   useAppFeatureCheck: () => ({
     validFeature: true,
   }),
-  useAppSelector: () => ({
+  useAppSelector: jest.fn((selector) => ({
     activator: "test_user",
-  }),
+  })),
 }));
+
+jest.mock("react-hook-form", () => {
+  const actual = jest.requireActual("react-hook-form");
+  return {
+    ...actual,
+    useForm: jest.fn(() => ({
+      register: jest.fn(),
+      handleSubmit: (cb) => cb,
+      formState: { errors: {} },
+      control: {}, // ใส่ mock control object ตรงนี้
+    })),
+    Controller: ({ render }) =>
+      render({ field: { onChange: jest.fn(), value: "" } }),
+  };
+});
 
 jest.mock("@/components", () => ({
   AppCard: ({ children, title }) => (
@@ -39,6 +55,14 @@ jest.mock("@/components", () => ({
       {rows?.map((row) => (
         <div key={row.id} data-testid="grid-row">
           {row.plan_code}
+          {row.create_date && (
+            <span>
+              {require("date-fns").format(
+                new Date(row.create_date),
+                "dd/MM/yyyy HH:mm:ss"
+              )}
+            </span>
+          )}
         </div>
       ))}
     </div>
@@ -120,6 +144,17 @@ describe("PageProductsList", () => {
   });
 
   it("handles status filter change", async () => {
+    const mockWatch = jest.fn().mockReturnValue({ value: "1" });
+    jest.spyOn(require("@/hooks"), "useAppForm").mockReturnValue({
+      reset: jest.fn(),
+      control: {},
+      register: jest.fn(),
+      handleSubmit: (fn) => fn,
+      clearErrors: jest.fn(),
+      formState: { errors: {} },
+      watch: mockWatch,
+    });
+
     await renderAfterHook(<PageProductsList />);
 
     const statusSelect = screen.getByTestId("app-autocomplete");
@@ -141,8 +176,8 @@ describe("PageProductsList", () => {
   it("handles date filter changes", async () => {
     await renderAfterHook(<PageProductsList />);
 
-    const datePicker = screen.getByTestId("app-date-picker");
-    fireEvent.change(datePicker, { target: { value: "2024-03-20" } });
+    const datePickers = screen.getAllByTestId("app-date-picker");
+    fireEvent.change(datePickers[0], { target: { value: "2024-03-20" } });
 
     const searchButton = screen.getByText("ค้นหา");
     fireEvent.click(searchButton);
@@ -170,6 +205,68 @@ describe("PageProductsList", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("app-data-grid")).toBeInTheDocument();
+    });
+  });
+
+  it("uses activator from global state", async () => {
+    const mockActivator = "test_user_123";
+    jest
+      .spyOn(require("@/hooks"), "useAppSelector")
+      .mockImplementation((selector) => {
+        if (selector.toString().includes("state.global")) {
+          return { activator: mockActivator };
+        }
+        return {};
+      });
+
+    await renderAfterHook(<PageProductsList />);
+
+    const searchButton = screen.getByText("ค้นหา");
+    fireEvent.click(searchButton);
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining("/api/products?action=getProducts"),
+        expect.any(Object)
+      );
+    });
+  });
+
+  it("handles create product with activator", async () => {
+    const mockActivator = "test_user_123";
+    jest
+      .spyOn(require("@/hooks"), "useAppSelector")
+      .mockImplementation((selector) => ({
+        activator: mockActivator,
+      }));
+
+    await renderAfterHook(<PageProductsList />);
+
+    // Simulate create product action
+    const mockProduct = {
+      plan_code: "TEST001",
+      product_name: "Test Product",
+      i_package: "NP-00",
+    };
+
+    const response = await fetch(
+      "/api/products?action=AddOrUpdateProductOnShelf",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...mockProduct, create_by: mockActivator }),
+      }
+    );
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining(
+          "/api/products?action=AddOrUpdateProductOnShelf"
+        ),
+        expect.objectContaining({
+          body: expect.stringContaining(`"create_by":"${mockActivator}"`),
+        })
+      );
     });
   });
 });
