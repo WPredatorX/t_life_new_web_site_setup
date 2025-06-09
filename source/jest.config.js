@@ -41,7 +41,9 @@ const customJestConfig = {
   coveragePathIgnorePatterns: [
     "node_modules",
     "src/app/layout.jsx", // Cannot render html inside div (of normal render)
-    "src/app/components/*", // ignore delete later
+    "src/constants/*",
+    "src/hooks/index.js",
+    "src/hooks/useAppIntl.js",
     "src/themes/*",
     "src/constants/*",
     "src/stores/index.js",

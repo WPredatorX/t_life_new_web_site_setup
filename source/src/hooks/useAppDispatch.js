@@ -1,3 +1,3 @@
 import { useDispatch } from "react-redux";
 
-export default useDispatch.withTypes();
+export default useDispatch;

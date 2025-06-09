@@ -26,8 +26,7 @@ import { AppAutocomplete } from "@components";
 import { Controller } from "react-hook-form";
 import { APPLICATION_CONFIGURATION } from "@constants";
 
-const AppApproveProfile = ({ open, setOpen }) => {
-  const { userProfile } = useAppSelector((state) => state.global);
+const AppApproveProfile = ({ open, setOpen, handleReject }) => {
   const { handleNotification } = useAppDialog();
 
   const validationSchema = Yup.object().shape({
@@ -70,7 +69,18 @@ const AppApproveProfile = ({ open, setOpen }) => {
     }
   };
 
-  const onSubmit = async (data, e) => {};
+  const onSubmit = async (data, e) => {
+    const reason = data?.reason;
+    handleNotification(
+      "คุณต้องการบันทึกการเปลี่ยนแปลงหรือไม่ ?",
+      () => {
+        setOpen(false);
+        handleReject(reason);
+      },
+      null,
+      "question"
+    );
+  };
 
   const onError = (errors, e) => console.log(errors, e);
 

@@ -1,6 +1,13 @@
 export default function componentStyleOverrides(theme) {
   const bgColor = theme.colors?.grey50;
   return {
+    // MuiTypography: {
+    //   styleOverrides: {
+    //     root: {
+    //       color: theme.colors?.greyText,
+    //     },
+    //   },
+    // },
     MuiDialogTitle: {
       styleOverrides: {
         root: {

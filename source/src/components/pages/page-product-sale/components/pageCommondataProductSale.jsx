@@ -64,7 +64,7 @@ const PageCommonDataProductSale = ({
   const productEnable = productCondition?.product_status === "3";
   const displayEnable = productCondition?.marketting_status === "3";
   const showProductApprove = productCondition?.product_status === "2";
-  const showPreview = productEnable && displayEnable;
+  const showPreview = false; //ปิดไม่ให้แสดงเลย  //productEnable && displayEnable ;
 
   const validationSchema = Yup.object().shape({
     conditionData: Yup.object().shape({
@@ -219,9 +219,6 @@ const PageCommonDataProductSale = ({
             product_sale_channel_id: saleChannelId,
             sale_period_id: item?.is_new ? null : item?.sale_period_id,
             is_active: item?.active_status === 3 ? false : null,
-            // : !item?.is_new && item?.sale_period_id
-            // ? item?.is_active
-            // : null,
             sale_start_date: addHours(item?.sale_start_date, 7),
             sale_end_date: addHours(item?.sale_end_date, 7),
           };
@@ -247,9 +244,6 @@ const PageCommonDataProductSale = ({
               ? null
               : item?.product_payment_mode_id,
             is_active: item?.active_status === 3 ? false : null,
-            // : !item?.is_new && item?.product_payment_mode_id
-            // ? item?.is_active
-            // : null,
           };
           await fetch(`/api/direct?action=AddOrUpdateProductPaymentMode`, {
             method: "POST",
@@ -273,9 +267,6 @@ const PageCommonDataProductSale = ({
                 ? null
                 : item?.product_payment_id,
               is_active: item?.active_status === 3 ? false : null,
-              // : !item?.is_new && item?.product_payment_id
-              // ? item?.is_active
-              // : null,
             };
             await fetch(`/api/direct?action=AddOrUpdateProductPaymentMethods`, {
               method: "POST",
@@ -297,9 +288,6 @@ const PageCommonDataProductSale = ({
             product_sale_channel_id: saleChannelId,
             installment_id: item?.is_new ? null : item?.installment_id,
             is_active: item?.active_status === 3 ? false : null,
-            // : !item?.is_new && item?.installment_id
-            // ? item?.is_active
-            // : null,
           };
 
           await fetch(`/api/direct?action=AddOrUpdateInstallmentType`, {
@@ -323,9 +311,6 @@ const PageCommonDataProductSale = ({
               ? null
               : item?.product_app_temp_id,
             is_active: item?.active_status === 3 ? false : null,
-            // : !item?.is_new && item?.product_app_temp_id
-            // ? item?.is_active
-            // : null,
           };
           await fetch(
             `/api/direct?action=AddOrUpdateProductApplicationTemplate`,
@@ -743,7 +728,7 @@ const PageCommonDataProductSale = ({
         <Grid item xs={12}>
           <AppCard
             cardstyle={{ border: "1px solid", borderColor: "#e7e7e7" }}
-            title={"เหตุผลการไม่อนุมัติ"}
+            title={"เหตุผลการปฏิเสธคำขออนุมัติ"}
           >
             <TextField
               type="number"

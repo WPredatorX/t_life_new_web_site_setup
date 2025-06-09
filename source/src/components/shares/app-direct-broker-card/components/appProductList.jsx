@@ -642,8 +642,6 @@ const AppProductList = ({ mode, channel, brokerData }) => {
         page_number: pageNumber,
         page_size: pageSize,
         is_active: true,
-        filterMarketing:
-          grantProduct && grantProductDisplay ? 0 : grantProductDisplay ? 1 : 0,
         i_subbusiness_line: channel,
         product_status:
           grantProductDisplay && !grantProduct

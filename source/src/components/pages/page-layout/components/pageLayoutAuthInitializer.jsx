@@ -70,7 +70,7 @@ const PageLayoutAuthInitializer = ({ children }) => {
       }
     };
 
-    if (!auth) {
+    if (auth !== undefined && auth !== null) {
       fetchAccountRole();
       fetchSasToken();
     }

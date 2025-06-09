@@ -8,5 +8,5 @@ export { default as AppManageBanner } from "./appManageBanner";
 export { default as AppManageProfile } from "./appManageProfile";
 export { default as AppManageSocial } from "./appManageSocial";
 export { default as AppApproveProfile } from "./appApproveProfile";
-export { default as AppManageInsuraceGroupProduct } from "./appManageInsuraceGroupProduct";
+export { default as AppManageInsuranceGroupProduct } from "./appManageInsuranceGroupProduct";
 export { default as AppRejectPromotion } from "./appRejectPromotion";

@@ -348,14 +348,6 @@ export async function POST(request) {
       return NextResponse.json(data);
 
     case "getProductFromDirectWithMultiParam":
-      //productId = url.searchParams.get("productId");
-      /* response = await axios.post(
-          `${baseUrl}Products/GetProductById?SaleChannelId=${productId}`,
-          {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          }
-        );
-        data = response.data?.data; */
       data = [
         {
           planCode: "04-02-11",

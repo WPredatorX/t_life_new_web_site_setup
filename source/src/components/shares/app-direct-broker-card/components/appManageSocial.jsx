@@ -37,7 +37,7 @@ const AppManageSocial = ({ mode, open, setOpen, addSocial, form }) => {
 
   const validationSchema = Yup.object().shape({
     name: Yup.string().nullable().required(),
-    icon: Yup.mixed().nullable().required(),
+    icon: Yup.mixed().nullable(),
     iconName: Yup.string().nullable().required(),
     iconString: Yup.string().nullable(),
     iconUrl: Yup.string().nullable(),
@@ -262,7 +262,7 @@ const AppManageSocial = ({ mode, open, setOpen, addSocial, form }) => {
                 fullWidth
                 margin="dense"
                 size="small"
-                value={watch("iconName")}
+                {...register("iconName")}
                 label={`ไอคอน (500 x 500px)`}
                 inputProps={{ maxLength: 100 }}
                 InputLabelProps={{

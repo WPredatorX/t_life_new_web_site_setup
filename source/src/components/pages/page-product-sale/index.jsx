@@ -76,13 +76,18 @@ const PageProductsSale = ({
           <Grid container spacing={2} mb={2}>
             <Grid item xs={12} md={4}>
               <Typography>ช่องทาง</Typography>
-              <TextField fullWidth value={channel} size="small" disabled />
+              <TextField
+                fullWidth
+                value={channel ?? ""}
+                size="small"
+                disabled
+              />
             </Grid>
             <Grid item xs={12} md={4}>
               <Typography>ชื่อช่องทาง</Typography>
               <TextField
                 fullWidth
-                value={broker?.c_subbusiness_line}
+                value={broker?.c_subbusiness_line ?? ""}
                 size="small"
                 disabled
               />
@@ -93,7 +98,7 @@ const PageProductsSale = ({
               <Typography>Plan Code</Typography>
               <TextField
                 fullWidth
-                value={productCondition.i_plan ? productCondition.i_plan : ""}
+                value={productCondition.i_plan ?? ""}
                 size="small"
                 disabled
               />
@@ -102,7 +107,7 @@ const PageProductsSale = ({
               <Typography>ชื่อ</Typography>
               <TextField
                 fullWidth
-                value={productCondition.title ? productCondition.title : ""}
+                value={productCondition.title ?? ""}
                 size="small"
                 disabled
               />
@@ -111,9 +116,7 @@ const PageProductsSale = ({
               <Typography>โปรโมชั่น</Typography>
               <TextField
                 fullWidth
-                value={
-                  productCondition.promotion ? productCondition.promotion : ""
-                }
+                value={productCondition.promotion ?? ""}
                 size="small"
                 disabled
               />

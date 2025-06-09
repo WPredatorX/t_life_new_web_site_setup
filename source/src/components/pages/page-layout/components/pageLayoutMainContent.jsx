@@ -10,7 +10,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { Close } from "@mui/icons-material";
-import { useAppSelector, useAppPathname } from "@hooks";
+import { useAppSelector } from "@hooks";
 import {
   PageLayoutHeader,
   PageLayoutMain,
@@ -21,8 +21,6 @@ import {
 import { menuItem } from "@constants";
 
 const PageLayoutMainContent = ({ children }) => {
-  const pathname = useAppPathname();
-  const splitted = pathname.split("/").filter((item) => item);
   const { openDrawer, auth } = useAppSelector((state) => state.global);
   const header = useMemo(() => <PageLayoutHeader />, []);
   const authMenus = (auth?.roles || [])?.map((role) => role.menus).flat();

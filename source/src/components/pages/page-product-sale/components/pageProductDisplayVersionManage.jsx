@@ -45,7 +45,7 @@ const PageProductDisplayVersionManage = ({
         is: "copy",
         then: (schema) => schema.required(),
       }),
-    profile: Yup.object()
+    version: Yup.object()
       .nullable()
       .when("type", {
         is: "copy",
@@ -59,7 +59,7 @@ const PageProductDisplayVersionManage = ({
     reValidateMode: "onChange",
     resolver: yupResolver(validationSchema),
     defaultValues: {
-      type: mode,
+      type: null,
       channel: null,
       version: null,
       name: null,
@@ -192,6 +192,17 @@ const PageProductDisplayVersionManage = ({
 
   const onError = (error, event) => console.error(error);
 
+  useEffect(() => {
+    if (open) {
+      reset({
+        type: mode,
+        channel: null,
+        version: null,
+        name: null,
+      });
+    }
+  }, [open]);
+
   return (
     <Dialog
       open={open}
@@ -279,10 +290,12 @@ const PageProductDisplayVersionManage = ({
                             {...otherProps}
                             onBeforeOpen={handleFetchVersion}
                             renderOption={(props, option) => {
+                              const { key, ...restProps } = props;
+
                               return (
                                 <Box
-                                  {...props}
-                                  key={props.id}
+                                  key={option.id}
+                                  {...restProps}
                                   sx={{
                                     "&:hover": {
                                       cursor: "pointer",

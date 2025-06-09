@@ -36,9 +36,11 @@ const AppDataGrid = ({
   disableRowSelectionOnClick = false,
   sortingMode = "server", // client
   paginationMode = "server", // client
+  getRowHeight = () => "52px",
 }) => {
   return (
     <DataGrid
+      getRowHeight={getRowHeight}
       apiRef={apiRef}
       rows={rows}
       getRowId={getRowId}

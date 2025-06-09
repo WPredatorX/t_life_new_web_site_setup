@@ -43,6 +43,7 @@ const themePalette = (theme) => {
       600: theme.heading,
       700: theme.darkTextPrimary,
       900: theme.textDark,
+      text: theme.colors?.greyText,
     },
     dark: {
       light: theme.colors?.darkTextPrimary,

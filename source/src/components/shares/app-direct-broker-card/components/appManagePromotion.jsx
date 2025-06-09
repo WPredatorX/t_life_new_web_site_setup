@@ -7,6 +7,7 @@ import {
   Dialog,
   useTheme,
   TextField,
+  InputLabel,
   DialogTitle,
   DialogContent,
   DialogActions,
@@ -30,7 +31,14 @@ import {
 import { AppRejectPromotion } from ".";
 import NextImage from "next/image";
 
-const AppManagePromotion = ({ mode, open, setOpen, initialData }) => {
+const AppManagePromotion = ({
+  mode,
+  brokerId,
+  channel,
+  open,
+  setOpen,
+  initialData,
+}) => {
   const theme = useTheme();
   const bannerRef = useRef();
   const { activator, sasToken } = useAppSelector((state) => state.global);
@@ -50,7 +58,7 @@ const AppManagePromotion = ({ mode, open, setOpen, initialData }) => {
   });
 
   const validationSchema = Yup.object().shape({
-    promotionId: Yup.string(),
+    promotionId: Yup.string().nullable(),
     promotionCode: Yup.string(),
     promotionType: Yup.object().nullable().required(),
     promotionDiscountPercent: Yup.number().nullable(),
@@ -59,18 +67,22 @@ const AppManagePromotion = ({ mode, open, setOpen, initialData }) => {
       minimumPremium: Yup.number()
         .min(0, "ต้องไม่ต่ำว่า 0")
         .nullable()
+        .typeError("จำเป็นต้องระบุข้อมูลนี้")
         .required(),
       maximumPremium: Yup.number()
         .min(Yup.ref("minimumPremium"), "ต้องมากกว่าหรือเท่ากับ 'เบี้ยต่ำสุด'")
         .nullable()
+        .typeError("จำเป็นต้องระบุข้อมูลนี้")
         .required(),
       minimumCoverage: Yup.number()
         .min(0, "ต้องไม่ต่ำว่า 0")
         .nullable()
+        .typeError("จำเป็นต้องระบุข้อมูลนี้")
         .required(),
       maximumCoverage: Yup.number()
         .min(Yup.ref("minimumCoverage"), "ต้องมากกว่าหรือเท่ากับ 'ทุนต่ำสุด'")
         .nullable()
+        .typeError("จำเป็นต้องระบุข้อมูลนี้")
         .required(),
     }),
     promotionDisplay: Yup.object().shape({
@@ -81,7 +93,7 @@ const AppManagePromotion = ({ mode, open, setOpen, initialData }) => {
       bannerImageName: Yup.string().required(),
       bannerImageUrl: Yup.string().nullable(),
       bannerImageUrlPreview: Yup.string(),
-      description: Yup.string().required(),
+      description: Yup.string().required().preventSpace("ต้องไม่เป็นค่าว่าง"),
     }),
   });
 
@@ -141,7 +153,7 @@ const AppManagePromotion = ({ mode, open, setOpen, initialData }) => {
   };
 
   const onSubmit = async (data, e) => {
-    handleNotification(
+    await handleNotification(
       "คุณต้องการบันทึกการเปลี่ยนแปลงหรือไม่ ?",
       async () => {
         await handleSave(data);
@@ -495,6 +507,33 @@ const AppManagePromotion = ({ mode, open, setOpen, initialData }) => {
     }
   };
 
+  const handlePreviewPromotion = async () => {
+    const baseUrl = `${process.env.NEXT_PUBLIC_APPLICATION_ONLINE_BASE_URL}/promotion`;
+    const detailStatus = initialData?.promotion_status;
+    const promotionId = initialData?.promotion_id;
+    let additionUrl = `?`;
+    if (channel !== "606") {
+      additionUrl += `brokerId=${brokerId}&`;
+    }
+    additionUrl += `previewMode=PROMOTION&previewPromotionId=${promotionId}&preview=${detailStatus}`;
+    window.open(`${baseUrl}${additionUrl}`, "_blank");
+  };
+
+  const showPreview = useMemo(() => {
+    debugger;
+    if (!initialData) {
+      return false;
+    }
+
+    if (!initialData?.promotion_status) {
+      return false;
+    }
+
+    const allowList = ["1", "2", "3"];
+    const detailStatus = initialData?.promotion_status.toString();
+    return allowList.includes(detailStatus);
+  }, [initialData]);
+
   useEffect(() => {
     if (open) {
       handleInitiateData();
@@ -530,7 +569,6 @@ const AppManagePromotion = ({ mode, open, setOpen, initialData }) => {
                   <Grid container justifyContent={"space-around"}>
                     <Grid item xs={11}>
                       <TextField
-                        required
                         fullWidth
                         disabled
                         multiline
@@ -877,19 +915,31 @@ const AppManagePromotion = ({ mode, open, setOpen, initialData }) => {
                         />
                       </Box>
                     </Grid>
+                    <Grid item xs={11} my={2}>
+                      <InputLabel required>คำอธิบาย</InputLabel>
+                    </Grid>
                     <Grid item xs={11}>
                       <Controller
                         name={`promotionDisplay.description`}
                         control={control}
-                        render={({ field: { value, onChange } }) => {
+                        render={({ field: { value, onChange, onBlur } }) => {
                           return (
-                            <AppWyswig
-                              editable={!disabledInput}
-                              value={value}
-                              onChange={(value) => {
-                                onChange(value);
-                              }}
-                            />
+                            <>
+                              <AppWyswig
+                                value={value}
+                                editable={!disabledInput}
+                                onChange={(value) => {
+                                  onChange(value);
+                                }}
+                                onBlur={onBlur}
+                                error={errors?.promotionDisplay?.description}
+                              />
+                              <FormHelperText
+                                error={errors?.promotionDisplay?.description}
+                              >
+                                {errors?.promotionDisplay?.description?.message}
+                              </FormHelperText>
+                            </>
                           );
                         }}
                       />
@@ -979,18 +1029,15 @@ const AppManagePromotion = ({ mode, open, setOpen, initialData }) => {
                 บันทึก
               </Button>
             )}
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={() => {
-                handleSnackAlert({
-                  open: true,
-                  message: "ทำรายการไม่สำเร็จ",
-                });
-              }}
-            >
-              ดูตัวอย่าง
-            </Button>
+            {showPreview && (
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handlePreviewPromotion}
+              >
+                ดูตัวอย่าง
+              </Button>
+            )}
           </DialogActions>
         </form>
       )}

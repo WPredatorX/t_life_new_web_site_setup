@@ -38,13 +38,16 @@ import {
 import { GridActionsCellItem } from "@mui/x-data-grid";
 import { AppManagePromotion } from ".";
 
-const AppPromotion = () => {
+const AppPromotion = ({ mode, brokerData, channel }) => {
   const defaultSortField = "create_date";
   const defaultSortDirection = "desc";
   const { handleSnackAlert } = useAppSnackbar();
-  const { promotionCode: globalPromotionCode } = useAppSelector(
-    (state) => state.global
-  );
+  const {
+    brokerId,
+    activator,
+    sasToken,
+    promotionCode: globalPromotionCode,
+  } = useAppSelector((state) => state.global);
   const [loading, setLoading] = useState(false);
   const [promotion, setPromotion] = useState([]);
   const [openManagePromotion, setOpenManagePromotion] = useState(false);
@@ -459,6 +462,8 @@ const AppPromotion = () => {
     <Grid container justifyContent={"center"} my={2}>
       <AppManagePromotion
         mode={openManagePromotionMode}
+        brokerId={brokerId}
+        channel={channel}
         open={openManagePromotion}
         setOpen={setOpenManagePromotion}
         initialData={openManagePromotionInitialData}

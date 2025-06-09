@@ -9,7 +9,7 @@ const useAppDialog = () => {
   const { dialog } = useAppSelector((state) => state.global);
 
   // ใช้สำหรับแสดง Dialog คำถาม
-  const handleNotificationQuestion = (title, callback, content = null) => {
+  const handleNotificationQuestion = (title, callback, content) => {
     dispatch(
       setDialog({
         ...dialog,
@@ -89,12 +89,7 @@ const useAppDialog = () => {
   };
 
   // ใช้สำหรับแสดง Dialog Info
-  const handleNotificationInfo = (
-    title,
-    callback,
-    content = nullม,
-    buttonMessage
-  ) => {
+  const handleNotificationInfo = (title, callback, content, buttonMessage) => {
     dispatch(
       setDialog({
         ...dialog,
@@ -139,7 +134,7 @@ const useAppDialog = () => {
   };
 
   // ใช้สำหรับแสดง Dialog Error
-  const handleNotificationError = (title, callback, content = null) => {
+  const handleNotificationError = (title, callback, content) => {
     dispatch(
       setDialog({
         ...dialog,
@@ -201,7 +196,7 @@ const useAppDialog = () => {
   const handleNotification = (
     title,
     callback,
-    content = null,
+    content,
     type = "question",
     buttonMessage = "กลับสู่หน้าหลัก"
   ) => {
@@ -212,8 +207,6 @@ const useAppDialog = () => {
         return handleNotificationInfo(title, callback, content, buttonMessage);
       case "error":
         return handleNotificationError(title, callback, content);
-      default:
-        return handleNotificationQuestion(title, callback, content);
     }
   };
 

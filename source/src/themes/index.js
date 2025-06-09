@@ -1,6 +1,6 @@
 "use client";
 
-import { createTheme, responsiveFontSizes } from "@mui/material/styles";
+import { createTheme } from "@mui/material/styles";
 import colors from "../assets/styles/scss/_themes-vars.module.scss";
 import componentStyleOverrides from "./compStyleOverride";
 import themePalette from "./palette";
@@ -38,7 +38,6 @@ export const theme = (customization) => {
 
   let themes = createTheme(themeOptions);
   themes.components = componentStyleOverrides(themeOption);
-  themes = responsiveFontSizes(themes);
 
   return themes;
 };

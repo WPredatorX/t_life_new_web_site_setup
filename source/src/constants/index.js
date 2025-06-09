@@ -142,12 +142,12 @@ export const APPLICATION_CONTENT_FILE_TYPE = [
 export const APPLICATION_LOGO_ASPECT = [
   {
     id: "0",
-    label: "1:1",
+    label: "ช่องทาง Direct",
     value: 1,
   },
   {
     id: "1",
-    label: "16:9",
+    label: "ช่องทาง โบรกเกอร์",
     value: 1.777777,
   },
 ];

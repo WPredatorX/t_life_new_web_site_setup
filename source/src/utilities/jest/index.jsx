@@ -6,16 +6,37 @@ import {
   PageLayoutProvider,
   PageLayoutMainContent,
 } from "@components/pages/page-layout/components";
-import { ThemeProvider, CssBaseline } from "@mui/material";
+import { ThemeProvider, CssBaseline, createTheme } from "@mui/material";
 import {
   StoreProvider,
   LanguageProvider,
   ReactQueryProvider,
   DateTimeProvider,
 } from "@providers";
+import { FormProvider } from "react-hook-form";
 import makeStore from "@stores";
 import userEvent from "@testing-library/user-event";
 import mediaQuery from "css-mediaquery";
+
+const loadedTheme = createTheme({
+  breakpoints: {
+    values: {
+      xs: 0,
+      sm: 600,
+      md: 900,
+      lg: 1280,
+      xl: 1536,
+    },
+  },
+  palette: {
+    common: {
+      white: "#ffffff",
+    },
+    primary: {
+      main: "#808080",
+    },
+  },
+});
 
 const Providers = ({ mockStore, children }) => {
   const generateMockStore = () => {
@@ -24,9 +45,11 @@ const Providers = ({ mockStore, children }) => {
 
   return (
     <StoreProvider mockStore={generateMockStore}>
-      <PageLayoutProvider>
-        <PageLayoutMainContent>{children}</PageLayoutMainContent>
-      </PageLayoutProvider>
+      <ThemeProvider theme={loadedTheme}>
+        <PageLayoutProvider>
+          <PageLayoutMainContent>{children}</PageLayoutMainContent>
+        </PageLayoutProvider>
+      </ThemeProvider>
     </StoreProvider>
   );
 };
@@ -56,13 +79,42 @@ const customRender = async (ui, options) => {
 const customRenderHook = (hookFunction, options) => {
   let renderResult = null;
   let mockStore = generateStore(options?.mockStore);
+  let formMethods = options?.formMethods;
 
   return (renderResult = renderHook(hookFunction, {
     wrapper: ({ children }) => (
-      <Provider store={mockStore}>{children}</Provider>
+      <Provider store={mockStore}>
+        <ThemeProvider theme={loadedTheme}>
+          <ReactQueryProvider>
+            {formMethods ? (
+              <FormProvider {...formMethods}>{children}</FormProvider>
+            ) : (
+              children
+            )}
+          </ReactQueryProvider>
+        </ThemeProvider>
+      </Provider>
     ),
     ...options,
   }));
+};
+
+const customRenderAfterHook = async (ui, options) => {
+  let renderResult = null;
+  let mockStore = generateStore(options?.mockStore);
+
+  await act(() => {
+    renderResult = render(ui, {
+      wrapper: ({ children }) => (
+        <Provider store={mockStore}>
+          <ThemeProvider theme={loadedTheme}>{children}</ThemeProvider>
+        </Provider>
+      ),
+      ...options,
+    });
+  });
+
+  return renderResult;
 };
 
 const createMatchMedia = (width) => {
@@ -82,5 +134,9 @@ export {
   within,
   waitFor,
 } from "@testing-library/react";
-export { customRender as render, customRenderHook as renderHook };
+export {
+  customRender as render,
+  customRenderHook as renderHook,
+  customRenderAfterHook as renderAfterHook,
+};
 export { userEvent, createMatchMedia };

@@ -1,150 +1,97 @@
 export default function themeTypography(theme) {
   return {
     fontFamily: theme?.customization?.fontFamily,
-    h6: {
-      fontWeight: 500,
-      color: theme.heading,
-      fontSize: "0.75rem",
-    },
-    h5: {
-      fontSize: "0.875rem",
-      color: theme.heading,
-      fontWeight: 500,
-    },
-    h4: {
-      fontSize: "1rem",
-      color: theme.heading,
-      fontWeight: 600,
-    },
-    h3: {
-      fontSize: "1.25rem",
-      color: theme.heading,
-      fontWeight: 600,
+    htmlFontSize: 16,
+    fontWeightLight: 400,
+    fontWeightMedium: 700,
+    fontWeightRegular: 700,
+    fontWeightBold: 900,
+    h1: {
+      fontWeight: 700,
+      fontSize: "6rem",
+      lineHeight: 1.167,
+      letterSpacing: "-0.01562em",
     },
     h2: {
-      fontSize: "1.5rem",
-      color: theme.heading,
       fontWeight: 700,
+      fontSize: "3.75rem",
+      lineHeight: 1.2,
+      letterSpacing: "-0.00833em",
     },
-    h1: {
-      fontSize: "2.125rem",
-      color: theme.heading,
+    h3: {
       fontWeight: 700,
+      fontSize: "3rem",
+      lineHeight: 1.167,
+      letterSpacing: "0em",
+    },
+    h4: {
+      fontWeight: 700,
+      fontSize: "2.125rem",
+      lineHeight: 1.235,
+      letterSpacing: "0.00735em",
+    },
+    h5: {
+      fontWeight: 700,
+      fontSize: "1.5rem",
+      lineHeight: 1.334,
+      letterSpacing: "0em",
+    },
+    h6: {
+      fontWeight: 700,
+      fontSize: "1.25rem",
+      lineHeight: 1.6,
+      letterSpacing: "0.0075em",
     },
     subtitle1: {
-      fontSize: "0.875rem",
-      fontWeight: 500,
-      color: theme.textDark,
+      fontWeight: 700,
+      fontSize: "1rem",
+      lineHeight: 1.75,
+      letterSpacing: "0.00938em",
     },
     subtitle2: {
-      fontSize: "0.75rem",
-      fontWeight: 400,
-      color: theme.darkTextSecondary,
-    },
-    caption: {
-      fontSize: "0.75rem",
-      color: theme.darkTextSecondary,
-      fontWeight: 400,
+      fontWeight: 700,
+      fontSize: "0.875rem",
+      lineHeight: 1.57,
+      letterSpacing: "0.00714em",
     },
     body1: {
-      fontSize: "0.875rem",
-      fontWeight: 400,
-      lineHeight: "1.7em",
+      fontWeight: 700,
+      fontSize: "1rem",
+      lineHeight: 1.5,
+      letterSpacing: "0.00938em",
     },
     body2: {
-      letterSpacing: "0em",
-      fontWeight: 400,
-      lineHeight: "1.5em",
-      color: theme.darkTextPrimary,
+      fontWeight: 700,
+      fontSize: "0.875rem",
+      lineHeight: 1.43,
+      letterSpacing: "0.01071em",
     },
     button: {
-      textTransform: "capitalize",
+      fontWeight: 700,
+      fontSize: "1.8rem",
+      lineHeight: 1.75,
+      letterSpacing: "0.1rem",
+      textTransform: "uppercase",
     },
-    customInput: {
-      marginTop: 1,
-      marginBottom: 1,
-      "& > label": {
-        top: 23,
-        left: 0,
-        color: theme.grey500,
-        '&[data-shrink="false"]': {
-          top: 5,
-        },
-      },
-      "& > div > input": {
-        padding: "30.5px 14px 11.5px !important",
-      },
-      "& legend": {
-        display: "none",
-      },
-      "& fieldset": {
-        top: 0,
-      },
+    caption: {
+      fontWeight: 700,
+      fontSize: "0.75rem",
+      lineHeight: 1.66,
+      letterSpacing: "0.03333em",
     },
-    customSelect: {
-      marginTop: 1,
-      marginBottom: 1,
-
-      "& > label": {
-        top: 15,
-        left: 0,
-        color: theme.grey500,
-        '&[data-shrink="false"]': {
-          top: 5,
-        },
-        marginBottom: "5px",
-      },
-      "& > div.MuiInputBase-root": {
-        paddingTop: "10px",
-        backgroundColor: "white",
-      },
-      "& legend": {
-        display: "none",
-      },
-      "& fieldset": {
-        top: 0,
-      },
+    overline: {
+      fontWeight: 700,
+      fontSize: "0.75rem",
+      lineHeight: 2.66,
+      letterSpacing: "0.08333em",
+      textTransform: "uppercase",
     },
-    mainContent: {
-      backgroundColor: theme.background,
-      width: "100%",
-      minHeight: "100vh",
-      flexGrow: 1,
-      padding: "20px",
-      borderRadius: `${theme?.customization?.borderRadius}px`,
-    },
-    menuCaption: {
-      fontSize: "0.875rem",
-      fontWeight: 500,
-      color: theme.heading,
-      padding: "6px",
-      textTransform: "capitalize",
-      marginTop: "10px",
-    },
-    subMenuCaption: {
-      fontSize: "0.6875rem",
-      fontWeight: 500,
-      color: theme.darkTextSecondary,
-      textTransform: "capitalize",
-    },
-    commonAvatar: {
-      cursor: "pointer",
-      borderRadius: "8px",
-    },
-    smallAvatar: {
-      width: "22px",
-      height: "22px",
-      fontSize: "1rem",
-    },
-    mediumAvatar: {
-      width: "34px",
-      height: "34px",
-      fontSize: "1.2rem",
-    },
-    largeAvatar: {
-      width: "44px",
-      height: "44px",
-      fontSize: "1.5rem",
+    inherit: {
+      fontFamily: "inherit",
+      fontWeight: "inherit",
+      fontSize: "inherit",
+      lineHeight: "inherit",
+      letterSpacing: "inherit",
     },
   };
 }

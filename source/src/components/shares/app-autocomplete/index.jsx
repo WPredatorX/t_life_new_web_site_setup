@@ -10,7 +10,7 @@ import {
   TextField,
   useTheme,
 } from "@mui/material";
-import { useAppIntl, useAppMutation } from "@hooks";
+import { useAppMutation } from "@hooks";
 
 const AppAutocomplete = forwardRef(
   (
@@ -32,7 +32,6 @@ const AppAutocomplete = forwardRef(
     },
     ref
   ) => {
-    const intl = useAppIntl();
     const theme = useTheme();
     const [optionAsync, setOptionAsync] = useState([]);
 

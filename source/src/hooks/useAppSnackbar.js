@@ -6,7 +6,7 @@ const useAppSnackbar = () => {
   const { snackBar } = useAppSelector((state) => state.global);
 
   const handleSnackAlert = ({
-    open = false,
+    open,
     severity = "error",
     autoHideDuration = 5000,
     onClose = null,

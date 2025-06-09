@@ -8,11 +8,11 @@ import {
 } from "@providers";
 import { Grid, Typography, CssBaseline, CircularProgress } from "@mui/material";
 import { AppSnackBar, AppDialog, AppScrollTo } from "@components";
-import { MsalProvider } from "@azure/msal-react";
 import { PublicClientApplication } from "@azure/msal-browser";
 import { APPLICATION_MSAL_CONFIG } from "@constants";
 import { PageLayoutAuthInitializer, PageLayoutUnAuth } from ".";
 import {
+  MsalProvider,
   AuthenticatedTemplate,
   UnauthenticatedTemplate,
 } from "@azure/msal-react";

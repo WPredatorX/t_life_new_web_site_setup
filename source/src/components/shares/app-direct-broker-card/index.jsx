@@ -81,7 +81,6 @@ const AppDirectBrokerCard = ({ mode, channel }) => {
   const handleChange = (event, newValue) => {
     const newUrl = `${window.location.pathname}?tabIndex=${newValue}`;
     router.push(newUrl, undefined, { shallow: true });
-    // window.location.href = newUrl;
   };
 
   const createChannelSilent = async (payload) => {
@@ -277,7 +276,11 @@ const AppDirectBrokerCard = ({ mode, channel }) => {
               {value === 3 &&
                 grantPromotion &&
                 mode.toLowerCase() === "direct" && (
-                  <AppPromotion brokerData={brokerData} channel={channel} />
+                  <AppPromotion
+                    mode={mode}
+                    brokerData={brokerData}
+                    channel={channel}
+                  />
                 )}
             </Grid>
           </Grid>

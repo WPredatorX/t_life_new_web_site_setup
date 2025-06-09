@@ -10,7 +10,7 @@ import {
   Collapse,
   Accordion,
   TextField,
-  Typography,
+  InputLabel,
   FormHelperText,
   InputAdornment,
   AccordionDetails,
@@ -28,7 +28,7 @@ import {
   AppDataGrid,
   AppAutocomplete,
 } from "@components";
-import { Transform, Yup } from "@utilities";
+import { Yup } from "@utilities";
 import {
   APPLICATION_CONTENT_FILE_TYPE,
   APPLICATION_CONFIGURATION,
@@ -63,7 +63,6 @@ const PageProductDisplay = ({
   const theme = useTheme();
   const router = useAppRouter();
   const dataGridApiRef = useAppGridApiRef();
-  const searchParams = useAppSearchParams();
   const { handleSnackAlert } = useAppSnackbar();
   const { handleNotification } = useAppDialog();
   const { handleScrollTo } = useAppScroll();
@@ -94,29 +93,33 @@ const PageProductDisplay = ({
     "direct.product.display.read",
     "broker.product.display.read",
   ]);
+
   const { validFeature: grantEdit } = useAppFeatureCheck([
     "direct.product.display.write",
     "broker.product.display.write",
   ]);
+
   const { validFeature: grantDrop } = useAppFeatureCheck([
     "direct.product.display.drop",
     "broker.product.display.drop",
   ]);
+
   const { validFeature: grantRequest } = useAppFeatureCheck([
     "direct.product.display.request",
     "broker.product.display.request",
   ]);
+
   const { validFeature: grantApprove } = useAppFeatureCheck([
     "direct.product.display.approve",
     "broker.product.display.approve",
   ]);
 
   const validationSchema = Yup.object().shape({
-    actionType: Yup.string(),
     displayVersion: Yup.array().of(Yup.mixed()),
     displayVersionTemp: Yup.array().of(Yup.mixed()),
     displayVersionDetail: Yup.object()
       .shape({
+        actionType: Yup.string(),
         main: Yup.mixed().nullable(),
         popularity: Yup.bool(),
         name: Yup.string(),
@@ -178,7 +181,7 @@ const PageProductDisplay = ({
       Yup.object().shape({
         title: Yup.string().required(),
         fullWidth: Yup.bool(),
-        fileType: Yup.mixed().required(), // เก็บเป็น object dropdown แต่ส่ง value บันทึก
+        fileType: Yup.mixed().required(),
         fileName: Yup.string()
           .nullable()
           .when("fileType.value", {
@@ -198,7 +201,19 @@ const PageProductDisplay = ({
           is: false,
           then: (schema) => schema.required(),
         }),
-        htmlDescription: Yup.string(),
+        htmlDescription: Yup.string()
+          .when("fullWidth", {
+            is: (value) => {
+              return !value;
+            },
+            then: (schema) => schema.required(),
+          })
+          .when("fileType", {
+            is: (value) => {
+              return value?.id === "2";
+            },
+            then: (schema) => schema.required(),
+          }),
       })
     ),
   });
@@ -206,6 +221,7 @@ const PageProductDisplay = ({
   const {
     watch,
     reset,
+    trigger,
     control,
     register,
     setValue,
@@ -219,6 +235,7 @@ const PageProductDisplay = ({
       displayVersion: [],
       displayVersionTemp: [],
       displayVersionDetail: {
+        actionType: "view",
         popularity: false,
         caption: "",
         description: "",
@@ -252,6 +269,20 @@ const PageProductDisplay = ({
   const watchedData = watch("displayVersion");
   const watchDetail = watch("displayVersionDetail");
   const watchedDataTemp = watch("displayVersionTemp");
+
+  const allowPreview = useMemo(() => {
+    //แบบร่าง, ขออนุมัติ, เปิดใช้งาน
+    const allowList = ["1", "2", "3"];
+    if (!watchDetail?._temp?.sale_card_status) {
+      return false;
+    }
+
+    if (selectionModel?.length < 1) {
+      return false;
+    }
+
+    return allowList.includes(watchDetail?._temp?.sale_card_status);
+  }, [watchDetail, selectionModel]);
 
   const versionWaitForApprove = useMemo(() => {
     return watchDetail?._temp?.sale_card_status === "2";
@@ -557,11 +588,12 @@ const PageProductDisplay = ({
           // ถ้าไม่ใช้ temp ให้โหลดข้อมูลและแสดงการโหลด
           if (!row.is_new) {
             setRowLoading(row?.product_sale_card_id, mode, true);
-            setValue("actionType", mode);
           }
           return [selectedId];
         }
       });
+
+      setValue("displayVersionDetail.actionType", mode);
       setDetailMode(mode);
     }
   };
@@ -690,18 +722,18 @@ const PageProductDisplay = ({
 
           return {
             _temp: { ...item },
-            title: item?.section_name,
-            conditionTitle: item?.condition_title,
+            title: item?.section_name ?? "",
+            conditionTitle: item?.condition_title ?? "",
             fullWidth: item?.is_full,
             fileType:
               APPLICATION_CONTENT_FILE_TYPE.find(
                 (typeItem) => typeItem.value === item?.content_item_file_type
               ) ?? null,
-            fileName: item?.content_item_file_name,
-            fileUrl: item?.section_content_item,
+            fileName: item?.content_item_file_name ?? "",
+            fileUrl: item?.section_content_item ?? "",
             fileItem: null,
-            filePreviewUrl: previewUrl,
-            htmlDescription: item?.description,
+            filePreviewUrl: previewUrl ?? "",
+            htmlDescription: item?.description ?? "",
           };
         });
         // #endregion
@@ -717,11 +749,12 @@ const PageProductDisplay = ({
                   mainItem?.id?.toLowerCase() ===
                   dataGeneral?.main_id?.toLowerCase()
               ) ?? null,
+            actionType: row?.is_copy ? "edit" : "view",
             popularity: Boolean(dataGeneral?.tag_sale) ?? false,
             name: dataGeneral?.title ?? "",
             caption: dataGeneral?.sub_title ?? "",
-            description: dataGeneral?.description ?? "",
-            cardDescription: dataGeneral?.description_banner ?? "",
+            description: dataGeneral?.description_banner ?? "",
+            cardDescription: dataGeneral?.description ?? "",
             remark: dataGeneral?.remark_marketing_name ?? "",
             url: dataGeneral?.buy_link_url ?? "",
             urlWithParams: dataGeneral?.more_link_url ?? "",
@@ -754,7 +787,7 @@ const PageProductDisplay = ({
                 }`
               : "",
             status: dataGeneral?.sale_card_status,
-            rejectReason: productCondition?.marketting_status_message,
+            rejectReason: productCondition?.marketting_status_message ?? "",
           },
           displayProductDetail: [...mappedDataContent],
         };
@@ -767,11 +800,11 @@ const PageProductDisplay = ({
       } else {
         // ทำข้อมูลตั้งต้นของ temp
         reset({
-          actionType: "edit",
           displayVersion: [...currentValue?.displayVersion],
           displayVersionTemp: [...currentValue?.displayVersionTemp],
           displayProductDetail: [],
           displayVersionDetail: {
+            actionType: "edit",
             popularity: false,
             caption: "",
             description: "",
@@ -812,6 +845,7 @@ const PageProductDisplay = ({
 
   const handleAddOrUpdateVersion = (data, mode = "edit") => {
     let updated;
+    debugger;
     const currentValue = watch("displayVersionTemp") ?? [];
     const existsIndex = currentValue.findIndex(
       (item) => item.product_sale_card_id === data.product_sale_card_id
@@ -826,6 +860,7 @@ const PageProductDisplay = ({
     }
 
     setValue("displayVersionTemp", updated);
+    setValue("displayVersionDetail.actionType", "edit");
     if (mode === "drop") {
       handleSaveVersion({ ...data, sale_card_status: "4" }, false, "4");
       return;
@@ -1026,7 +1061,7 @@ const PageProductDisplay = ({
             product_sale_card_id: versionId,
             title: productCondition?.title,
             sub_title: detailData?.caption,
-            description: detailData?.description,
+            description: detailData?.cardDescription,
             buy_link_url: detailData?.url,
             more_link_url: detailData?.urlWithParams,
             ...(detailData?.benefitImageUrl && {
@@ -1052,7 +1087,7 @@ const PageProductDisplay = ({
               content_url_banner_product_file: detailData?.bannerImageString,
             }),
             content_url_banner_product_name: detailData?.bannerImageName,
-            description_banner: detailData?.cardDescription,
+            description_banner: detailData?.description,
 
             ...(detailData?.brochureFileUrl && {
               brochure_document_file_path: detailData?.brochureFileUrl,
@@ -1248,8 +1283,10 @@ const PageProductDisplay = ({
         // #endregion
 
         // #region ส่งอีเมลแจ้งอนุมัติ
+        const detailVersion = currentData?.displayVersionDetail?._temp;
         const approvePayload = {
           type: 1,
+          request_to: detailVersion?.create_by,
           product_sale_channel_id: saleChannelId,
           product_plan_id: productId,
           mode: "DISPLAY_APPROVE",
@@ -1316,9 +1353,11 @@ const PageProductDisplay = ({
         // #endregion
 
         // #region ส่งอีเมลแจ้งอนุมัติ
+        const detailVersion = currentData?.displayVersionDetail?._temp;
         const rejectPayload = {
           type: 1,
           product_sale_channel_id: saleChannelId,
+          request_to: detailVersion?.create_by,
           product_plan_id: productId,
           mode: "DISPLAY_APPROVE",
           template_code: "03",
@@ -1368,14 +1407,16 @@ const PageProductDisplay = ({
     const onlineSaleUrl =
       process.env.NEXT_PUBLIC_APPLICATION_ONLINE_BASE_URL ?? "";
     const planCode = productCondition?.i_plan;
+    const detailStatus = watch("displayVersionDetail")?._temp?.sale_card_status;
+    const suffix = `?brokerId=${brokerId}&previewMode=PRODUCT&previewProductId=${saleChannelId}&preview=${detailStatus}`;
 
     switch (type) {
       case "1":
-        return `${onlineSaleUrl}/online-assurance/${saleChannelId}`;
+        return `${onlineSaleUrl}/online-assurance/${saleChannelId}${suffix}`;
       case "2":
-        return `${onlineSaleUrl}/online-assurance/${saleChannelId}&SubBusiLine=${channel}&PlanCode=${planCode}&SaleCode=XXXXXXXXXX`;
+        return `${onlineSaleUrl}/online-assurance/${saleChannelId}&SubBusiLine=${channel}&PlanCode=${planCode}&SaleCode=XXXXXXXXXX${suffix}`;
       default:
-        return `${onlineSaleUrl}/online-assurance/${saleChannelId}`;
+        return `${onlineSaleUrl}/online-assurance/${saleChannelId}${suffix}`;
     }
   };
 
@@ -1391,6 +1432,18 @@ const PageProductDisplay = ({
   };
 
   const onError = (error, event) => console.error(error);
+
+  const handleProductPreview = () => {
+    const baseUrl = `${process.env.NEXT_PUBLIC_APPLICATION_ONLINE_BASE_URL}`;
+    const detailStatus = watch("displayVersionDetail")?._temp?.sale_card_status;
+
+    let additionUrl = `?`;
+    if (channel !== "606") {
+      additionUrl += `brokerId=${brokerId}&`;
+    }
+    additionUrl += `previewMode=PRODUCT&previewProductId=${saleChannelId}&preview=${detailStatus}`;
+    window.open(`${baseUrl}${additionUrl}`, "_blank");
+  };
 
   useEffect(() => {
     handleFetchVersion();
@@ -1476,7 +1529,6 @@ const PageProductDisplay = ({
                   <Grid container justifyContent={"space-around"} my={2}>
                     <Grid item xs={12}>
                       <TextField
-                        required
                         fullWidth
                         disabled
                         multiline
@@ -1568,7 +1620,7 @@ const PageProductDisplay = ({
                             label="ชื่อ"
                             margin="dense"
                             size="small"
-                            value={productCondition?.title}
+                            value={productCondition?.title ?? ""}
                             InputProps={{
                               readOnly: true,
                             }}
@@ -1691,7 +1743,9 @@ const PageProductDisplay = ({
                             label="หมายเหตุ"
                             margin="dense"
                             size="small"
-                            value={productCondition?.remark_marketing_name}
+                            value={
+                              productCondition?.remark_marketing_name ?? ""
+                            }
                             inputProps={{ maxLength: 250 }}
                             InputLabelProps={{
                               shrink: true,
@@ -2032,6 +2086,7 @@ const PageProductDisplay = ({
                                 </Grid>
                                 <Grid item xs={12} mt={2}>
                                   <TextField
+                                    required
                                     fullWidth
                                     label="รูปการ์ด (1000 × 1200 px)"
                                     margin="dense"
@@ -2100,48 +2155,6 @@ const PageProductDisplay = ({
                                 </Grid>
                               </Grid>
                             </Grid>
-                            {/* <Grid item xs={4}>
-                      <Grid container>
-                        <Grid item xs={12}>
-                          <NextImage
-                            alt="banner"
-                            src={"/images/600x200.png"}
-                            width={600}
-                            height={200}
-                            style={{
-                              aspectRatio: 600 / 200,
-                              border: "2px dashed #e7e7e7",
-                              objectFit: "contain",
-                            }}
-                          />
-                        </Grid>
-                        <Grid item xs={12} mt={2}>
-                          <TextField
-                            disabled
-                            fullWidth
-                            label="รูปภาพเพิ่มเติม (ด้านซ้ายของแบนเนอร์) (600 × 200 px)"
-                            margin="dense"
-                            size="small"
-                            id={`other`}
-                            {...register(`other`)}
-                            error={Boolean(errors?.name)}
-                            inputProps={{ maxLength: 100 }}
-                            InputProps={{
-                              endAdornment: (
-                                <InputAdornment position="end">
-                                  <Button sx={{ color: "GrayText" }}>
-                                    อัปโหลด
-                                  </Button>
-                                </InputAdornment>
-                              ),
-                            }}
-                          />
-                          <FormHelperText error={errors?.name}>
-                            {errors?.name?.message}
-                          </FormHelperText>
-                        </Grid>
-                      </Grid>
-                    </Grid> */}
                           </Grid>
                         </Grid>
                         <Grid item xs={12}>
@@ -2173,6 +2186,7 @@ const PageProductDisplay = ({
                           <Grid container>
                             <Grid item xs={12} md={6}>
                               <TextField
+                                required
                                 fullWidth
                                 label="รูปตัวอย่างผลประโยชน์ (2000 × 1000 px)"
                                 margin="dense"
@@ -2289,6 +2303,10 @@ const PageProductDisplay = ({
                                   },
                                   fields?.length
                                 );
+
+                                // await trigger(
+                                //   `displayProductDetail.${fields.length}`
+                                // );
                               }}
                               variant="contained"
                             >
@@ -2303,10 +2321,13 @@ const PageProductDisplay = ({
                         const errorIndex =
                           errors?.displayProductDetail?.[index];
 
-                        const typeOptions = watch(`${baseNameIndex}.fullWidth`)
+                        const typeOptions = !!watch(
+                          `${baseNameIndex}.fullWidth`
+                        )
                           ? APPLICATION_CONTENT_FILE_TYPE
                           : APPLICATION_CONTENT_FILE_TYPE.filter(
-                              (typeItem) => typeItem?.id !== "2"
+                              (typeItem) =>
+                                typeItem?.id !== "2" && typeItem?.id !== "1"
                             );
                         const showHtmlDescription =
                           !watch(`${baseNameIndex}.fullWidth`) ||
@@ -2425,17 +2446,34 @@ const PageProductDisplay = ({
                                                 disablePortal
                                                 fullWidth
                                                 label="ประเภท"
-                                                onChange={(event, value) => {
-                                                  const current = watch(
-                                                    `${baseNameIndex}`
+                                                onChange={async (
+                                                  event,
+                                                  value
+                                                ) => {
+                                                  const commonOptions = {
+                                                    shouldTouch: true,
+                                                    shouldValidate: true,
+                                                  };
+                                                  setValue(
+                                                    `${baseNameIndex}.fileType`,
+                                                    value,
+                                                    commonOptions
                                                   );
-                                                  update(index, {
-                                                    ...current,
-                                                    fileUrl: "",
-                                                    fileName: "",
-                                                    filePreviewUrl: "",
-                                                  });
-                                                  onChange(value);
+                                                  setValue(
+                                                    `${baseNameIndex}.fileUrl`,
+                                                    "",
+                                                    commonOptions
+                                                  );
+                                                  setValue(
+                                                    `${baseNameIndex}.fileName`,
+                                                    "",
+                                                    commonOptions
+                                                  );
+                                                  setValue(
+                                                    `${baseNameIndex}.filePreviewUrl`,
+                                                    "",
+                                                    commonOptions
+                                                  );
                                                 }}
                                                 {...otherProps}
                                                 disabled={detailMode === "view"}
@@ -2658,7 +2696,26 @@ const PageProductDisplay = ({
                                 </Grid>
                                 {showHtmlDescription && (
                                   <Grid container>
-                                    <Grid item xs={12}></Grid>
+                                    <Grid
+                                      item
+                                      xs={11}
+                                      sx={{
+                                        padding: 2,
+                                        paddingBottom: 0,
+                                      }}
+                                    >
+                                      <InputLabel
+                                        required={
+                                          !watch(
+                                            `${baseNameIndex}.fullWidth`
+                                          ) ||
+                                          watch(`${baseNameIndex}.fileType`)
+                                            ?.value === "2"
+                                        }
+                                      >
+                                        คำอธิบาย
+                                      </InputLabel>
+                                    </Grid>
                                     <Grid
                                       item
                                       xs={12}
@@ -2670,16 +2727,32 @@ const PageProductDisplay = ({
                                         name={`${baseNameIndex}.htmlDescription`}
                                         control={control}
                                         render={({
-                                          field: { value, onChange },
+                                          field: { value, onChange, onBlur },
                                         }) => {
                                           return (
-                                            <AppWyswig
-                                              editable={detailMode !== "view"}
-                                              value={value}
-                                              onChange={(value) => {
-                                                onChange(value);
-                                              }}
-                                            />
+                                            <>
+                                              <AppWyswig
+                                                editable={detailMode !== "view"}
+                                                value={value}
+                                                onChange={(value) => {
+                                                  onChange(value);
+                                                }}
+                                                onBlur={onBlur}
+                                                error={
+                                                  errorIndex?.htmlDescription
+                                                }
+                                              />
+                                              <FormHelperText
+                                                error={
+                                                  errorIndex?.htmlDescription
+                                                }
+                                              >
+                                                {
+                                                  errorIndex?.htmlDescription
+                                                    ?.message
+                                                }
+                                              </FormHelperText>
+                                            </>
                                           );
                                         }}
                                       />
@@ -2808,20 +2881,17 @@ const PageProductDisplay = ({
                             )}
                           </>
                         ) : null}
-                        {selectionModel?.length > 0 &&
-                          watchDetail?._temp?.sale_card_status !== "4" && (
-                            <Grid item xs={12} md="auto">
-                              <Button
-                                variant="contained"
-                                sx={{
-                                  color: theme.palette.common.white,
-                                  backgroundColor: theme.palette.primary.main,
-                                }}
-                              >
-                                ดูตัวอย่าง
-                              </Button>
-                            </Grid>
-                          )}
+                        {allowPreview && (
+                          <Grid item xs={12} md="auto">
+                            <Button
+                              color="primary"
+                              variant="contained"
+                              onClick={handleProductPreview}
+                            >
+                              ดูตัวอย่าง
+                            </Button>
+                          </Grid>
+                        )}
                       </Grid>
                     </Grid>
                   </Grid>

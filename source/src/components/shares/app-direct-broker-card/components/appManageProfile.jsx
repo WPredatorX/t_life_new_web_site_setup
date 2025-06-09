@@ -26,7 +26,6 @@ import { Controller } from "react-hook-form";
 import { AppAutocomplete } from "@components";
 import { useEffect, useState } from "react";
 
-// 1 เพิ่ม, 2 คัดลอก
 const AppManageProfile = ({ mode, open, setOpen, handleSave }) => {
   const theme = useTheme();
   const { activator } = useAppSelector((state) => state.global);
@@ -54,7 +53,7 @@ const AppManageProfile = ({ mode, open, setOpen, handleSave }) => {
     reValidateMode: "onChange",
     resolver: yupResolver(validationSchema),
     defaultValues: {
-      type: mode,
+      type: null,
       channel: null,
       profile: null,
       name: null,
@@ -140,14 +139,15 @@ const AppManageProfile = ({ mode, open, setOpen, handleSave }) => {
           {
             is_new: true,
             is_copy: mode === "copy",
-            copy_channel: watch("channel") && watch("channel").id,
-            copy_version: watch("version") && watch("version").id,
+            copy_channel: watch("channel"),
+            copy_version: watch("profile"),
             id: crypto.randomUUID(),
             active_status: null,
             title: data?.name,
-            name_status: "รออนุมัติ",
+            name_status: "แบบร่าง",
             create_by: activator,
             create_date: new Date(),
+            insuranceGroup: [],
           },
           mode
         );
@@ -160,13 +160,17 @@ const AppManageProfile = ({ mode, open, setOpen, handleSave }) => {
     );
   };
 
-  const onError = (error, event) => {
-    alert("onError " + error.message);
-  };
+  const onError = (error, event) => console.error(error);
 
   useEffect(() => {
     if (open) {
       handleFetchChannel();
+      reset({
+        type: mode,
+        channel: null,
+        profile: null,
+        name: null,
+      });
     }
   }, [open]);
 
@@ -242,10 +246,11 @@ const AppManageProfile = ({ mode, open, setOpen, handleSave }) => {
                             {...otherProps}
                             onBeforeOpen={handleFetchVersion}
                             renderOption={(props, option) => {
+                              const { key, ...rest } = props;
                               return (
                                 <Box
-                                  {...props}
                                   key={props.id}
+                                  {...rest}
                                   sx={{
                                     "&:hover": {
                                       cursor: "pointer",
@@ -270,10 +275,10 @@ const AppManageProfile = ({ mode, open, setOpen, handleSave }) => {
                                 </Box>
                               );
                             }}
-                            error={Boolean(errors?.version)}
+                            error={Boolean(errors?.profile)}
                           />
-                          <FormHelperText error={errors?.version}>
-                            {errors?.version?.message}
+                          <FormHelperText error={errors?.profile}>
+                            {errors?.profile?.message}
                           </FormHelperText>
                         </>
                       );

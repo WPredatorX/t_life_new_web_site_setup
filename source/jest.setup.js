@@ -14,4 +14,62 @@ jest.mock("swiper/modules", () => ({
   A11y: () => null,
 }));
 
+jest.mock("@azure/msal-browser", () => {
+  return {
+    PublicClientApplication: jest.fn().mockImplementation(() => ({
+      initialize: jest.fn().mockResolvedValue(undefined),
+      getAllAccounts: jest.fn(() => []),
+      ssoSilent: jest.fn(() => Promise.resolve()),
+    })),
+  };
+});
+
+jest.mock("@azure/msal-react", () => ({
+  MsalProvider: ({ children }) => (
+    <div data-testid="msal-provider">{children}</div>
+  ),
+  UnauthenticatedTemplate: ({ children }) => (
+    <div data-testid="unauth-template">{children}</div>
+  ),
+  AuthenticatedTemplate: ({ children }) => (
+    <div data-testid="auth-template">{children}</div>
+  ),
+  useMsal: () => ({
+    instance: {
+      getAllAccounts: () => [],
+      ssoSilent: jest.fn(() => Promise.resolve()),
+    },
+    accounts: [],
+  }),
+}));
+
+jest.mock("@hooks/useAppRouter", () => ({
+  __esModule: true,
+  default: jest.fn(() => ({
+    push: jest.fn(),
+    replace: jest.fn(),
+    refresh: jest.fn(),
+    back: jest.fn(),
+    forward: jest.fn(),
+  })),
+}));
+
+jest.mock("@hooks/useAppPathname", () => ({
+  __esModule: true,
+  default: () => "/",
+}));
+
+jest.mock("@hooks/useAppSearchParams", () => ({
+  __esModule: true,
+  default: () => new URLSearchParams(),
+}));
+
+Object.defineProperty(global, "crypto", {
+  value: {
+    randomUUID: () => "mocked-uuid",
+    getRandomValues: (arr) => arr.map(() => 1),
+    subtle: {},
+  },
+});
+
 self.__NEXT_DATA__ = {};

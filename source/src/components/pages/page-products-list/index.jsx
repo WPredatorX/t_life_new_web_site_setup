@@ -76,6 +76,31 @@ const PageProductsList = () => {
     },
     {
       flex: 1,
+      field: "broker_list",
+      type: "string",
+      headerAlign: "center",
+      headerName: "ช่องทางที่ขาย",
+      headerClassName: "header-main",
+      align: "left",
+      minWidth: 300,
+      sortable: false,
+      renderCell: (params) => (
+        <div
+          style={{
+            height: "100%",
+            display: "flex",
+            wordBreak: "break-word",
+            lineHeight: 1.4,
+            alignItems: "center",
+            whiteSpace: "normal",
+          }}
+        >
+          {params.value}
+        </div>
+      ),
+    },
+    {
+      flex: 1,
       field: "product_name",
       type: "string",
       headerAlign: "center",

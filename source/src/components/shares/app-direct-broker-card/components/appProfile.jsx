@@ -2,18 +2,14 @@ import { useState, useEffect, useRef, createRef, useMemo } from "react";
 import {
   Box,
   Link,
-  Card,
   Grid,
-  Select,
   Button,
   Collapse,
   useTheme,
   TextField,
   Accordion,
   Typography,
-  InputLabel,
   IconButton,
-  FormControl,
   FormHelperText,
   InputAdornment,
   CircularProgress,
@@ -34,15 +30,13 @@ import {
   useAppRouter,
   useAppDialog,
   useAppSnackbar,
-  useAppDispatch,
   useAppSelector,
   useAppFieldArray,
   useAppGridApiRef,
   useAppFeatureCheck,
+  useAppScroll,
 } from "@hooks";
-import { setDialog, closeDialog } from "@stores/slices";
 import {
-  APPLICATION_DEFAULT,
   APPLICATION_CONFIGURATION,
   APPLICATION_LOGO_ASPECT,
   APPLICATION_DESCRIPTION_SIZE,
@@ -57,27 +51,33 @@ import {
   AppManageBanner,
   AppManageSocial,
   AppApproveProfile,
-  AppManageInsuraceGroupProduct,
+  AppManageInsuranceGroupProduct,
 } from ".";
 import NextImage from "next/image";
 
 const AppProfile = ({ mode, channel, brokerData }) => {
   const theme = useTheme();
   const router = useAppRouter();
-  const dispatch = useAppDispatch();
   const dataGridApiRef = useAppGridApiRef();
   const inputLogoRef = useRef(null);
   const { handleSnackAlert } = useAppSnackbar();
-  const { dialog, brokerId, activator, sasToken } = useAppSelector(
+  const { handleScrollTo } = useAppScroll();
+  const { brokerId, activator, sasToken } = useAppSelector(
     (state) => state.global
   );
-  const { handleNotification: handleNotificationHook } = useAppDialog();
+  const { handleNotification } = useAppDialog();
   const [bannerReOrder, setBannerReOrder] = useState(false);
   const [bannerDisplay, setBannerDisplay] = useState([]);
   const [loadingVersion, setLoadingVersion] = useState(false);
   const [detailMode, setDetailMode] = useState("view");
   const [openManageBanner, setOpenManageBanner] = useState(false);
   const [openManageSocial, setOpenManageSocial] = useState(false);
+  const [openManageInsuranceGroupIndex, setOpenManageInsuranceGroupIndex] =
+    useState(-1);
+  const [
+    openManageInsuranceGroupDisabledProduct,
+    setOpenManageInsuranceGroupDisabledProduct,
+  ] = useState([]);
   const [openManageInsuranceGroupProduct, setOpenManageInsuranceGroupProduct] =
     useState(false);
   const [
@@ -95,50 +95,41 @@ const AppProfile = ({ mode, channel, brokerData }) => {
   const [openManageProfileVersionMode, setOpenManageProfileVersionMode] =
     useState("create");
   const [loadingMap, setLoadingMap] = useState({});
-  const [pageNumber, setPageNumber] = useState(
-    APPLICATION_DEFAULT.dataGrid.pageNumber
-  );
-  const [pageSize, setPageSize] = useState(
-    APPLICATION_DEFAULT.dataGrid.pageSize
-  );
-  const [BannerPageNumber, setBannerPageNumber] = useState(
-    APPLICATION_DEFAULT.dataGrid.pageNumber
-  );
-  const [BannerPageSize, setBannerPageSize] = useState(
-    APPLICATION_DEFAULT.dataGrid.pageSize
-  );
   const hiddenColumn = {
     id: false,
   };
-  const { defaultFileAccept, defaultFileExtension, defaultFileSize } =
-    APPLICATION_CONFIGURATION;
+  const { defaultFileAccept, defaultFileExtension } = APPLICATION_CONFIGURATION;
 
   const { validFeature: grantRead } = useAppFeatureCheck([
     "direct.profile.read",
     "broker.profile.read",
   ]);
+
   const { validFeature: grantEdit } = useAppFeatureCheck([
     "direct.profile.write",
     "broker.profile.write",
   ]);
+
   const { validFeature: grantDrop } = useAppFeatureCheck([
     "direct.profile.drop",
     "broker.profile.drop",
   ]);
+
   const { validFeature: grantRequest } = useAppFeatureCheck([
     "direct.profile.request",
     "broker.profile.request",
   ]);
+
   const { validFeature: grantApprove } = useAppFeatureCheck([
     "direct.profile.approve",
     "broker.profile.approve",
   ]);
 
   const showOperationButton = useMemo(() => {
-    if (detailMode !== "view") {
+    if (detailMode !== "view" && selectionModel?.length > 0) {
       return true;
     }
-  }, [detailMode]);
+  }, [detailMode, selectionModel]);
 
   const defaultScale = APPLICATION_LOGO_ASPECT?.find(
     (aspectItem) => aspectItem?.id === "0"
@@ -161,21 +152,21 @@ const AppProfile = ({ mode, channel, brokerData }) => {
         bannerTemp: Yup.array().of(Yup.object()),
         insuranceGroup: Yup.array().of(
           Yup.object().shape({
-            icon1: Yup.mixed(),
+            icon1: Yup.mixed().nullable(),
             icon1ImageName: Yup.string().nullable().required(),
             icon1ImageString: Yup.string(),
             icon1ImageUrl: Yup.string(),
             icon1ImageUrlPreview: Yup.string(),
             name1: Yup.string().required(),
             description1: Yup.string().required(),
-            icon2: Yup.mixed(),
+            icon2: Yup.mixed().nullable(),
             icon2ImageName: Yup.string().nullable().required(),
             icon2ImageString: Yup.string(),
             icon2ImageUrl: Yup.string(),
             icon2ImageUrlPreview: Yup.string(),
             name2: Yup.string().required(),
             description2: Yup.string().required(),
-            icon3: Yup.mixed(),
+            icon3: Yup.mixed().nullable(),
             icon3ImageName: Yup.string().nullable().required(),
             icon3ImageString: Yup.string(),
             icon3ImageUrl: Yup.string(),
@@ -195,6 +186,7 @@ const AppProfile = ({ mode, channel, brokerData }) => {
                 is: (value) => value !== 12,
                 then: (schema) => schema.required(),
               }),
+            product: Yup.array().of(Yup.object()),
           })
         ),
         additionalInfo: Yup.object().shape({
@@ -256,13 +248,12 @@ const AppProfile = ({ mode, channel, brokerData }) => {
   });
 
   const {
-    getValues,
-    setValue,
+    reset,
     watch,
     control,
     trigger,
     register,
-    reset,
+    setValue,
     handleSubmit,
     formState: { errors, isDirty },
   } = formMethods;
@@ -278,15 +269,6 @@ const AppProfile = ({ mode, channel, brokerData }) => {
     remove: removeInsuranceGroup,
   } = useAppFieldArray({
     name: "displayVersionDetail.insuranceGroup",
-    control: control,
-  });
-
-  const {
-    fields: fieldsInsuranceGroupProduct,
-    append: appendInsuranceGroupProduct,
-    remove: removeInsuranceGroupProduct,
-  } = useAppFieldArray({
-    name: "displayVersionDetail.insuranceGroup.product",
     control: control,
   });
 
@@ -307,7 +289,8 @@ const AppProfile = ({ mode, channel, brokerData }) => {
     );
 
     // 3. รวมทั้งหมด
-    return [...merged, ...newItems];
+    const combined = [...newItems, ...merged];
+    return combined;
   }, [watchedProfileData, watchedProfileDataTemp]);
   const preventAddVersion = useMemo(() => {
     if (watchedProfileDataTemp?.length > 0) {
@@ -326,9 +309,39 @@ const AppProfile = ({ mode, channel, brokerData }) => {
     }
   }, [watchedProfileData, watchedProfileDataTemp]);
 
+  const watchDetail = watch("displayVersionDetail");
+
+  const showApproveButton = useMemo(() => {
+    const detailStatus = watchDetail?.detailStatus;
+    if (
+      grantApprove &&
+      detailStatus == "2" &&
+      detailMode === "view" &&
+      selectionModel?.length > 0
+    ) {
+      return true;
+    }
+
+    return false;
+  }, [detailMode, grantApprove, selectionModel, watchDetail]);
+
+  const showPreview = useMemo(() => {
+    //แบบร่าง, ขออนุมัติ, เปิดใช้งาน
+    const allowList = ["1", "2", "3"];
+    const detailStatus = watchDetail?.detailStatus;
+    if (!detailStatus) {
+      return false;
+    }
+
+    if (detailStatus !== "4" && selectionModel?.length > 0) {
+      return true;
+    }
+
+    return allowList.includes(detailStatus);
+  }, [watchDetail, selectionModel]);
+
   const watchedBanner = watch("displayVersionDetail.banner");
   const watchedBannerTemp = watch("displayVersionDetail.bannerTemp");
-
   const handleBannerRowDisplay = () => {
     if (bannerReOrder) {
       // ถ้าเรียงจะยึดตามเรียงเลย
@@ -376,12 +389,6 @@ const AppProfile = ({ mode, channel, brokerData }) => {
       return merged.sort(sortFn);
     }
   };
-
-  useEffect(() => {
-    const bannerRowsToDisplay = handleBannerRowDisplay();
-    setBannerDisplay(bannerRowsToDisplay);
-    setBannerReOrder(false);
-  }, [watchedBanner, watchedBannerTemp]);
 
   const watchedSocial = watch("displayVersionDetail.additionalInfo.social");
   const watchedSocialTemp = watch(
@@ -466,7 +473,10 @@ const AppProfile = ({ mode, channel, brokerData }) => {
             date =
               typeof value === "string" ? parseISO(value) : new Date(value);
             if (isNaN(date.getTime())) return value;
-            let formattedValue = format(addYears(date, 543), "dd/MM/yyyy");
+            let formattedValue = format(
+              addYears(date, 543),
+              "dd/MM/yyyy HH:mm:ss"
+            );
             return formattedValue;
           } catch (error) {
             return value;
@@ -501,7 +511,10 @@ const AppProfile = ({ mode, channel, brokerData }) => {
             date =
               typeof value === "string" ? parseISO(value) : new Date(value);
             if (isNaN(date.getTime())) return value;
-            let formattedValue = format(addYears(date, 543), "dd/MM/yyyy");
+            let formattedValue = format(
+              addYears(date, 543),
+              "dd/MM/yyyy HH:mm:ss"
+            );
             return formattedValue;
           } catch (error) {
             return value;
@@ -622,7 +635,7 @@ const AppProfile = ({ mode, channel, brokerData }) => {
     },
     {
       flex: 1,
-      field: "title",
+      field: "name",
       type: "string",
       headerAlign: "center",
       headerName: "ชื่อ",
@@ -638,24 +651,6 @@ const AppProfile = ({ mode, channel, brokerData }) => {
       headerClassName: "header-main",
       align: "center",
       minWidth: 100,
-      renderCell: (params) => {
-        const id = params?.row?.id;
-        const detailView = detailMode === "view";
-        const dropLoading = loadingMap[id]?.drop || false;
-        let disableDrop = dropLoading;
-
-        let dropFunction = () => {};
-
-        if (!detailView) {
-          return (
-            <IconButton disabled={disableDrop} onClick={dropFunction}>
-              <Delete />
-            </IconButton>
-          );
-        }
-
-        return <></>;
-      },
     },
   ];
 
@@ -1055,28 +1050,23 @@ const AppProfile = ({ mode, channel, brokerData }) => {
   );
 
   const handleDropBanner = (row) => {
-    handleNotificationHook(
+    handleNotification(
       "คุณต้องการยกเลิกรายการนี้หรือไม่ ?",
       () => {
         const tempData = watch("displayVersionDetail.bannerTemp") ?? [];
-        const isTemp = tempData.some((item) => item.id === row.id);
 
-        if (isTemp) {
-          // เอาออกจาก temp array ไปเลย
-          const newTempData = tempData.filter((item) => item.id !== row.id);
+        // เอาออกจาก temp array ไปเลย
+        const newTempData = tempData.filter((item) => item.id !== row.id);
+        const deleteRow = {
+          ...row,
+          status: 3,
+          statusName: "ยกเลิกใช้งาน",
+          updateDate: new Date().toISOString(),
+          updateBy: activator,
+        };
 
-          setValue("displayVersionDetail.bannerTemp", [...newTempData]);
-        } else {
-          const deleteRow = {
-            ...row,
-            status: 3,
-            statusName: "ยกเลิกใช้งาน",
-            updateDate: new Date().toISOString(),
-            updateBy: activator,
-          };
-
-          appendBanner(deleteRow);
-        }
+        setValue("displayVersionDetail.bannerTemp", [...newTempData]);
+        appendBanner(deleteRow);
       },
       null,
       "question"
@@ -1160,10 +1150,10 @@ const AppProfile = ({ mode, channel, brokerData }) => {
     }));
   };
 
-  const handleRowDrop = (row) => {
-    handleNotificationHook(
+  const handleRowDrop = async (row) => {
+    handleNotification(
       "คุณต้องการยกเลิกรายการนี้หรือไม่ ?",
-      () => {
+      async () => {
         const tempData = watch("displayVersionTemp") ?? [];
         const isTemp = tempData.some((item) => item.id === row.id);
 
@@ -1174,15 +1164,7 @@ const AppProfile = ({ mode, channel, brokerData }) => {
           setValue("displayVersionTemp", [...newTempData]);
           setSelectionModel([]);
         } else {
-          const deleteRow = {
-            ...row,
-            profile_status: 4,
-            name_status: "ยกเลิกใช้งาน",
-            update_date: new Date(),
-            update_by: activator,
-          };
-          handleSaveDialog(deleteRow);
-          setDetailMode("drop");
+          await handleDropProfile(row);
         }
       },
       null,
@@ -1190,50 +1172,69 @@ const AppProfile = ({ mode, channel, brokerData }) => {
     );
   };
 
-  const handleSaveDialog = (data) => {
-    let updated;
-    const currentValue = watch("displayVersionTemp") ?? [];
-    const existsIndex = currentValue.findIndex((item) => item.id === data.id);
-    if (existsIndex > -1) {
-      // กรณี create ซ้ำ หรือ edit
-      updated = [...currentValue];
-      updated[existsIndex] = { ...updated[existsIndex], ...data };
-    } else {
-      // เพิ่มใหม่ หรือแก้ไขจากของจริง
-      updated = [...currentValue, data];
-    }
+  const handleDropProfile = async (row) => {
+    try {
+      const targetData = row;
 
-    // ถ้ายังมีรายการใน Temp ถึงจะให้ฟอร์ม dirty ต่อไป
-    setValue("displayVersionTemp", updated, {
-      shouldDirty: updated.length > 0,
-    });
+      if (targetData) {
+        // #region อัพเดตสถานะยกเลิกใช้งาน
+        const payloadProfile = {
+          is_active: true,
+          create_by: activator,
+          update_by: activator,
+          id: targetData?.id,
+          profile_status: "4",
+        };
+        const responseProfile = await fetch(
+          `/api/direct/profile?action=AddOrUpdateBrokersProfile`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payloadProfile),
+          }
+        );
+        if (responseProfile.status !== 200) {
+          throw new Error("");
+        }
+        // #endregion
+
+        handleNotification(
+          "ยกเลิกใช้งานสำเร็จ",
+          () => {
+            window.location.reload();
+          },
+          null,
+          "info",
+          "ตกลง"
+        );
+      }
+    } catch (error) {
+      handleSnackAlert({
+        open: true,
+        message: "ทำรายการไม่สำเร็จ",
+      });
+    }
   };
 
   const handleRowDropSocial = (row) => {
-    handleNotificationHook(
-      "คุณต้องการยกเลิกรายการนี้หรือไม่ ?",
+    handleNotification(
+      "ต้องการลบราบการนี้หรือไม่ ?",
       () => {
         const tempData =
           watch("displayVersionDetail.additionalInfo.socialTemp") ?? [];
-        const isTemp = tempData.some((item) => item.id === row.id);
-
-        if (isTemp) {
-          // เอาออกจาก temp array ไปเลย
-          const newTempData = tempData.filter((item) => item.id !== row.id);
-
-          setValue("displayVersionDetail.additionalInfo.socialTemp", [
-            ...newTempData,
-          ]);
-        } else {
-          const deleteRow = {
-            ...row,
-            status: 3,
-            statusName: "ยกเลิกใช้งาน",
-            update_date: new Date(),
-            update_by: activator,
-          };
-          handleSaveSocialDialog(deleteRow);
-        }
+        // เอาออกจาก temp array ไปเลย
+        const newTempData = tempData.filter((item) => item.id !== row.id);
+        setValue("displayVersionDetail.additionalInfo.socialTemp", [
+          ...newTempData,
+        ]);
+        const deleteRow = {
+          ...row,
+          status: 3,
+          statusName: "ยกเลิกใช้งาน",
+          update_date: new Date(),
+          update_by: activator,
+        };
+        handleSaveSocialDialog(deleteRow);
       },
       null,
       "question"
@@ -1280,101 +1281,6 @@ const AppProfile = ({ mode, channel, brokerData }) => {
     });
   };
 
-  const handleAddProduct = () => {
-    const Content = (
-      <Grid container>
-        <Grid item xs={12}>
-          <FormControl sx={{ m: 1, minWidth: "100%", maxWidth: "100%" }}>
-            <InputLabel shrink htmlFor="select-multiple-native">
-              เลือกผลิตภัณฑ์ (เลือกได้หลายรายการ)
-            </InputLabel>
-            <Select
-              fullWidth
-              multiple
-              native
-              //value={personName}
-              //onChange={handleChangeMultiple}
-              label="เลือกผลิตภัณฑ์ (เลือกได้หลายรายการ)"
-              inputProps={{
-                id: "select-multiple-native",
-              }}
-            >
-              {watch("productGroup").map((item, index) => (
-                <option key={index} value={item}>
-                  {item.title}
-                </option>
-              ))}
-            </Select>
-          </FormControl>
-        </Grid>
-      </Grid>
-    );
-    handleNotification("ผลิตภัณฑ์", Content, 30, "product");
-  };
-
-  const handleNotification = (
-    message,
-    Content,
-    dialogWidth,
-    mode,
-    callback
-  ) => {
-    dispatch(
-      setDialog({
-        ...dialog,
-        open: true,
-        title: message,
-        width: dialogWidth,
-        useDefaultBehavior: false,
-        renderAction: () => {
-          return (
-            <Grid container justifyContent={"center"}>
-              <Grid item xs={11}>
-                {Content}
-              </Grid>
-              <Grid container justifyContent={"space-around"} mt={2}>
-                <Grid item xs={11}>
-                  <Grid container justifyContent={"end"} spacing={2}>
-                    <Grid item xs={12} md="auto">
-                      <Button
-                        variant="outlined"
-                        sx={{
-                          fontSize: "1.8rem",
-                          fontWeight: 700,
-                        }}
-                        onClick={() => {
-                          dispatch(closeDialog());
-                        }}
-                      >
-                        ยกเลิก
-                      </Button>
-                    </Grid>
-
-                    <Grid item xs={12} md="auto">
-                      <Button
-                        variant="contained"
-                        sx={{
-                          fontSize: "1.8rem",
-                          fontWeight: 700,
-                          color: theme.palette.common.white,
-                        }}
-                        onClick={() => {
-                          dispatch(closeDialog());
-                        }}
-                      >
-                        บันทึก
-                      </Button>
-                    </Grid>
-                  </Grid>
-                </Grid>
-              </Grid>
-            </Grid>
-          );
-        },
-      })
-    );
-  };
-
   const handleFetchVersion = async () => {
     setLoadingVersion(true);
 
@@ -1391,7 +1297,14 @@ const AppProfile = ({ mode, channel, brokerData }) => {
         }
       );
       const data = await response.json();
+
       reset({ displayVersion: [...data] });
+      const effectiveId =
+        data.find((versionItem) => versionItem?.profile_status === "3")?.id ??
+        null;
+      if (effectiveId) {
+        setSelectionModel([effectiveId]);
+      }
     } catch (error) {
       handleSnackAlert({ open: true, message: "ล้มเหลวเกิดข้อผิดพลาด" });
     } finally {
@@ -1426,12 +1339,6 @@ const AppProfile = ({ mode, channel, brokerData }) => {
           "error"
         );
         throw new Error("ประเภทไฟล์ไม่ถูกต้อง (รองรับ .png, .jpg, .jpeg)");
-      }
-
-      // validate size
-      if (selectedFileSize > defaultFileSize) {
-        handleNotification("ขนาดไฟล์ต้องไม่เกิน 3Mb.", null, null, "error");
-        throw new Error("ขนาดไฟล์ต้องไม่เกิน 3Mb.");
       }
 
       const reader = new FileReader();
@@ -1485,25 +1392,48 @@ const AppProfile = ({ mode, channel, brokerData }) => {
         // #endregion
 
         // #region โหลดตารางแบนเนอร์
-        const payloadBanner = {
-          broker_profile_id: brokerProfileId,
-        };
-        const responseBanner = await fetch(
-          `/api/direct/profile?action=GetMainContentById`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payloadBanner),
+        let dataBanner = [];
+        if (row?.is_copy) {
+          // โหลดเส้นคัดลอก ที่มีการตัดผลิตภัณฑ์ที่ไม่ได้ขายออก
+          const payloadBanner = {
+            broker_id: brokerId,
+            broker_profile_id: brokerProfileId,
+          };
+          const responseBanner = await fetch(
+            `/api/direct/profile?action=GetCopyMainContentById`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payloadBanner),
+            }
+          );
+          if (responseBanner.status !== 200) {
+            throw new Error("");
           }
-        );
-        if (responseBanner.status !== 200) {
-          throw new Error("");
+          dataBanner = await responseBanner.json();
+        } else {
+          // โหลดเส้นปกติ
+          const payloadBanner = {
+            broker_profile_id: brokerProfileId,
+          };
+          const responseBanner = await fetch(
+            `/api/direct/profile?action=GetMainContentById`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payloadBanner),
+            }
+          );
+          if (responseBanner.status !== 200) {
+            throw new Error("");
+          }
+          dataBanner = await responseBanner.json();
         }
-        const dataBanner = await responseBanner.json();
+
         const mappedBanner = dataBanner.map((bannerItem) => {
           return {
             _temp: { ...bannerItem },
-            id: bannerItem?.id,
+            id: row?.is_copy ? crypto.randomUUID() : bannerItem?.id,
             seq: parseInt(bannerItem?.seq_content),
             product_sale_group_id: bannerItem?.product_sale_group_id,
             type: bannerItem?.content_type,
@@ -1534,14 +1464,14 @@ const AppProfile = ({ mode, channel, brokerData }) => {
             body: JSON.stringify(payloadSocial),
           }
         );
-        if (responseBanner.status !== 200) {
+        if (responseSocial.status !== 200) {
           throw new Error("");
         }
         const dataSocial = await responseSocial.json();
         const mappedSocial = dataSocial.map((socialItem) => {
           return {
             _temp: { ...socialItem },
-            id: socialItem?.id,
+            id: row?.is_copy ? crypto.randomUUID() : socialItem?.id,
             title: socialItem?.title,
             url: socialItem?.url,
             iconName: socialItem?.icon_name,
@@ -1560,28 +1490,50 @@ const AppProfile = ({ mode, channel, brokerData }) => {
         // #endregion
 
         // #region โหลดข้อมูลกลุ่มแบบประกัน
-        const payloadInsuranceGroup = {
-          broker_profile_id: brokerProfileId,
-        };
-        const responseInsuranceGroup = await fetch(
-          `/api/direct/profile?action=GetInsuranceGroup`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payloadInsuranceGroup),
+        let dataInsuranceGroup = [];
+        if (row?.is_copy) {
+          const payloadInsuranceGroup = {
+            broker_id: brokerId,
+            broker_profile_id: brokerProfileId,
+          };
+          const responseInsuranceGroup = await fetch(
+            `/api/direct/profile?action=GetCopyInsuranceGroup`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payloadInsuranceGroup),
+            }
+          );
+          if (responseInsuranceGroup.status !== 200) {
+            throw new Error("");
           }
-        );
-        if (responseInsuranceGroup.status !== 200) {
-          throw new Error("");
+          dataInsuranceGroup = await responseInsuranceGroup.json();
+        } else {
+          const payloadInsuranceGroup = {
+            broker_profile_id: brokerProfileId,
+          };
+          const responseInsuranceGroup = await fetch(
+            `/api/direct/profile?action=GetInsuranceGroup`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payloadInsuranceGroup),
+            }
+          );
+          if (responseInsuranceGroup.status !== 200) {
+            throw new Error("");
+          }
+          dataInsuranceGroup = await responseInsuranceGroup.json();
         }
 
-        const dataInsuranceGroup = await responseInsuranceGroup.json();
         const mappedInsuranceGroup = dataInsuranceGroup.map(
           (insuranceGroupItem) => {
             const mappedProduct = (insuranceGroupItem?.products ?? []).map(
               (productItem) => {
                 return {
-                  ...productItem,
+                  _temp: { ...productItem },
+                  id: productItem?.product_sale_group_id,
+                  name: productItem?.title,
                 };
               }
             );
@@ -1638,13 +1590,15 @@ const AppProfile = ({ mode, channel, brokerData }) => {
         );
         // #endregion
 
-        const aspect = APPLICATION_LOGO_ASPECT.find(
-          (aspectItem) =>
-            aspectItem.value === dataLogoContact?.broker_logo_aspect
-        );
+        const arrayAspect = [...APPLICATION_LOGO_ASPECT];
+        const aspect = arrayAspect.find((aspectItem) => {
+          return aspectItem.value === dataLogoContact?.broker_logo_aspect;
+        });
 
         const preparedData = {
           displayVersionDetail: {
+            detailStatus: dataLogoContact?.profile_status,
+            rejectReason: dataLogoContact?.profile_status_message,
             name: dataLogoContact?.title,
             logo: null,
             logoName: dataLogoContact?.broker_logo,
@@ -1655,11 +1609,12 @@ const AppProfile = ({ mode, channel, brokerData }) => {
               : "",
             scale: aspect,
             banner: mappedBanner,
+            bannerTemp: mappedBanner,
             insuranceGroup: mappedInsuranceGroup,
             additionalInfo: {
               phone: dataLogoContact?.number_phone_social,
               social: mappedSocial,
-              socialTemp: [],
+              socialTemp: mappedSocial,
             },
             contactUs: {
               phone: dataLogoContact?.number_phone ?? "",
@@ -1687,6 +1642,8 @@ const AppProfile = ({ mode, channel, brokerData }) => {
             logoPreviewUrl: "",
             scale: defaultScale,
             banner: [],
+            bannerTemp: [],
+            insuranceGroup: [],
             additionalInfo: {
               phone: "",
               social: [],
@@ -1727,7 +1684,6 @@ const AppProfile = ({ mode, channel, brokerData }) => {
 
     setValue("displayVersionTemp", updated);
     if (mode === "drop") {
-      // handleSaveVersion({ ...data, sale_card_status: "4" }, false, "4");
       return;
     }
 
@@ -1736,27 +1692,23 @@ const AppProfile = ({ mode, channel, brokerData }) => {
     setDetailMode(mode);
   };
 
-  const handleBack = () => {
+  const handleBack = (index = 2) => {
     let pageUrl = channel === "606" ? "direct" : `brokers/${channel}`;
-    router.push(`/${pageUrl}`);
+    router.push(`/${pageUrl}?tabIndex=${index}`);
     setTimeout(() => {
+      window.location.reload();
       handleScrollTo();
-    }, 1000);
+    }, 200);
   };
-
-  useEffect(() => {
-    handleFetchVersion();
-  }, []);
-
-  useEffect(() => {
-    if (selectionModel.length > 0) {
-      handleFetchDetail(selectionModel[0]);
-    }
-  }, [selectionModel.join(",")]);
 
   const onError = (error, event) => console.error(error);
 
-  const handleSaveProfile = async (data, silent = false) => {
+  const handleSaveProfile = async (
+    data,
+    silent = false,
+    profile_status = null,
+    reason = ""
+  ) => {
     try {
       let ProfileId = null;
       const selectedId = selectionModel[0] ?? data.displayVersionTemp.id;
@@ -1782,8 +1734,8 @@ const AppProfile = ({ mode, channel, brokerData }) => {
           description: data.displayVersionDetail.contactUs.description,
           email: data.displayVersionDetail.contactUs.email,
           number_phone: data.displayVersionDetail.contactUs.phone,
-          profile_status: isDrop ? "4" : "1",
-          profile_status_message: targetData.name_status,
+          profile_status: profile_status ? profile_status : isDrop ? "4" : "1",
+          profile_status_message: reason,
         };
         const responseProfile = await fetch(
           `/api/direct/profile?action=AddOrUpdateBrokersProfile`,
@@ -1815,7 +1767,7 @@ const AppProfile = ({ mode, channel, brokerData }) => {
                 update_by: activator,
                 id: item?.is_new ? null : item?.id,
                 broker_profile_id: ProfileId,
-                product_sale_group_id: item?.product?.product_sale_group_id,
+                product_sale_group_id: item?.product_sale_group_id,
                 seq_content: parseInt(originalBanner.length + index),
                 title: item?.product?.title,
                 content_file_name: item?.fileName,
@@ -1825,6 +1777,7 @@ const AppProfile = ({ mode, channel, brokerData }) => {
                 content_file: item?.fileString,
               };
 
+              debugger;
               await fetch(`/api/direct/profile?action=AddOrUpdateMainContent`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -1833,7 +1786,59 @@ const AppProfile = ({ mode, channel, brokerData }) => {
             });
             await Promise.all(promises);
           };
-          runBannerAddOrUpdate();
+          await runBannerAddOrUpdate();
+          // #endregion
+
+          // #region บันทึกกลุ่มแบบประกัน
+          const insuranceGroup =
+            watch("displayVersionDetail.insuranceGroup") ?? [];
+          const payloadInsuranceGroup = insuranceGroup.map((item, index) => {
+            const productIds = item?.product?.map((productItem, index) => {
+              return {
+                seq_content: index,
+                product_sale_group_id: productItem?.id,
+                name: productItem?.name,
+              };
+            });
+
+            return {
+              seq_content: index,
+              broker_profile_id: ProfileId,
+              topic_mode: item?.name1,
+              description_topic_mode: item?.description1,
+              title: item?.name2,
+              content_topic: item?.description2,
+              description_topic: item?.name3,
+              description: item?.description3,
+              content_description: "",
+              description_placement: item?.descriptionPosition?.value,
+              content_size: item?.descriptionSize?.value,
+              display_as_carousel: true,
+              icon1: item?.icon1ImageUrl,
+              icon_name1: item?.icon1ImageName,
+              icon_file1: item?.icon1ImageString,
+              icon2: item?.icon2ImageUrl,
+              icon_name2: item?.icon2ImageName,
+              icon_file2: item?.icon2ImageString,
+              icon3: item?.icon3ImageUrl,
+              icon_name3: item?.icon3ImageName,
+              icon_file3: item?.icon3ImageString,
+              create_by: activator,
+              update_by: activator,
+              product_sale_group: productIds,
+            };
+          });
+          const responseInsuranceGroup = await fetch(
+            `/api/direct/profile?action=AddOrUpdateInsuranceGroup`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payloadInsuranceGroup),
+            }
+          );
+          if (responseInsuranceGroup.status !== 200) {
+            throw new Error("");
+          }
           // #endregion
 
           // #region บันทึกรายการโซเชี่ยล
@@ -1841,6 +1846,8 @@ const AppProfile = ({ mode, channel, brokerData }) => {
             watch("displayVersionDetail.additionalInfo.social") ?? [];
           const tempSocial =
             watch("displayVersionDetail.additionalInfo.socialTemp") ?? [];
+
+          debugger;
           const runSocialAddOrUpdate = async () => {
             const promises = tempSocial.map(async (item, index) => {
               const payload = {
@@ -1870,7 +1877,7 @@ const AppProfile = ({ mode, channel, brokerData }) => {
         }
 
         if (!silent) {
-          handleNotificationHook(
+          handleNotification(
             "บันทึกข้อมูลสำเร็จ",
             () => {
               window.location.reload();
@@ -1880,11 +1887,11 @@ const AppProfile = ({ mode, channel, brokerData }) => {
             "ตกลง"
           );
         } else {
-          return true;
+          return ProfileId;
         }
       }
     } catch (error) {
-      handleNotification({
+      handleSnackAlert({
         open: true,
         message: "ทำรายการไม่สำเร็จ",
       });
@@ -1892,7 +1899,7 @@ const AppProfile = ({ mode, channel, brokerData }) => {
   };
 
   const onSubmit = (data, event) => {
-    handleNotificationHook(
+    handleNotification(
       "คุณต้องการยืนยันการบันทึกการเปลี่ยนแปลงหรือไม่ ?",
       () => {
         handleSaveProfile(data);
@@ -1902,29 +1909,216 @@ const AppProfile = ({ mode, channel, brokerData }) => {
     );
   };
 
-  const handleAddOrUpdateProduct = (data, mode) => {
-    let updated;
-    const currentValue = watch("displayVersionDetail.insuranceGroup") ?? [];
-    const existsIndex = currentValue.findIndex((item) => item.id === data.id);
-    if (existsIndex > -1) {
-      // กรณี create ซ้ำ หรือ edit
-      updated = [...currentValue];
-      updated[existsIndex] = { ...updated[existsIndex], ...data };
-    } else {
-      // เพิ่มใหม่ หรือแก้ไขจากของจริง
-      updated = [...currentValue, data];
-    }
+  const handleRequestForApprove = async () => {
+    try {
+      // #region บันทึกและอัพเดตสถานะเป็นรออนุมัติ
+      const currentData = watch();
+      const profileId = await handleSaveProfile(currentData, true, "2");
+      // #endregion
 
-    setValue("displayVersionDetail.insuranceGroup", updated);
-    if (mode === "drop") {
-      // handleSaveVersion({ ...data, sale_card_status: "4" }, false, "4");
-      return;
-    }
+      if (profileId) {
+        // #region ส่งเมลขออนุมัติ
+        const payload = {
+          mode: "PROFILE_APPROVE",
+          template_code: "01",
+          broker_profile_id: profileId,
+        };
+        const response = await fetch(
+          `/api/direct?action=ProductRecordApprove`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          }
+        );
+        if (response.status !== 200) {
+          throw new Error("");
+        }
+        // #endregion
 
-    let loadDataId = data?.id;
-    setSelectionModel([loadDataId]);
-    setDetailMode(mode);
+        handleNotification(
+          "ทำการบันทึกและขออนุมัติสำเร็จ",
+          () => handleBack(),
+          null,
+          "info",
+          "ตกลง"
+        );
+      }
+    } catch (error) {
+      handleSnackAlert({
+        open: true,
+        message: "ทำรายการไม่สำเร็จ",
+      });
+    }
   };
+
+  const handleApprove = async () => {
+    try {
+      // #region บันทึกและอัพเดตสถานะเป็นรออนุมัติ
+      const currentData = watch();
+      const profileId = await handleSaveProfile(currentData, true, "3");
+      // #endregion
+
+      if (profileId) {
+        // #region บันทึกรายการแบนเนอร์ (ของเดิม)
+        const banner = watch("displayVersionDetail.banner") ?? [];
+        const runBannerAddOrUpdate = async () => {
+          const promises = banner.map(async (item, index) => {
+            const payload = {
+              id: item?.id,
+              is_active: true,
+              create_by: activator,
+              broker_profile_id: profileId,
+            };
+
+            await fetch(`/api/direct/profile?action=AddOrUpdateMainContent`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+          });
+          await Promise.all(promises);
+        };
+        await runBannerAddOrUpdate();
+        // #endregion
+
+        // #region บันทึกรายการโซเชี่ยล (ของเดิม)
+        const social =
+          watch("displayVersionDetail.additionalInfo.social") ?? [];
+        const runSocialAddOrUpdate = async () => {
+          const promises = social.map(async (item, index) => {
+            const payload = {
+              id: item?.id,
+              is_active: true,
+              create_by: activator,
+              update_by: activator,
+              broker_profile_id: profileId,
+            };
+
+            await fetch(`/api/direct/profile?action=AddOrUpdateSocial`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+          });
+          await Promise.all(promises);
+        };
+        runSocialAddOrUpdate();
+        // #endregion
+
+        // #region ส่งเมลขออนุมัติ
+        const payload = {
+          mode: "PROFILE_APPROVE",
+          template_code: "02",
+          broker_profile_id: profileId,
+        };
+        const response = await fetch(
+          `/api/direct?action=ProductRecordApprove`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          }
+        );
+        if (response.status !== 200) {
+          throw new Error("");
+        }
+        // #endregion
+
+        handleNotification(
+          "ทำการบันทึกและอนุมัติสำเร็จ",
+          () => handleBack(),
+          null,
+          "info",
+          "ตกลง"
+        );
+      }
+    } catch (error) {
+      handleSnackAlert({
+        open: true,
+        message: "ทำรายการไม่สำเร็จ",
+      });
+    }
+  };
+
+  const handleReject = async (reason) => {
+    try {
+      // #region บันทึกและอัพเดตสถานะเป็นรออนุมัติ
+      const currentData = watch();
+      const profileId = await handleSaveProfile(currentData, true, "5", reason);
+      // #endregion
+
+      if (profileId) {
+        // #region ส่งเมลขออนุมัติ
+        const payload = {
+          mode: "PROFILE_APPROVE",
+          template_code: "03",
+          broker_profile_id: profileId,
+        };
+        const response = await fetch(
+          `/api/direct?action=ProductRecordApprove`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          }
+        );
+        if (response.status !== 200) {
+          throw new Error("");
+        }
+        // #endregion
+
+        handleNotification(
+          "ทำการบันทึกสำเร็จ",
+          () => handleBack(),
+          null,
+          "info",
+          "ตกลง"
+        );
+      }
+    } catch (error) {
+      handleSnackAlert({
+        open: true,
+        message: "ทำรายการไม่สำเร็จ",
+      });
+    }
+  };
+
+  const handleAddOrUpdateProduct = (products) => {
+    setValue(
+      `displayVersionDetail.insuranceGroup.${openManageInsuranceGroupIndex}.product`,
+      products
+    );
+    setOpenManageInsuranceGroupIndex(-1);
+    console.log("handleAddOrUpdateProduct", { products });
+  };
+
+  const handleStorePreview = () => {
+    const baseUrl = `${process.env.NEXT_PUBLIC_APPLICATION_ONLINE_BASE_URL}`;
+    const detailStatus = watch("displayVersionDetail")?.detailStatus;
+    let additionUrl = `?`;
+    if (channel !== "606") {
+      additionUrl += `brokerId=${brokerId}&`;
+    }
+    additionUrl += `previewMode=STORE&preview=${detailStatus}`;
+    window.open(`${baseUrl}${additionUrl}`, "_blank");
+  };
+
+  useEffect(() => {
+    handleFetchVersion();
+  }, []);
+
+  useEffect(() => {
+    if (selectionModel.length > 0) {
+      handleFetchDetail(selectionModel[0]);
+    }
+  }, [selectionModel.join(",")]);
+
+  useEffect(() => {
+    const bannerRowsToDisplay = handleBannerRowDisplay();
+    setBannerDisplay(bannerRowsToDisplay);
+    setBannerReOrder(false);
+  }, [watchedBanner, watchedBannerTemp]);
 
   return (
     <>
@@ -1949,11 +2143,18 @@ const AppProfile = ({ mode, channel, brokerData }) => {
         addSocial={handleAddOrUpdateSocial}
         form={openManageSocialInitialData}
       />
-      <AppManageInsuraceGroupProduct
+      <AppManageInsuranceGroupProduct
         open={openManageInsuranceGroupProduct}
         setOpen={setOpenManageInsuranceGroupProduct}
         addProduct={handleAddOrUpdateProduct}
+        brokerId={brokerId}
         initialData={openManageInsuranceGroupProductInitialData}
+        disabledProduct={openManageInsuranceGroupDisabledProduct}
+      />
+      <AppApproveProfile
+        open={openApproveProfile}
+        setOpen={setOpenApproveProfile}
+        handleReject={handleReject}
       />
       <form onSubmit={handleSubmit(onSubmit, onError)}>
         <Grid container>
@@ -2030,6 +2231,28 @@ const AppProfile = ({ mode, channel, brokerData }) => {
                   justifyContent={"center"}
                   sx={{ border: "0px solid red" }}
                 >
+                  {watch("displayVersionDetail")?.detailStatus === "5" && (
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        disabled
+                        multiline
+                        rows={5}
+                        label="เหตุผลการปฏิเสธคำขออนุมัติ"
+                        margin="dense"
+                        size="small"
+                        value={
+                          watch("displayVersionDetail")?.rejectReason ?? ""
+                        }
+                        InputLabelProps={{
+                          shrink: true,
+                        }}
+                        InputProps={{
+                          readOnly: true,
+                        }}
+                      />
+                    </Grid>
+                  )}
                   <Grid item xs={12} mt={2}>
                     <AppCard
                       title={`โปรไฟล์แสดงผล`}
@@ -2066,7 +2289,7 @@ const AppProfile = ({ mode, channel, brokerData }) => {
                                   height={
                                     watch("displayVersionDetail.scale")?.id ===
                                     "1"
-                                      ? 1000
+                                      ? 1080
                                       : 600
                                   }
                                   style={{
@@ -2076,7 +2299,7 @@ const AppProfile = ({ mode, channel, brokerData }) => {
                                     aspectRatio:
                                       watch("displayVersionDetail.scale")
                                         ?.id === "1"
-                                        ? 1.777777
+                                        ? 1.77777
                                         : 1,
                                     backgroundColor:
                                       watch("displayVersionDetail.scale")
@@ -2094,7 +2317,7 @@ const AppProfile = ({ mode, channel, brokerData }) => {
                             <Grid item xs={6} md={4}>
                               <input
                                 ref={inputLogoRef}
-                                accept="image/*"
+                                accept={defaultFileAccept.join(",")}
                                 type="file"
                                 id="upload-input"
                                 style={{ display: "none" }}
@@ -2284,12 +2507,24 @@ const AppProfile = ({ mode, channel, brokerData }) => {
                                   status: 1,
                                   statusText: "แบบร่าง",
                                   icon1: null,
+                                  icon1ImageName: "",
+                                  icon1ImageString: "",
+                                  icon1ImageUrl: "",
+                                  icon1ImageUrlPreview: "",
                                   name1: null,
                                   description1: null,
                                   icon2: null,
+                                  icon2ImageName: "",
+                                  icon2ImageString: "",
+                                  icon2ImageUrl: "",
+                                  icon2ImageUrlPreview: "",
                                   name2: null,
                                   description2: null,
                                   icon3: null,
+                                  icon3ImageName: "",
+                                  icon3ImageString: "",
+                                  icon3ImageUrl: "",
+                                  icon3ImageUrlPreview: "",
                                   name3: null,
                                   description3: null,
                                   product: [],
@@ -2363,7 +2598,7 @@ const AppProfile = ({ mode, channel, brokerData }) => {
                                             variant="outlined"
                                             onClick={(e) => {
                                               e.stopPropagation();
-                                              handleNotificationHook(
+                                              handleNotification(
                                                 "คุณต้องการยกเลิกรายการนี้หรือไม่",
                                                 () =>
                                                   removeInsuranceGroup(index),
@@ -2412,7 +2647,7 @@ const AppProfile = ({ mode, channel, brokerData }) => {
                                     <Grid item xs={4}>
                                       <input
                                         ref={icon1Ref}
-                                        accept="image/*"
+                                        accept={defaultFileAccept.join(",")}
                                         type="file"
                                         id="upload-input"
                                         style={{ display: "none" }}
@@ -2553,7 +2788,7 @@ const AppProfile = ({ mode, channel, brokerData }) => {
                                     <Grid item xs={4}>
                                       <input
                                         ref={icon2Ref}
-                                        accept="image/*"
+                                        accept={defaultFileAccept.join(",")}
                                         type="file"
                                         id="upload-input"
                                         style={{ display: "none" }}
@@ -2697,7 +2932,9 @@ const AppProfile = ({ mode, channel, brokerData }) => {
                                           <>
                                             <input
                                               ref={icon3Ref}
-                                              accept="image/*"
+                                              accept={defaultFileAccept.join(
+                                                ","
+                                              )}
                                               type="file"
                                               id="upload-input"
                                               style={{ display: "none" }}
@@ -2992,7 +3229,27 @@ const AppProfile = ({ mode, channel, brokerData }) => {
                                           variant="contained"
                                           onClick={() => {
                                             const currentProduct = watch(
-                                              "displayVersionDetail.insuranceGroup"
+                                              `${insuranceGroupName}.product`
+                                            );
+                                            const disabledInsuranceGroup =
+                                              watch(
+                                                "displayVersionDetail.insuranceGroup"
+                                              )?.filter(
+                                                (item, itemIndex) =>
+                                                  itemIndex !== index
+                                              );
+                                            const allProductId =
+                                              disabledInsuranceGroup.flatMap(
+                                                (item) =>
+                                                  item?.product?.map(
+                                                    (sub) => sub.id
+                                                  )
+                                              );
+                                            setOpenManageInsuranceGroupDisabledProduct(
+                                              allProductId
+                                            );
+                                            setOpenManageInsuranceGroupIndex(
+                                              index
                                             );
                                             setOpenManageInsuranceGroupProduct(
                                               true
@@ -3001,14 +3258,8 @@ const AppProfile = ({ mode, channel, brokerData }) => {
                                               currentProduct
                                             );
                                           }}
-                                          // onClick={() => {
-                                          //   handleSnackAlert({
-                                          //     open: true,
-                                          //     message: "ทำรายการไม่สำเร็จ",
-                                          //   });
-                                          // }}
                                         >
-                                          เพิ่ม
+                                          เพิ่ม / ลบ
                                         </Button>
                                       </Grid>
                                     )}
@@ -3027,6 +3278,12 @@ const AppProfile = ({ mode, channel, brokerData }) => {
                                         }
                                         columns={productColumns}
                                         hiddenColumn={hiddenColumn}
+                                        handleUpdateRow={(reOrderedRow) => {
+                                          setValue(
+                                            `${insuranceGroupName}.product`,
+                                            reOrderedRow
+                                          );
+                                        }}
                                         hideFooter
                                       />
                                     </Grid>
@@ -3103,10 +3360,10 @@ const AppProfile = ({ mode, channel, brokerData }) => {
                             <Grid item xs={12} sx={{ height: "auto" }} mt={1}>
                               <AppDataGrid
                                 rows={rowSocial}
-                                rowCount={rowSocial.length}
                                 columns={socialColumns}
                                 hiddenColumn={hiddenColumn}
                                 hideFooter
+                                sortingMode="client"
                               />
                             </Grid>
                           </Grid>
@@ -3242,14 +3499,49 @@ const AppProfile = ({ mode, channel, brokerData }) => {
               <Grid container justifyContent={"center"} mt={0}>
                 <Grid item xs={12}>
                   <Grid container justifyContent={"end"} spacing={1}>
+                    <Grid item xs={12} md="auto">
+                      <Button
+                        color="inherit"
+                        variant="outlined"
+                        onClick={() => {
+                          handleNotification(
+                            "คุณต้องการยกเลิกการเปลี่ยนแปลงหรือไม่ ?",
+                            () => handleBack(0),
+                            null,
+                            "question"
+                          );
+                        }}
+                      >
+                        ยกเลิก / ออก
+                      </Button>
+                    </Grid>
                     {showOperationButton && (
                       <>
+                        {grantRequest && (
+                          <Grid item xs={12} md="auto">
+                            <Button
+                              color="info"
+                              variant="contained"
+                              onClick={() => {
+                                handleNotification(
+                                  "ท่านต้องการบันทึกและขออนุมัติหรือไม่ ?",
+                                  () => handleRequestForApprove(),
+                                  null,
+                                  "question"
+                                );
+                              }}
+                            >
+                              ขออนุมัติ
+                            </Button>
+                          </Grid>
+                        )}
                         <Grid item xs={12} md="auto">
                           <Button
+                            disabled={!isDirty}
                             color="primary"
                             variant="outlined"
                             onClick={() => {
-                              handleNotificationHook(
+                              handleNotification(
                                 "ท่านต้องการล้างค่าเปลี่ยนแปลงหรือไม่ ?",
                                 () => reset(),
                                 null,
@@ -3262,6 +3554,7 @@ const AppProfile = ({ mode, channel, brokerData }) => {
                         </Grid>
                         <Grid item xs={12} md="auto">
                           <Button
+                            disabled={!isDirty}
                             color="primary"
                             variant="contained"
                             type="submit"
@@ -3271,111 +3564,56 @@ const AppProfile = ({ mode, channel, brokerData }) => {
                         </Grid>
                       </>
                     )}
-                    {/* <Grid item xs={12} md="auto">
-                        <Button
-                          color="inherit"
-                          variant="outlined"
-                          onClick={() => {
-                            handleNotification(
-                              "คุณต้องการยกเลิกการเปลี่ยนแปลงหรือไม่ ?",
-                              () => handleBack(),
-                              null,
-                              "question"
-                            );
-                          }}
-                        >
-                          ยกเลิก / ออก
-                        </Button>
-                      </Grid>
-                      <Grid item xs={12} md="auto">
-                        <Button
-                          variant="outlined"
-                          onClick={() => {
-                            handleNotificationHook(
-                              "ท่านต้องการล้างค่าเปลี่ยนแปลงหรือไม่ ?",
-                              () => reset(),
-                              null,
-                              "question"
-                            );
-                          }}
-                        >
-                          ล้างค่า
-                        </Button>
-                      </Grid>
-                      {grantRequest && (
+                    {showApproveButton && (
+                      <>
                         <Grid item xs={12} md="auto">
                           <Button
-                            color="info"
+                            color="error"
                             variant="contained"
                             onClick={() => {
-                              handleNotificationHook(
-                                "ท่านต้องการขออนุมัติหรือไม่ ?",
-                                () => {},
+                              handleNotification(
+                                "ท่านต้องการยืนยันการไม่อนุมัติข้อมูลผลิตภัณฑ์นี้หรือไม่ ?",
+                                () => setOpenApproveProfile(true),
                                 null,
                                 "question"
                               );
                             }}
                           >
-                            ขออนุมัติ
+                            ไม่อนุมัติ
                           </Button>
                         </Grid>
-                      )} */}
-
-                    {/* <Grid item xs={12} md="auto">
+                        <Grid item xs={12} md="auto">
+                          <Button
+                            color="success"
+                            variant="contained"
+                            onClick={() => {
+                              handleNotification(
+                                "ท่านต้องการยืนยันการอนุมัติข้อมูลผลิตภัณฑ์นี้หรือไม่ ?",
+                                () => handleApprove(),
+                                null,
+                                "question"
+                              );
+                            }}
+                          >
+                            อนุมัติ
+                          </Button>
+                        </Grid>
+                      </>
+                    )}
+                    {showPreview && (
+                      <Grid item xs={12} md="auto">
                         <Button
+                          color="primary"
                           variant="contained"
-                          sx={{
-                            color: theme.palette.common.white,
-                            backgroundColor: theme.palette.primary.main,
-                          }}
+                          onClick={handleStorePreview}
                         >
                           ดูตัวอย่าง
                         </Button>
-                      </Grid> */}
+                      </Grid>
+                    )}
                   </Grid>
                 </Grid>
               </Grid>
-              {/* <Grid container justifyContent={"center"} my={2}>
-                  <Grid item xs={11.3}>
-                    <Grid container spacing={2} justifyContent={"end"}>
-                      <Grid item xs={12} md="auto">
-                        <AppApproveProfile
-                          open={openApproveProfile}
-                          setOpen={setOpenApproveProfile}
-                        />
-                        <Button
-                          variant="contained"
-                          sx={{
-                            color: "white",
-                            backgroundColor: theme.palette.error.dark,
-                          }}
-                          onClick={() => setOpenApproveProfile(true)}
-                        >
-                          ไม่อนุมัติ
-                        </Button>
-                      </Grid>
-                      <Grid item xs={12} md="auto">
-                        <Button
-                          variant="contained"
-                          sx={{
-                            color: "white",
-                            background: "green",
-                          }}
-                          onClick={() => {
-                            handleNotificationHook(
-                              "ท่านต้องการยืนยันเพื่ออนุมัติหรือไม่ ?",
-                              () => {},
-                              null,
-                              "question"
-                            );
-                          }}
-                        >
-                          อนุมัติ
-                        </Button>
-                      </Grid>
-                    </Grid>
-                  </Grid>
-                </Grid> */}
             </Grid>
           </Grid>
         </Grid>

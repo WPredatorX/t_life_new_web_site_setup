@@ -75,6 +75,9 @@ export async function POST(request) {
           headers: { Authorization: `Bearer ${accessToken}` },
         }
       );
+      if (response.status === 204) {
+        data = [];
+      }
       if (response.status === 200) {
         data = response.data?.data;
       }
@@ -231,6 +234,51 @@ export async function POST(request) {
       body = await request.json();
       response = await axios.post(
         `${baseUrl}DisplayProfile/GetInsuranceGroup`,
+        body,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      if (response.status === 204) {
+        data = [];
+      }
+      if (response.status === 200) {
+        data = response.data?.data;
+      }
+      return NextResponse.json(data);
+
+    case "AddOrUpdateInsuranceGroup":
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}DisplayProfile/AddOrUpdateInsuranceGroup`,
+        body,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      if (response.status === 204) {
+        data = [];
+      }
+      if (response.status === 200) {
+        data = response.data?.data;
+      }
+      return NextResponse.json(data);
+
+    case "GetCopyMainContentById":
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}DisplayProfile/GetCopyMainContentById`,
+        body,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      if (response.status === 204) {
+        data = [];
+      }
+      if (response.status === 200) {
+        data = response.data?.data;
+      }
+      return NextResponse.json(data);
+
+    case "GetCopyInsuranceGroup":
+      body = await request.json();
+      response = await axios.post(
+        `${baseUrl}DisplayProfile/GetCopyInsuranceGroup`,
         body,
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
