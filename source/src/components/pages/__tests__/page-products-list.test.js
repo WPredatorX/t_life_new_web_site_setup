@@ -2,7 +2,9 @@ import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { renderAfterHook, renderHook } from "@utilities/jest";
 import PageProductsList from "../page-products-list/index";
 import { format } from "date-fns";
-
+import { configureStore } from "@reduxjs/toolkit";
+import { addHours } from "date-fns";
+import { globalInitialState, globalSliceReducer } from "@stores/slices";
 // Mock dependencies
 jest.mock("@/hooks", () => ({
   useAppSnackbar: () => ({
@@ -90,6 +92,8 @@ jest.mock("@/components", () => ({
 global.fetch = jest.fn();
 
 describe("PageProductsList", () => {
+  let mockStore = null;
+  let mockProducts = null;
   beforeEach(() => {
     jest.clearAllMocks();
     global.fetch.mockResolvedValue({
@@ -107,6 +111,68 @@ describe("PageProductsList", () => {
           page_size: 10,
           total_records: 1,
         }),
+    });
+    // Mock products data
+    mockProducts = {
+      products: [
+        {
+          id: 1,
+          product_name: "Product 1",
+          i_package: "NP-00",
+          is_active: true,
+        },
+        {
+          id: 2,
+          product_name: "Product 2",
+          i_package: "NP-01",
+          is_active: false,
+        },
+      ],
+      current_page: 1,
+      page_size: 10,
+      total_records: 2,
+    };
+    fetchMock.resetMocks();
+    fetchMock.mockResponse(async (req) => {
+      if (req.url.includes("/api/products?action=getProducts")) {
+        return {
+          status: 200,
+          body: JSON.stringify(mockProducts),
+        };
+      }
+      return {
+        status: 404,
+        body: "Not found",
+      };
+    });
+
+    // Setup store
+    mockStore = configureStore({
+      reducer: {
+        global: globalSliceReducer,
+      },
+      preloadedState: {
+        global: {
+          ...globalInitialState,
+          auth: {
+            roles: [
+              {
+                role_name: "mock-role",
+                menus: [
+                  {
+                    code: "menu-001",
+                    feature: [
+                      {
+                        code: "product.general.read",
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      },
     });
   });
 
