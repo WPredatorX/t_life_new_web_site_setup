@@ -134,7 +134,10 @@ const AppManageSaleRange = ({
         }
       }}
     >
-      <form onSubmit={handleSubmit(onSubmit, onError)}>
+      <form
+        data-testid="form-submit"
+        onSubmit={handleSubmit(onSubmit, onError)}
+      >
         <DialogTitle>จัดการระยะเวลาขาย</DialogTitle>
         <DialogContent>
           <Grid container>
