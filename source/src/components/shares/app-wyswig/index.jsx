@@ -92,16 +92,16 @@ import { Extension, mergeAttributes } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Color from "@tiptap/extension-color";
 import Underline from "@tiptap/extension-underline";
-import Strike from "@tiptap/extension-strike";
+// import Strike from "@tiptap/extension-strike";
 import TextStyle from "@tiptap/extension-text-style";
 import Highlight from "@tiptap/extension-highlight";
-import FontFamily from "@tiptap/extension-font-family";
-import Text from "@tiptap/extension-text";
+// import FontFamily from "@tiptap/extension-font-family";
+// import Text from "@tiptap/extension-text";
 import TextAlign from "@tiptap/extension-text-align";
 import BulletList from "@tiptap/extension-bullet-list";
 import OrderedList from "@tiptap/extension-ordered-list";
-import ListKeymap from "@tiptap/extension-list-keymap";
-import ListItem from "@tiptap/extension-list-item";
+// import ListKeymap from "@tiptap/extension-list-keymap";
+// import ListItem from "@tiptap/extension-list-item";
 
 const FontSize = Extension.create({
   name: "fontSize",
