@@ -1,0 +1,89 @@
+# Node.js
+# Build a general Node.js project with npm.
+# Add steps that analyze code, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/javascript
+
+trigger:
+- none
+
+variables:
+  uiSource: '$(Build.Repository.Name)'
+  uiBuild: '$(uiSource)/build'
+
+stages:
+- stage: Build
+  displayName: 'Build stage Node.js application'
+
+  jobs:
+  - job: Build
+    displayName: Build
+
+    pool:
+      vmImage: 'ubuntu-latest'
+
+    steps:
+      - task: NodeTool@0
+        inputs:
+          versionSpec: '18.x'
+          checkLatest: true
+        displayName: 'Install Node.js'
+      - task: Npm@1
+        displayName: 'NPM install env-cmd'
+        inputs:
+          command: 'custom'
+          workingDir: '$(uiSource)'
+          customCommand: 'install env-cmd'
+      - task: Npm@1
+        displayName: 'NPM install $(uiSource)'
+        inputs:
+          command: 'install'
+          workingDir: '$(uiSource)'
+      - task: Npm@1
+        displayName: 'NPM Run build:prd'
+        inputs:
+          command: 'custom'
+          workingDir: '$(uiSource)'
+          customCommand: 'run build:prd'
+      - task: ArchiveFiles@2
+        inputs:
+          rootFolderOrFile: '$(System.DefaultWorkingDirectory)/$(uiSource)/out'
+          includeRootFolder: false
+          archiveType: 'zip'
+          archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip'
+          replaceExistingArchive: true
+      - task: PublishBuildArtifacts@1
+        inputs:
+            PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+            ArtifactName: 'drop'
+            publishLocation: 'Container'
+- stage: 'Deploy'
+  displayName: 'Deploy to $(AppServiceName)'
+  dependsOn: Build
+
+  jobs:
+  - deployment: Deploy
+    pool:
+      name: 'Default'
+
+    environment: 'prd - $(Build.Repository.Name)'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: DownloadPipelineArtifact@2
+            inputs:
+              buildType: 'current'
+              artifactName: 'drop'
+              targetPath: '$(System.DefaultWorkingDirectory)'
+          - task: AzureRmWebAppDeployment@4
+            inputs:
+              ConnectionType: 'AzureRM'
+              azureSubscription: 'DevOps-TNI-PRD'
+              appType: 'webApp'
+              WebAppName: '$(AppServiceName)'
+              packageForLinux: '$(System.DefaultWorkingDirectory)/$(Build.BuildId).zip'
+          - task: DeleteFiles@1
+            displayName: 'Remove zip files'
+            inputs:
+              SourceFolder: '$(System.DefaultWorkingDirectory)'
+              Contents: '**/*'

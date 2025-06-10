@@ -1,0 +1,12 @@
+export { default as AppCommonData } from "./appCommonData";
+export { default as AppProductList } from "./appProductList";
+export { default as AppProfile } from "./appProfile";
+export { default as AppPromotion } from "./appPromotion";
+export { default as AppManagePromotion } from "./appManagePromotion";
+export { default as AppProductListItem } from "./appProductListItem";
+export { default as AppManageBanner } from "./appManageBanner";
+export { default as AppManageProfile } from "./appManageProfile";
+export { default as AppManageSocial } from "./appManageSocial";
+export { default as AppApproveProfile } from "./appApproveProfile";
+export { default as AppManageInsuranceGroupProduct } from "./appManageInsuranceGroupProduct";
+export { default as AppRejectPromotion } from "./appRejectPromotion";
