@@ -1,5 +1,6 @@
 import "@testing-library/jest-dom";
 import "jest-canvas-mock";
+import fetchMock from "jest-fetch-mock";
 
 jest.mock("swiper/react", () => ({
   Swiper: () => null,
@@ -71,5 +72,7 @@ Object.defineProperty(global, "crypto", {
     subtle: {},
   },
 });
+
+fetchMock.enableMocks();
 
 self.__NEXT_DATA__ = {};
