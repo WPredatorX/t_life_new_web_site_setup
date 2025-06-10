@@ -128,7 +128,10 @@ const AppManageSalePrepayment = ({
         }
       }}
     >
-      <form onSubmit={handleSubmit(onSubmit, onError)}>
+      <form
+        data-testid="form-submit"
+        onSubmit={handleSubmit(onSubmit, onError)}
+      >
         <DialogTitle>จัดการรูปแบบการชำระเงิน</DialogTitle>
         <DialogContent>
           <Grid container>
