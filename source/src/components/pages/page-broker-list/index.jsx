@@ -218,14 +218,8 @@ const PageBrokerList = () => {
       getActions: (params) => {
         const id = params?.row?.id;
         const subbusiness_line = params?.row?.i_subbusiness_line;
-        let disabledView = false;
-        let disabledEdit = false;
-        const viewFunction = disabledView
-          ? null
-          : () => router.push(`/brokers/${subbusiness_line}`);
-        const editFunction = disabledEdit
-          ? null
-          : () => router.push(`/brokers/${subbusiness_line}`);
+        const viewFunction = () => router.push(`/brokers/${subbusiness_line}`);
+        const editFunction = () => router.push(`/brokers/${subbusiness_line}`);
 
         const defaultProps = {
           showInMenu: true,
@@ -245,7 +239,6 @@ const PageBrokerList = () => {
               icon={<RemoveRedEye />}
               {...defaultProps}
               label="ดูรายละเอียด"
-              disabled={disabledView}
               onClick={viewFunction}
             />
           );
@@ -258,7 +251,6 @@ const PageBrokerList = () => {
               icon={<Edit />}
               {...defaultProps}
               label="แก้ไข"
-              disabled={disabledEdit}
               onClick={editFunction}
             />
           );
@@ -340,6 +332,8 @@ const PageBrokerList = () => {
         body: JSON.stringify(payload),
       });
 
+      if (response.status !== 200) throw new Error("");
+
       const data = await response.json();
       setData(data);
     } catch (error) {
@@ -373,15 +367,7 @@ const PageBrokerList = () => {
   };
 
   const onSubmit = async (data, event) => {
-    setLoading(true);
-
-    try {
-      handleFetchBroker();
-    } catch (error) {
-      handleSnackAlert({ open: true, message: "ล้มเหลวเกิดข้อผิดพลาด" });
-    } finally {
-      setLoading(false);
-    }
+    handleFetchBroker();
   };
 
   const onError = (error, event) => console.error(error);
@@ -394,7 +380,10 @@ const PageBrokerList = () => {
     <AppCard title={"ช่องทาง Broker"}>
       <Grid container spacing={2}>
         <Grid item xs={12}>
-          <form onSubmit={handleSubmit(onSubmit, onError)}>
+          <form
+            data-testid="form-submit"
+            onSubmit={handleSubmit(onSubmit, onError)}
+          >
             <Grid container spacing={2} alignItems={"center"}>
               <Grid item xs={12} md={3}>
                 <Controller

@@ -135,6 +135,7 @@ const AppDatePicker = forwardRef(
                 autoComplete: "off",
                 placeholder: placeholder,
                 disabled: disableInput,
+                ["data-testid"]: "input-date",
               }}
             />
           );
