@@ -1,7 +1,7 @@
 import { render } from "@utilities/jest";
 import userEvent from "@testing-library/user-event";
 import AppManageInsuranceGroupProduct from "../appManageInsuranceGroupProduct";
-import { useAppForm } from "@hooks";
+import { useAppForm, useLanguage } from "@hooks";
 
 // Mock crypto.randomUUID
 Object.defineProperty(global, "crypto", {
@@ -24,6 +24,50 @@ jest.mock("@/hooks", () => ({
     handleNotification: jest.fn(),
   }),
   useAppSelector: jest.fn(),
+  useAppFieldArray: () => ({
+    fields: [],
+    append: jest.fn(),
+    remove: jest.fn(),
+    update: jest.fn(),
+    insert: jest.fn(),
+  }),
+  useLanguage: jest.fn(),
+}));
+
+// Mock constants
+jest.mock("@/constants", () => ({
+  APPLICATION_BANNER_TYPE: [
+    { label: "Image", value: 0 },
+    { label: "Video", value: 2 },
+  ],
+  APPLICATION_CONFIGURATION: {
+    defaultFileAccept: ".jpg,.jpeg,.png",
+    defaultFileExtension: ["image/jpeg", "image/png"],
+    defaultFileSize: 2000000,
+  },
+  APPLICATION_DEFAULT: {
+    language: "th",
+    snackBar: {
+      open: false,
+      autoHideDuration: 5000,
+      onClose: null,
+      message: "Message",
+      action: null,
+      anchorOrigin: {
+        horizontal: "left",
+        vertical: "bottom",
+      },
+    },
+    dialog: {
+      title: "",
+      open: false,
+      onClose: null,
+      renderContent: null,
+      renderAction: null,
+      useDefaultBehavior: true,
+      draggable: false,
+    },
+  },
 }));
 
 describe("AppManageInsuranceGroupProduct", () => {
@@ -51,6 +95,9 @@ describe("AppManageInsuranceGroupProduct", () => {
         isDirty: false,
       },
       handleSubmit: jest.fn((fn) => fn),
+    });
+    useLanguage.mockReturnValue({
+      language: "th",
     });
   });
 
