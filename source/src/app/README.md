@@ -1,0 +1,2 @@
+- Page Component ใช้ app router ของ nextjs
+- เขียน jest ของ Page component ไว้ใน "_\_tests_\_"

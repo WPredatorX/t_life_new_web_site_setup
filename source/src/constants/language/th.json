@@ -1,0 +1,24 @@
+{
+    "app": {
+        "title": "แอพพลิเคชั่น",
+        "logo": {
+            "alt": "รูปภาพโลโก้"
+        }
+    },
+    "component": {
+        "product-card": {
+            "button": {
+                "buy-now": "ซื้อเลย",
+                "more-info": "ข้อมูลเพิ่มเติม",
+                "register": "ลงทะเบียน",
+                "login": "เข้าสู่ระบบ"
+            }
+        },
+        "date-picker": {
+            "action": {
+                "today" : "วันนี้",
+                "clear": "ล้างค่า"
+            }
+        }
+    }
+}
