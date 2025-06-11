@@ -1,6 +1,8 @@
 import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { renderAfterHook } from "@utilities/jest";
 import PageCommonSetting from "../page-product-detail/components/pageCommonSetting";
+import { globalInitialState, globalSliceReducer } from "@stores/slices";
+import { configureStore } from "@reduxjs/toolkit";
 import { APPLICATION_CONFIGURATION } from "@constants";
 import { useFieldArray } from "react-hook-form";
 
@@ -16,6 +18,13 @@ jest.mock("@/hooks", () => ({
     sasToken: { sas_files: "?token=123" },
     activator: "test_user",
   })),
+  useAppFieldArray: () => ({
+    fields: [],
+    append: jest.fn(),
+    remove: jest.fn(),
+    update: jest.fn(),
+    insert: jest.fn(),
+  }),
 }));
 
 jest.mock("react-hook-form", () => {
@@ -75,6 +84,8 @@ jest.mock("@/components", () => ({
 global.fetch = jest.fn();
 
 describe("PageCommonSetting", () => {
+  let mockStore = null;
+  let mockProductStatusCode = null;
   const mockProps = {
     mode: "EDIT",
     type: "0",
@@ -101,6 +112,50 @@ describe("PageCommonSetting", () => {
     global.fetch = jest.fn().mockResolvedValue({
       json: () => Promise.resolve({ data: [] }),
       ok: true,
+    });
+    mockProductStatusCode = 200;
+    fetchMock.resetMocks();
+    fetchMock.mockResponse(async (req) => {
+      if (
+        req.url.includes("/api/products?action=PreviewReportByDocumentCode")
+      ) {
+        return {
+          status: 200,
+          body: JSON.stringify({
+            quo_document_id: "Mock quo id",
+            document_code: "mock doc code",
+          }),
+        };
+      }
+    });
+    mockStore = configureStore({
+      reducer: {
+        global: globalSliceReducer,
+      },
+      preloadedState: {
+        global: {
+          ...globalInitialState,
+          auth: {
+            roles: [
+              {
+                role_name: "mock-role",
+                menus: [
+                  {
+                    code: "menu-001",
+                    feature: [
+                      {
+                        code: "feature-001",
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      },
+      middleware: (getDefaultMiddleware) =>
+        getDefaultMiddleware({ serializableCheck: false }).concat([]),
     });
   });
 
