@@ -1,0 +1,24 @@
+{
+    "app": {
+        "title": "Application Titles",
+        "logo": {
+            "alt": "Logo Image"
+        }
+    },
+    "component": {
+        "product-card": {
+            "button": {
+                "buy-now": "Buy now",
+                "more-info": "More info",
+                "register": "Register",
+                "login": "Login"
+            }
+        },
+        "date-picker": {
+            "action": {
+                "today" : "Today",
+                "clear": "Clear"
+            }
+        }
+    }
+}
