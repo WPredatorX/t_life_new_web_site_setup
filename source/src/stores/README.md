@@ -1,1 +1,0 @@
-- ใช้สำหรับเก็บ Redux Store (เน้นทำ Slice / Reducer)
