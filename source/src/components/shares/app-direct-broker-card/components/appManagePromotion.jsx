@@ -5,7 +5,6 @@ import {
   Card,
   Button,
   Dialog,
-  useTheme,
   TextField,
   InputLabel,
   DialogTitle,
@@ -39,7 +38,6 @@ const AppManagePromotion = ({
   setOpen,
   initialData,
 }) => {
-  const theme = useTheme();
   const bannerRef = useRef();
   const { activator, sasToken } = useAppSelector((state) => state.global);
   const { handleSnackAlert } = useAppSnackbar();
