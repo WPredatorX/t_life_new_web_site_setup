@@ -1,0 +1,13 @@
+{
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll": "explicit",
+    "source.fixAll.eslint": "explicit"
+  },
+  "jest.runMode": {
+    "type": "on-demand"
+  },
+  "cSpell.words": [
+    "Swiper"
+  ],
+}
